@@ -106,7 +106,11 @@ class Renderer {
             'u_emptiness',
             'u_collision',
             'u_audioAmp',
-            'u_bandEnergy'
+            'u_bandEnergy',
+            // Spatial metrics (v2)
+            'u_stereoWidth',
+            'u_panPosition',
+            'u_spatialDepth'
         ];
         
         uniformNames.forEach(name => {

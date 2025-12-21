@@ -207,8 +207,18 @@
     <canvas id="canvas"></canvas>
     <div id="controls">
         <h3>Coherence Canvas</h3>
-        <button id="enable-audio-btn" style="margin-bottom: 6px; padding: 4px 8px; cursor: pointer; font-size: 9px;">Enable Audio</button>
+        <div style="margin-bottom: 6px;">
+            <select id="audio-device-select" style="width: 100%; font-size: 9px; padding: 2px; margin-bottom: 4px; background: #222; color: #fff; border: 1px solid #444;">
+                <option value="">Loading devices...</option>
+            </select>
+            <button id="enable-audio-btn" style="width: 100%; padding: 4px 8px; cursor: pointer; font-size: 9px;">Enable Audio</button>
+        </div>
         <div id="audio-status" style="margin-bottom: 6px; font-size: 9px; color: #888;">Audio: Disabled</div>
+        <div id="stereo-info" style="margin-bottom: 6px; font-size: 8px; color: #666; display: none;">
+            <div>For stereo analysis, route system audio through:</div>
+            <div>• Windows: Virtual Audio Cable</div>
+            <div>• macOS: BlackHole</div>
+        </div>
         <h4>Diagnostic Metrics</h4>
         <div id="meters-container"></div>
     </div>

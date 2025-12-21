@@ -136,11 +136,48 @@ function setupLegend() {
     });
 }
 
+async function loadAudioDevices() {
+    const select = document.getElementById('audio-device-select');
+    if (!select) return;
+    
+    try {
+        const devices = await analyzer.getAudioDevices();
+        select.innerHTML = '<option value="">Default (System Default)</option>';
+        
+        devices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.textContent = device.label;
+            select.appendChild(option);
+        });
+        
+        console.log(`Loaded ${devices.length} audio input devices`);
+    } catch (err) {
+        console.error('Failed to load audio devices:', err);
+        select.innerHTML = '<option value="">Error loading devices</option>';
+    }
+}
+
 function setupAudioButton() {
     const btn = document.getElementById('enable-audio-btn');
     const status = document.getElementById('audio-status');
+    const deviceSelect = document.getElementById('audio-device-select');
     
     if (!btn || !status) return;
+    
+    // Load devices on page load
+    loadAudioDevices();
+    
+    // Reload devices when selection changes (in case new devices are added)
+    if (deviceSelect) {
+        deviceSelect.addEventListener('change', () => {
+            if (useAudio) {
+                // If audio is enabled, restart with new device
+                btn.click();
+                btn.click(); // Toggle off then on
+            }
+        });
+    }
     
     btn.addEventListener('click', async () => {
         if (useAudio) {
@@ -150,17 +187,47 @@ function setupAudioButton() {
             btn.textContent = 'Enable Audio';
             status.textContent = 'Audio: Disabled';
             status.style.color = '#888';
+            if (deviceSelect) deviceSelect.disabled = false;
         } else {
-            // Enable audio
+            // Enable audio (try stereo first)
             try {
-                await analyzer.enableAudio();
+                const selectedDeviceId = deviceSelect?.value || null;
+                if (selectedDeviceId) {
+                    console.log(`Using device: ${deviceSelect.options[deviceSelect.selectedIndex].textContent}`);
+                } else {
+                    console.log('Using default audio device');
+                }
+                
+                await analyzer.enableAudio(selectedDeviceId, true); // Try stereo
                 useAudio = true;
+                const mode = analyzer.isStereo ? 'STEREO' : 'MONO';
                 btn.textContent = 'Disable Audio';
-                status.textContent = 'Audio: Enabled';
-                status.style.color = '#0f0';
+                status.textContent = `Audio: ${mode}`;
+                status.style.color = analyzer.isStereo ? '#0f0' : '#ff0';
+                if (deviceSelect) deviceSelect.disabled = true;
+                
+                // Show/hide stereo setup info
+                const stereoInfo = document.getElementById('stereo-info');
+                if (stereoInfo) {
+                    stereoInfo.style.display = analyzer.isStereo ? 'none' : 'block';
+                }
+                
+                if (!analyzer.isStereo) {
+                    console.log('Note: Mono input detected. For stereo analysis, set up system audio routing.');
+                }
             } catch (err) {
                 console.error('Failed to enable audio:', err);
-                alert('Failed to enable audio. Please allow microphone access.');
+                let errorMsg = 'Failed to enable audio. ';
+                if (err.name === 'NotAllowedError') {
+                    errorMsg += 'Please allow microphone access.';
+                } else if (err.name === 'NotFoundError') {
+                    errorMsg += 'Selected device not found.';
+                } else if (err.name === 'NotReadableError') {
+                    errorMsg += 'Device is being used by another application.';
+                } else {
+                    errorMsg += err.message;
+                }
+                alert(errorMsg);
             }
         }
     });
@@ -180,6 +247,17 @@ function render() {
         if (useAudio && analyzer) {
             const audioMetrics = analyzer.getMetrics();
             metrics = audioMetrics;
+            
+            // Debug: Log metrics occasionally to verify they're updating
+            if (frameCount % 60 === 0) {
+                console.log('Audio metrics:', {
+                    audioAmp: audioMetrics.u_audioAmp?.toFixed(3),
+                    coherence: audioMetrics.u_coherence?.toFixed(3),
+                    mud: audioMetrics.u_mud?.toFixed(3),
+                    harshness: audioMetrics.u_harshness?.toFixed(3),
+                    bandEnergy: audioMetrics.u_bandEnergy?.map(v => v.toFixed(3))
+                });
+            }
         }
         
         // Update legend visuals
