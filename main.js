@@ -6,6 +6,7 @@
 let renderer;
 let analyzer;
 let legend;
+let meters;
 let startTime;
 let useAudio = false;
 
@@ -45,8 +46,11 @@ async function init() {
         legend = new MetricLegend();
         setupLegend();
         
-        // Wire up controls and audio button
-        setupControls();
+        // Create diagnostic meters (try different visualization modes: 'waveform', 'rings', 'dots', 'histogram', 'bars')
+        meters = new MetricMeters('waveform'); // Change to 'rings', 'dots', 'histogram', or 'bars' to try different modes
+        setupMeters();
+        
+        // Wire up audio button
         setupAudioButton();
         
         // Start render loop
@@ -58,44 +62,29 @@ async function init() {
     }
 }
 
-function setupControls() {
-    // Wire up sliders to update metrics (only when audio is disabled)
-    const controls = {
-        coherence: document.getElementById('coherence'),
-        mud: document.getElementById('mud'),
-        harshness: document.getElementById('harshness'),
-        compression: document.getElementById('compression'),
-        collision: document.getElementById('collision'),
-        phaseRisk: document.getElementById('phaseRisk'),
-        audioAmp: document.getElementById('audioAmp')
-    };
+function setupMeters() {
+    const container = document.getElementById('meters-container');
+    if (!container) return;
     
-    // Update value displays and metrics
-    Object.keys(controls).forEach(key => {
-        const slider = controls[key];
-        const display = document.getElementById(key + '-val');
+    // Create meters for each metric
+    const metricNames = ['coherence', 'mud', 'harshness', 'compression', 'collision', 'phaseRisk', 'audioAmp'];
+    
+    metricNames.forEach(name => {
+        const meter = meters.createMeter(name);
         
-        if (slider && display) {
-            // Update display on change
-            slider.addEventListener('input', () => {
-                if (!useAudio) {
-                    const value = parseFloat(slider.value);
-                    display.textContent = value.toFixed(2);
-                    
-                    // Update metrics object
-                    if (key === 'phaseRisk') {
-                        metrics.u_phaseRisk = value;
-                    } else {
-                        metrics['u_' + key] = value;
-                    }
-                    
-                    // Update legend visuals
-                    if (legend) {
-                        legend.update(metrics);
-                    }
-                }
-            });
+        // Add legend swatch to the label
+        const label = meter.querySelector('.meter-label');
+        if (label) {
+            const swatchId = `legend-${name === 'audioAmp' ? 'bandEnergy' : name}`;
+            const swatch = document.getElementById(swatchId);
+            if (swatch) {
+                const swatchClone = swatch.cloneNode(true);
+                swatchClone.style.marginRight = '4px';
+                label.insertBefore(swatchClone, label.firstChild);
+            }
         }
+        
+        container.appendChild(meter);
     });
 }
 
@@ -179,18 +168,20 @@ function render() {
     try {
         const currentTime = (Date.now() - startTime) / 1000.0;
         
-        // Get metrics from audio analyzer if enabled, otherwise use manual controls
+        // Get metrics from audio analyzer if enabled
         if (useAudio && analyzer) {
             const audioMetrics = analyzer.getMetrics();
             metrics = audioMetrics;
-            
-            // Update UI displays with live values
-            updateMetricDisplays(metrics);
         }
         
         // Update legend visuals
         if (legend) {
             legend.update(metrics);
+        }
+        
+        // Update diagnostic meters
+        if (meters) {
+            meters.updateAll(metrics);
         }
         
         // Pass time + resolution + all metrics
@@ -205,26 +196,6 @@ function render() {
     }
 }
 
-function updateMetricDisplays(metrics) {
-    // Update display values to show live audio metrics
-    const displays = {
-        coherence: document.getElementById('coherence-val'),
-        mud: document.getElementById('mud-val'),
-        harshness: document.getElementById('harshness-val'),
-        compression: document.getElementById('compression-val'),
-        collision: document.getElementById('collision-val'),
-        phaseRisk: document.getElementById('phaseRisk-val'),
-        audioAmp: document.getElementById('audioAmp-val')
-    };
-    
-    if (displays.coherence) displays.coherence.textContent = metrics.u_coherence.toFixed(2);
-    if (displays.mud) displays.mud.textContent = metrics.u_mud.toFixed(2);
-    if (displays.harshness) displays.harshness.textContent = metrics.u_harshness.toFixed(2);
-    if (displays.compression) displays.compression.textContent = metrics.u_compression.toFixed(2);
-    if (displays.collision) displays.collision.textContent = metrics.u_collision.toFixed(2);
-    if (displays.phaseRisk) displays.phaseRisk.textContent = metrics.u_phaseRisk.toFixed(2);
-    if (displays.audioAmp) displays.audioAmp.textContent = metrics.u_audioAmp.toFixed(2);
-}
 
 // Wait for DOM to be ready
 if (document.readyState === 'loading') {

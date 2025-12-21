@@ -47,30 +47,153 @@
             color: #aaa;
         }
         
-        #controls label {
+        .meter-container {
+            margin: 6px 0;
+            font-size: 9px;
+        }
+        
+        .meter-label {
             display: flex;
             align-items: center;
-            margin: 4px 0;
-            gap: 4px;
+            margin-bottom: 2px;
             font-size: 9px;
         }
         
-        #controls label .label-text {
-            min-width: 70px;
-            font-size: 9px;
+        .meter-label .legend-swatch {
+            margin-right: 4px;
         }
         
-        #controls label .value-display {
+        .meter-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+        
+        .meter-bar {
+            flex: 1;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .meter-fill {
+            height: 100%;
+            background: #0f0;
+            transition: width 0.1s linear, background-color 0.2s;
+            min-width: 0;
+        }
+        
+        .meter-value {
             min-width: 32px;
             font-size: 8px;
             color: #aaa;
             text-align: right;
+            font-family: monospace;
         }
         
-        #controls input[type="range"] {
+        .stability-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+        }
+        
+        .stability-label {
+            font-size: 7px;
+            color: #888;
+            min-width: 50px;
+            text-transform: capitalize;
+        }
+        
+        .stability-visualizer {
             flex: 1;
-            max-width: 100px;
-            height: 4px;
+            height: 12px;
+            display: flex;
+            align-items: center;
+            transition: opacity 0.2s;
+        }
+        
+        .stability-visualizer:hover {
+            opacity: 0.8;
+        }
+        
+        .stability-indicators {
+            display: flex;
+            gap: 2px;
+            height: 3px;
+            width: 100%;
+            align-items: center;
+        }
+        
+        .stability-bar {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 1px;
+            transition: width 0.2s, background-color 0.2s;
+            min-width: 0;
+            height: 3px;
+        }
+        
+        .stability-waveform-container,
+        .stability-histogram-container {
+            display: flex;
+            gap: 2px;
+            width: 100%;
+            height: 12px;
+            align-items: center;
+        }
+        
+        .stability-waveform,
+        .stability-histogram {
+            flex: 1;
+            image-rendering: pixelated;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1px;
+            height: 8px;
+        }
+        
+        .stability-rings-container {
+            display: flex;
+            gap: 4px;
+            width: 100%;
+            height: 12px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .stability-ring {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 12px;
+        }
+        
+        .stability-ring svg {
+            display: block;
+            width: 12px;
+            height: 12px;
+        }
+        
+        .stability-dots-container {
+            display: flex;
+            gap: 2px;
+            width: 100%;
+            height: 12px;
+            align-items: center;
+        }
+        
+        .stability-dots {
+            flex: 1;
+            position: relative;
+            height: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .legend-swatch {
@@ -86,54 +209,14 @@
         <h3>Coherence Canvas</h3>
         <button id="enable-audio-btn" style="margin-bottom: 6px; padding: 4px 8px; cursor: pointer; font-size: 9px;">Enable Audio</button>
         <div id="audio-status" style="margin-bottom: 6px; font-size: 9px; color: #888;">Audio: Disabled</div>
-        <h4>Metrics</h4>
-        <label>
-            <span class="label-text">Coherence</span>
-            <canvas id="legend-coherence" class="legend-swatch"></canvas>
-            <span class="value-display" id="coherence-val">0.7</span>
-            <input type="range" id="coherence" min="0" max="1" step="0.01" value="0.7">
-        </label>
-        <label>
-            <span class="label-text">Mud</span>
-            <canvas id="legend-mud" class="legend-swatch"></canvas>
-            <span class="value-display" id="mud-val">0.0</span>
-            <input type="range" id="mud" min="0" max="1" step="0.01" value="0.0">
-        </label>
-        <label>
-            <span class="label-text">Harshness</span>
-            <canvas id="legend-harshness" class="legend-swatch"></canvas>
-            <span class="value-display" id="harshness-val">0.0</span>
-            <input type="range" id="harshness" min="0" max="1" step="0.01" value="0.0">
-        </label>
-        <label>
-            <span class="label-text">Compression</span>
-            <canvas id="legend-compression" class="legend-swatch"></canvas>
-            <span class="value-display" id="compression-val">0.0</span>
-            <input type="range" id="compression" min="0" max="1" step="0.01" value="0.0">
-        </label>
-        <label>
-            <span class="label-text">Collision</span>
-            <canvas id="legend-collision" class="legend-swatch"></canvas>
-            <span class="value-display" id="collision-val">0.0</span>
-            <input type="range" id="collision" min="0" max="1" step="0.01" value="0.0">
-        </label>
-        <label>
-            <span class="label-text">Phase Risk</span>
-            <canvas id="legend-phaseRisk" class="legend-swatch"></canvas>
-            <span class="value-display" id="phaseRisk-val">0.0</span>
-            <input type="range" id="phaseRisk" min="0" max="1" step="0.01" value="0.0">
-        </label>
-        <label>
-            <span class="label-text">Band Energy</span>
-            <canvas id="legend-bandEnergy" class="legend-swatch"></canvas>
-            <span class="value-display" id="audioAmp-val">0.5</span>
-            <input type="range" id="audioAmp" min="0" max="1" step="0.01" value="0.5">
-        </label>
+        <h4>Diagnostic Metrics</h4>
+        <div id="meters-container"></div>
     </div>
     
     <script src="audio/analyzer.js"></script>
     <script src="gl/renderer.js"></script>
     <script src="ui/legend.js"></script>
+    <script src="ui/meters.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
