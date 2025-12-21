@@ -1,6 +1,5 @@
-// Vertex shader
-// Responsibilities:
-// - Transforms full-screen quad vertices to clip space
-// - Passes through texture coordinates to fragment shader
-// - Simple pass-through shader for full-screen rendering
+attribute vec2 a_position;
 
+void main() {
+    gl_Position = vec4(a_position, 0.0, 1.0);
+}

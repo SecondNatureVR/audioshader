@@ -1,9 +1,84 @@
-<!--
-  Entry point HTML file
-  Responsibilities:
-  - Sets up the page structure with a full-screen canvas
-  - Includes all JavaScript modules
-  - Provides minimal UI (e.g., "Enable Audio" button)
-  - Links to CSS if needed
--->
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coherence Canvas - Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #000;
+        }
+        
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+            z-index: 100;
+        }
+        
+        #controls label {
+            display: block;
+            margin: 5px 0;
+        }
+        
+        #controls input[type="range"] {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="controls">
+        <h3>Test Controls</h3>
+        <label>
+            Coherence: <span id="coherence-val">0.7</span>
+            <input type="range" id="coherence" min="0" max="1" step="0.01" value="0.7">
+        </label>
+        <label>
+            Mud: <span id="mud-val">0.0</span>
+            <input type="range" id="mud" min="0" max="1" step="0.01" value="0.0">
+        </label>
+        <label>
+            Harshness: <span id="harshness-val">0.0</span>
+            <input type="range" id="harshness" min="0" max="1" step="0.01" value="0.0">
+        </label>
+        <label>
+            Compression: <span id="compression-val">0.0</span>
+            <input type="range" id="compression" min="0" max="1" step="0.01" value="0.0">
+        </label>
+        <label>
+            Collision: <span id="collision-val">0.0</span>
+            <input type="range" id="collision" min="0" max="1" step="0.01" value="0.0">
+        </label>
+        <label>
+            Phase Risk: <span id="phaseRisk-val">0.0</span>
+            <input type="range" id="phaseRisk" min="0" max="1" step="0.01" value="0.0">
+        </label>
+        <label>
+            Audio Amp: <span id="audioAmp-val">0.5</span>
+            <input type="range" id="audioAmp" min="0" max="1" step="0.01" value="0.5">
+        </label>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
