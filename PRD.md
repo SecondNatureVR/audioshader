@@ -75,14 +75,23 @@ Visual Coherence Canvas
 
 ### 6.1 Audio Input
 
-* Stereo master output (v1 minimum)
-* Optional multi-track / stem input (v2+)
+**v1 (Current):**
+* Microphone input (mono) - implemented
+* Basic stereo analysis placeholder
+
+**v2 (Planned):**
+* **Stereo system audio loopback** (primary)
+  * Capture desktop audio (Spotify, DAW, etc.)
+  * Platform-specific implementation:
+    * Windows: WASAPI loopback or virtual audio cable
+    * macOS: BlackHole or Soundflower
+    * Browser: May require Electron wrapper or native app
+* Optional multi-track / stem input (future)
 
 Audio may originate from:
-
+* System audio loopback (v2 primary)
 * DAW loopback
-* System audio
-* Microphone (optional)
+* Microphone (fallback/testing)
 
 ### 6.2 Optional Future Inputs
 
@@ -112,6 +121,22 @@ Audio may originate from:
 | `emptiness`    | Persistent spectral gaps                 |
 | `collision`    | Transient overlap / arrangement clashes  |
 | `coherence`    | Aggregate inverse of above issues        |
+
+### 7.3 Spatial Metrics (v2 - Planned)
+
+For stereo input, per frequency band:
+
+| Metric              | Meaning                                    |
+| ------------------- | ------------------------------------------ |
+| `stereoWidth`        | Correlation between L/R channels (0=mono, 1=wide) |
+| `panPosition`       | L/R balance (-1=left, 0=center, 1=right)  |
+| `spatialDepth`      | Phase relationships indicating depth       |
+| `bandEnergy`        | Energy per band (low/mid/high) - **separate meters** |
+
+**Spatial Characteristics by Frequency:**
+* **Low (20-250 Hz)**: Typically mono/centered, lower in mix
+* **Mid (250-4 kHz)**: Wider stereo image, front-center
+* **High (4 kHz+)**: More panning, can be wide or focused
 
 ---
 
@@ -204,15 +229,42 @@ These mappings should remain **consistent**, not stylistic.
 
 ---
 
-## 12. Geometry / Spatial Model (Open Choice)
+## 12. Geometry / Spatial Model
 
-Possible canonical canvases:
-
+### 12.1 v1 Implementation (Current)
 * Radial (radius ≈ frequency, angle ≈ structure)
-* Cartesian (frequency × time)
-* Hybrid layered fields
+* 2D coherence field with diagnostic overlays
+* Band energy drives structure and color
 
-Choice is deferred, but **one canonical geometry** must be chosen for v1.
+### 12.2 v2 Design Direction (Planned)
+
+**Spatial Visualization: Room-like 3D Scene**
+
+The visualization will evolve into a **room-like spatial representation** where:
+
+* **Base Layer**: 3D spatial scene representing the stereo field
+  * Objects/particles positioned by pan (left ↔ right) and frequency (low ↔ high)
+  * Frequency bands manifest as different object types:
+    * **Low frequencies**: Heavy, central, floor-level objects (warm colors)
+    * **Mid frequencies**: Mid-height, wider spread, front-center objects (neutral colors)
+    * **High frequencies**: Light, pannable, upper-region objects (cool colors)
+
+* **Overlay Layer**: Coherence texture as subtle diagnostic overlay
+  * Normal state: Subtle, transparent texture affecting clarity
+  * Diagnostic issues become **salient** when they occur:
+    * Mud → blur increases, objects lose definition
+    * Harshness → noise texture appears, objects flicker
+    * Compression → contrast flattens, objects become uniform
+    * Collision → sharp spikes/artifacts appear
+    * Phase issues → interference patterns emerge
+
+**Spatial Characteristics:**
+* X-axis: Pan position (left ↔ right)
+* Y-axis: Frequency (low ↔ high) or depth
+* Z-axis: Depth or spatial positioning
+* Object size: Energy level
+* Object color: Frequency band
+* Object position: Spatial characteristics (pan, width, depth)
 
 ---
 
@@ -254,21 +306,77 @@ The codebase must be structured so Cursor can:
 
 ---
 
-## 16. Explicit Open Questions (Deferred)
+## 16. v2 Design Evolution
 
-* Raw WebGL vs Three.js vs WebGPU
-* DAW loopback UX per OS
+### 16.1 Spatial Visualization Architecture
+
+**Two-Layer System:**
+
+1. **Spatial Scene Layer** (3D Room)
+   * Objects/particles positioned by pan and frequency
+   * Frequency-dependent object types and behaviors
+   * Real-time spatial positioning based on stereo analysis
+   * Visual representation of how audio occupies space
+
+2. **Coherence Overlay Layer** (Diagnostic Texture)
+   * Subtle shader overlay affecting scene clarity
+   * Becomes salient when diagnostic issues occur
+   * Does not obscure spatial information
+   * Enhances understanding of mix problems
+
+### 16.2 Implementation Phases
+
+**Phase 1: Stereo Input**
+* System audio loopback implementation
+* L/R channel analysis
+* Spatial metric calculation (width, pan, depth)
+
+**Phase 2: Basic Spatial Visualization**
+* 3D scene setup (Three.js or WebGL)
+* Objects positioned by pan and frequency
+* Stereo width visualization
+
+**Phase 3: Room-like Visualization**
+* Depth and dimension
+* Frequency-dependent object types
+* Spatial relationships
+
+**Phase 4: Coherence Overlay**
+* Subtle texture system
+* Diagnostic salience
+* Issue highlighting
+
+### 16.3 Visual Design Principles
+
+* **Spatial = Primary**: The room visualization is the main interface
+* **Coherence = Overlay**: Diagnostic texture is subtle until issues occur
+* **Salience = Responsive**: Problems become visually prominent when they happen
+* **Frequency = Vertical**: Low (bottom), Mid (center), High (top)
+* **Pan = Horizontal**: Left ↔ Right
+* **Energy = Size/Intensity**: More energy = larger/more visible objects
+
+---
+
+## 17. Explicit Open Questions (Deferred)
+
+* Raw WebGL vs Three.js vs WebGPU (v2 may require 3D library)
+* System audio loopback UX per OS (v2 requirement)
 * Multi-track routing standards
 * Persistence / snapshots
 * Performance tuning
+* 3D scene navigation (fixed view vs interactive)
 
 These are **implementation details**, not blockers.
 
 ---
 
-## 17. One-Sentence Product Definition
+## 18. One-Sentence Product Definition
 
+**v1 (Current):**
 > Coherence Canvas is a real-time visual diagnostic field that externalizes the perceptual coherence of a music mix, allowing producers to see masking, phasing, imbalance, and structural gaps as spatial phenomena rather than meters.
+
+**v2 (Planned):**
+> Coherence Canvas is a real-time 3D spatial visualization of stereo audio where frequency bands manifest as objects in a room-like space, with diagnostic coherence overlays that become salient when mix problems occur, helping producers see both spatial characteristics and mix quality simultaneously.
 
 ---
 

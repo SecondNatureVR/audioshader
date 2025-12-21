@@ -67,7 +67,7 @@ function setupMeters() {
     if (!container) return;
     
     // Create meters for each metric
-    const metricNames = ['coherence', 'mud', 'harshness', 'compression', 'collision', 'phaseRisk', 'audioAmp'];
+    const metricNames = ['coherence', 'mud', 'harshness', 'compression', 'collision', 'phaseRisk', 'audioAmp', 'bandLow', 'bandMid', 'bandHigh'];
     
     metricNames.forEach(name => {
         const meter = meters.createMeter(name);
@@ -75,7 +75,15 @@ function setupMeters() {
         // Add legend swatch to the label
         const label = meter.querySelector('.meter-label');
         if (label) {
-            const swatchId = `legend-${name === 'audioAmp' ? 'bandEnergy' : name}`;
+            let swatchId;
+            if (name === 'bandLow' || name === 'bandMid' || name === 'bandHigh') {
+                swatchId = 'legend-bandEnergy';
+            } else if (name === 'audioAmp') {
+                swatchId = 'legend-bandEnergy';
+            } else {
+                swatchId = `legend-${name}`;
+            }
+            
             const swatch = document.getElementById(swatchId);
             if (swatch) {
                 const swatchClone = swatch.cloneNode(true);

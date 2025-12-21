@@ -20,7 +20,7 @@ class MetricMeters {
         this.window4Bar = this.window1Bar * 4;
         
         // Initialize history for all metrics
-        const metricNames = ['coherence', 'mud', 'harshness', 'compression', 'collision', 'phaseRisk', 'audioAmp'];
+        const metricNames = ['coherence', 'mud', 'harshness', 'compression', 'collision', 'phaseRisk', 'audioAmp', 'bandLow', 'bandMid', 'bandHigh'];
         metricNames.forEach(name => {
             this.metricHistory[name] = [];
             this.metricModes[name] = defaultMode;
@@ -105,8 +105,15 @@ class MetricMeters {
             `;
         }
         
+        // Format metric name for display
+        let displayName = metricName.charAt(0).toUpperCase() + metricName.slice(1);
+        if (metricName === 'bandLow') displayName = 'Low';
+        else if (metricName === 'bandMid') displayName = 'Mid';
+        else if (metricName === 'bandHigh') displayName = 'High';
+        else if (metricName === 'audioAmp') displayName = 'Amp';
+        
         container.innerHTML = `
-            <div class="meter-label">${metricName.charAt(0).toUpperCase() + metricName.slice(1)}</div>
+            <div class="meter-label">${displayName}</div>
             <div class="meter-wrapper">
                 <div class="meter-bar">
                     <div class="meter-fill" id="meter-${metricName}"></div>
@@ -260,10 +267,19 @@ class MetricMeters {
             const percentage = Math.min(100, Math.max(0, value * 100));
             fill.style.width = percentage + '%';
             
-            // Color based on value (green = good, yellow = medium, red = high)
+            // Color based on value and metric type
             if (metricName === 'coherence') {
                 // For coherence, higher is better
                 fill.style.backgroundColor = value > 0.7 ? '#0f0' : value > 0.4 ? '#ff0' : '#f00';
+            } else if (metricName.startsWith('band')) {
+                // Band energy: color by frequency band
+                if (metricName === 'bandLow') {
+                    fill.style.backgroundColor = `rgb(${Math.floor(220 * value)}, ${Math.floor(100 * value)}, ${Math.floor(50 * value)})`;
+                } else if (metricName === 'bandMid') {
+                    fill.style.backgroundColor = `rgb(${Math.floor(180 * value)}, ${Math.floor(200 * value)}, ${Math.floor(120 * value)})`;
+                } else if (metricName === 'bandHigh') {
+                    fill.style.backgroundColor = `rgb(${Math.floor(50 * value)}, ${Math.floor(150 * value)}, ${Math.floor(255 * value)})`;
+                }
             } else {
                 // For problems, lower is better
                 fill.style.backgroundColor = value < 0.3 ? '#0f0' : value < 0.6 ? '#ff0' : '#f00';
@@ -279,9 +295,9 @@ class MetricMeters {
         const stability2 = this.calculateStability(metricName, this.window2Bar);
         const stability4 = this.calculateStability(metricName, this.window4Bar);
         
-        this.updateStabilityBar(`stability-1bar-${metricName}`, stability1);
-        this.updateStabilityBar(`stability-2bar-${metricName}`, stability2);
-        this.updateStabilityBar(`stability-4bar-${metricName}`, stability4);
+        this.updateStabilityBar(`stability-1bar-${metricName}`, stability1, metricName, this.window1Bar);
+        this.updateStabilityBar(`stability-2bar-${metricName}`, stability2, metricName, this.window2Bar);
+        this.updateStabilityBar(`stability-4bar-${metricName}`, stability4, metricName, this.window4Bar);
     }
     
     updateStabilityBar(elementId, stability, metricName, windowSize) {
@@ -422,6 +438,24 @@ class MetricMeters {
         });
     }
     
+    updateAll(metrics) {
+        // Update all meters with current metric values
+        this.updateMetric('coherence', metrics.u_coherence || 0.0);
+        this.updateMetric('mud', metrics.u_mud || 0.0);
+        this.updateMetric('harshness', metrics.u_harshness || 0.0);
+        this.updateMetric('compression', metrics.u_compression || 0.0);
+        this.updateMetric('collision', metrics.u_collision || 0.0);
+        this.updateMetric('phaseRisk', metrics.u_phaseRisk || 0.0);
+        this.updateMetric('audioAmp', metrics.u_audioAmp || 0.0);
+        
+        // Update band energy meters separately
+        if (metrics.u_bandEnergy && Array.isArray(metrics.u_bandEnergy)) {
+            this.updateMetric('bandLow', metrics.u_bandEnergy[0] || 0.0);
+            this.updateMetric('bandMid', metrics.u_bandEnergy[1] || 0.0);
+            this.updateMetric('bandHigh', metrics.u_bandEnergy[2] || 0.0);
+        }
+    }
+    
     updateMeterDisplay(metricName, value) {
         const fill = document.getElementById(`meter-${metricName}`);
         const valueDisplay = document.getElementById(`value-${metricName}`);
@@ -430,10 +464,19 @@ class MetricMeters {
             const percentage = Math.min(100, Math.max(0, value * 100));
             fill.style.width = percentage + '%';
             
-            // Color based on value (green = good, yellow = medium, red = high)
+            // Color based on value and metric type
             if (metricName === 'coherence') {
                 // For coherence, higher is better
                 fill.style.backgroundColor = value > 0.7 ? '#0f0' : value > 0.4 ? '#ff0' : '#f00';
+            } else if (metricName.startsWith('band')) {
+                // Band energy: color by frequency band
+                if (metricName === 'bandLow') {
+                    fill.style.backgroundColor = `rgb(${Math.floor(220 * value)}, ${Math.floor(100 * value)}, ${Math.floor(50 * value)})`;
+                } else if (metricName === 'bandMid') {
+                    fill.style.backgroundColor = `rgb(${Math.floor(180 * value)}, ${Math.floor(200 * value)}, ${Math.floor(120 * value)})`;
+                } else if (metricName === 'bandHigh') {
+                    fill.style.backgroundColor = `rgb(${Math.floor(50 * value)}, ${Math.floor(150 * value)}, ${Math.floor(255 * value)})`;
+                }
             } else {
                 // For problems, lower is better
                 fill.style.backgroundColor = value < 0.3 ? '#0f0' : value < 0.6 ? '#ff0' : '#f00';
@@ -452,17 +495,6 @@ class MetricMeters {
         this.updateStabilityBar(`stability-1bar-${metricName}`, stability1, metricName, this.window1Bar);
         this.updateStabilityBar(`stability-2bar-${metricName}`, stability2, metricName, this.window2Bar);
         this.updateStabilityBar(`stability-4bar-${metricName}`, stability4, metricName, this.window4Bar);
-    }
-    
-    updateAll(metrics) {
-        // Update all meters with current metric values
-        this.updateMetric('coherence', metrics.u_coherence || 0.0);
-        this.updateMetric('mud', metrics.u_mud || 0.0);
-        this.updateMetric('harshness', metrics.u_harshness || 0.0);
-        this.updateMetric('compression', metrics.u_compression || 0.0);
-        this.updateMetric('collision', metrics.u_collision || 0.0);
-        this.updateMetric('phaseRisk', metrics.u_phaseRisk || 0.0);
-        this.updateMetric('audioAmp', metrics.u_audioAmp || 0.0);
     }
 }
 
