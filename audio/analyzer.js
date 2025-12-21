@@ -23,8 +23,8 @@ class AudioAnalyzer {
         this.timeData = null;
         this.prevFrequencyData = null; // For spectral flux calculation
         
-        // Smoothing (EMA) factors
-        this.smoothingFactor = 0.9;
+        // Smoothing (EMA) factors - reduced for more responsiveness
+        this.smoothingFactor = 0.85; // More responsive to changes
         
         // Smoothed metric values
         this.smoothedMetrics = {
@@ -36,7 +36,8 @@ class AudioAnalyzer {
             phaseRisk: 0.0,
             collision: 0.0,
             lowImbalance: 0.0,
-            emptiness: 0.0
+            emptiness: 0.0,
+            coherence: 1.0
         };
     }
     
@@ -103,13 +104,20 @@ class AudioAnalyzer {
         const emptiness = this.calculateEmptiness();
         
         // Calculate coherence as inverse of problems
-        const coherence = Math.max(0, Math.min(1, 1.0 - (
-            mud * 0.3 +
+        // More sensitive weighting for better visual response
+        let coherence = Math.max(0, Math.min(1, 1.0 - (
+            mud * 0.25 +
             harshness * 0.25 +
             compression * 0.2 +
-            collision * 0.15 +
+            collision * 0.2 +
             phaseRisk * 0.1
         )));
+        
+        // Boost coherence when audio is present and clean
+        if (audioAmp > 0.1 && mud < 0.3 && harshness < 0.3) {
+            const boost = (1.0 - coherence) * 0.2;
+            coherence = Math.min(1.0, coherence + boost);
+        }
         
         // Apply smoothing (EMA)
         this.smoothedMetrics.audioAmp = this.smooth(this.smoothedMetrics.audioAmp, audioAmp);
@@ -125,6 +133,13 @@ class AudioAnalyzer {
         this.smoothedMetrics.lowImbalance = this.smooth(this.smoothedMetrics.lowImbalance, lowImbalance);
         this.smoothedMetrics.emptiness = this.smooth(this.smoothedMetrics.emptiness, emptiness);
         
+        // Smooth coherence separately (it's calculated from other metrics)
+        const smoothedCoherence = this.smooth(
+            this.smoothedMetrics.coherence || coherence,
+            coherence
+        );
+        this.smoothedMetrics.coherence = smoothedCoherence;
+        
         return {
             u_audioAmp: this.smoothedMetrics.audioAmp,
             u_bandEnergy: this.smoothedMetrics.bandEnergy,
@@ -135,7 +150,7 @@ class AudioAnalyzer {
             u_collision: this.smoothedMetrics.collision,
             u_lowImbalance: this.smoothedMetrics.lowImbalance,
             u_emptiness: this.smoothedMetrics.emptiness,
-            u_coherence: coherence
+            u_coherence: smoothedCoherence
         };
     }
     
@@ -216,8 +231,9 @@ class AudioAnalyzer {
         const totalEnergy = bandEnergy[0] + bandEnergy[1] + bandEnergy[2];
         const highRatio = totalEnergy > 0 ? highEnergy / totalEnergy : 0;
         
-        // Combine high energy and high ratio
-        return Math.min(1.0, (highEnergy * 0.7 + highRatio * 0.3));
+        // More sensitive harshness calculation - amplify high frequency presence
+        const harshness = (highEnergy * 0.6 + highRatio * 0.4) * 1.3; // Amplify by 30%
+        return Math.min(1.0, harshness);
     }
     
     /**
@@ -231,8 +247,9 @@ class AudioAnalyzer {
         const totalEnergy = bandEnergy[0] + bandEnergy[1] + bandEnergy[2];
         const midRatio = totalEnergy > 0 ? midEnergy / totalEnergy : 0;
         
-        // High mud = high mid energy and high mid ratio
-        return Math.min(1.0, (midEnergy * 0.6 + midRatio * 0.4));
+        // More sensitive mud detection - amplify when mid dominates
+        const mud = (midEnergy * 0.5 + midRatio * 0.5) * 1.2; // Amplify by 20%
+        return Math.min(1.0, mud);
     }
     
     /**

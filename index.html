@@ -28,20 +28,55 @@
             left: 10px;
             color: white;
             font-family: monospace;
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
+            font-size: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px;
             border-radius: 4px;
             z-index: 100;
+            max-width: 280px;
+        }
+        
+        #controls h3 {
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+        
+        #controls h4 {
+            font-size: 10px;
+            margin: 8px 0 4px 0;
+            color: #aaa;
         }
         
         #controls label {
-            display: block;
-            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+            gap: 4px;
+            font-size: 9px;
+        }
+        
+        #controls label .label-text {
+            min-width: 70px;
+            font-size: 9px;
+        }
+        
+        #controls label .value-display {
+            min-width: 32px;
+            font-size: 8px;
+            color: #aaa;
+            text-align: right;
         }
         
         #controls input[type="range"] {
-            width: 200px;
+            flex: 1;
+            max-width: 100px;
+            height: 4px;
+        }
+        
+        .legend-swatch {
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -49,41 +84,56 @@
     <canvas id="canvas"></canvas>
     <div id="controls">
         <h3>Coherence Canvas</h3>
-        <button id="enable-audio-btn" style="margin-bottom: 10px; padding: 8px 16px; cursor: pointer;">Enable Audio</button>
-        <div id="audio-status" style="margin-bottom: 10px; font-size: 10px; color: #888;">Audio: Disabled</div>
-        <h4>Test Controls</h4>
+        <button id="enable-audio-btn" style="margin-bottom: 6px; padding: 4px 8px; cursor: pointer; font-size: 9px;">Enable Audio</button>
+        <div id="audio-status" style="margin-bottom: 6px; font-size: 9px; color: #888;">Audio: Disabled</div>
+        <h4>Metrics</h4>
         <label>
-            Coherence: <span id="coherence-val">0.7</span>
+            <span class="label-text">Coherence</span>
+            <canvas id="legend-coherence" class="legend-swatch"></canvas>
+            <span class="value-display" id="coherence-val">0.7</span>
             <input type="range" id="coherence" min="0" max="1" step="0.01" value="0.7">
         </label>
         <label>
-            Mud: <span id="mud-val">0.0</span>
+            <span class="label-text">Mud</span>
+            <canvas id="legend-mud" class="legend-swatch"></canvas>
+            <span class="value-display" id="mud-val">0.0</span>
             <input type="range" id="mud" min="0" max="1" step="0.01" value="0.0">
         </label>
         <label>
-            Harshness: <span id="harshness-val">0.0</span>
+            <span class="label-text">Harshness</span>
+            <canvas id="legend-harshness" class="legend-swatch"></canvas>
+            <span class="value-display" id="harshness-val">0.0</span>
             <input type="range" id="harshness" min="0" max="1" step="0.01" value="0.0">
         </label>
         <label>
-            Compression: <span id="compression-val">0.0</span>
+            <span class="label-text">Compression</span>
+            <canvas id="legend-compression" class="legend-swatch"></canvas>
+            <span class="value-display" id="compression-val">0.0</span>
             <input type="range" id="compression" min="0" max="1" step="0.01" value="0.0">
         </label>
         <label>
-            Collision: <span id="collision-val">0.0</span>
+            <span class="label-text">Collision</span>
+            <canvas id="legend-collision" class="legend-swatch"></canvas>
+            <span class="value-display" id="collision-val">0.0</span>
             <input type="range" id="collision" min="0" max="1" step="0.01" value="0.0">
         </label>
         <label>
-            Phase Risk: <span id="phaseRisk-val">0.0</span>
+            <span class="label-text">Phase Risk</span>
+            <canvas id="legend-phaseRisk" class="legend-swatch"></canvas>
+            <span class="value-display" id="phaseRisk-val">0.0</span>
             <input type="range" id="phaseRisk" min="0" max="1" step="0.01" value="0.0">
         </label>
         <label>
-            Audio Amp: <span id="audioAmp-val">0.5</span>
+            <span class="label-text">Band Energy</span>
+            <canvas id="legend-bandEnergy" class="legend-swatch"></canvas>
+            <span class="value-display" id="audioAmp-val">0.5</span>
             <input type="range" id="audioAmp" min="0" max="1" step="0.01" value="0.5">
         </label>
     </div>
     
     <script src="audio/analyzer.js"></script>
     <script src="gl/renderer.js"></script>
+    <script src="ui/legend.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

@@ -5,6 +5,7 @@
 
 let renderer;
 let analyzer;
+let legend;
 let startTime;
 let useAudio = false;
 
@@ -39,6 +40,10 @@ async function init() {
         
         // Create audio analyzer
         analyzer = new AudioAnalyzer();
+        
+        // Create visual legend
+        legend = new MetricLegend();
+        setupLegend();
         
         // Wire up controls and audio button
         setupControls();
@@ -83,9 +88,54 @@ function setupControls() {
                     } else {
                         metrics['u_' + key] = value;
                     }
+                    
+                    // Update legend visuals
+                    if (legend) {
+                        legend.update(metrics);
+                    }
                 }
             });
         }
+    });
+}
+
+function setupLegend() {
+    // Get existing canvas elements and set them up
+    const metricMap = {
+        'legend-coherence': 'coherence',
+        'legend-mud': 'mud',
+        'legend-harshness': 'harshness',
+        'legend-compression': 'compression',
+        'legend-collision': 'collision',
+        'legend-phaseRisk': 'phaseRisk',
+        'legend-bandEnergy': 'bandEnergy'
+    };
+    
+    Object.keys(metricMap).forEach(elementId => {
+        const canvas = document.getElementById(elementId);
+        if (canvas) {
+            // Set canvas size
+            canvas.width = 20;
+            canvas.height = 20;
+            canvas.style.width = '20px';
+            canvas.style.height = '20px';
+            canvas.style.border = '1px solid rgba(255,255,255,0.4)';
+            canvas.style.borderRadius = '2px';
+            canvas.style.marginLeft = '4px';
+            canvas.style.marginRight = '4px';
+            canvas.style.imageRendering = 'pixelated';
+            
+            // Store context
+            const ctx = canvas.getContext('2d');
+            const metricName = metricMap[elementId];
+            legend.canvases[metricName] = canvas;
+            legend.ctx[metricName] = ctx;
+        }
+    });
+    
+    // Initial render
+    requestAnimationFrame(() => {
+        legend.update(metrics);
     });
 }
 
@@ -136,6 +186,11 @@ function render() {
             
             // Update UI displays with live values
             updateMetricDisplays(metrics);
+        }
+        
+        // Update legend visuals
+        if (legend) {
+            legend.update(metrics);
         }
         
         // Pass time + resolution + all metrics
