@@ -58,9 +58,15 @@ float coherenceField(vec2 uv) {
     // Add angular bands for frequency separation
     structure += sin(angle * 6.0 + dist * 4.0) * 0.3;
     
+    // Clamp structure to valid range before power operation
+    structure = clamp(structure, 0.0, 1.0);
+    
     // Coherence controls structure sharpness
     float sharpness = mix(0.3, 1.0, u_coherence);
     structure = pow(structure, 1.0 / (sharpness + 0.1));
+    
+    // Ensure structure is visible (scale to reasonable range)
+    structure = structure * 0.8 + 0.2;
     
     return structure;
 }
@@ -148,11 +154,17 @@ float applyPhaseRisk(float value, vec2 uv) {
 }
 
 void main() {
-    // Normalize coordinates to [0, 1] with aspect ratio correction
-    vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+    // Normalize coordinates maintaining aspect ratio for circular patterns
     float aspect = u_resolution.x / u_resolution.y;
-    uv.x *= aspect;
-    uv.x -= (aspect - 1.0) * 0.5;
+    
+    // Get coordinates centered at origin, normalized by height
+    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+    
+    // Adjust X coordinate for aspect ratio to keep circles circular
+    uv.x /= aspect;
+    
+    // Convert to [0, 1] range centered at 0.5
+    uv = uv + 0.5;
     
     // Base coherence field structure
     float field = coherenceField(uv);

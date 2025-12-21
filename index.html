@@ -48,7 +48,10 @@
 <body>
     <canvas id="canvas"></canvas>
     <div id="controls">
-        <h3>Test Controls</h3>
+        <h3>Coherence Canvas</h3>
+        <button id="enable-audio-btn" style="margin-bottom: 10px; padding: 8px 16px; cursor: pointer;">Enable Audio</button>
+        <div id="audio-status" style="margin-bottom: 10px; font-size: 10px; color: #888;">Audio: Disabled</div>
+        <h4>Test Controls</h4>
         <label>
             Coherence: <span id="coherence-val">0.7</span>
             <input type="range" id="coherence" min="0" max="1" step="0.01" value="0.7">
@@ -79,6 +82,7 @@
         </label>
     </div>
     
+    <script src="audio/analyzer.js"></script>
     <script src="gl/renderer.js"></script>
     <script src="main.js"></script>
 </body>
