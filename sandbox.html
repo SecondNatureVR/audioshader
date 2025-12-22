@@ -35,6 +35,8 @@
             padding: 20px;
             color: #fff;
             min-width: 250px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
             z-index: 1000;
         }
         
@@ -119,6 +121,8 @@
         uniform float u_hue;
         uniform float u_scale;
         uniform float u_rotation;
+        uniform float u_autoRotationSpeed;
+        uniform float u_blendOpacity;
 
         // Convert HSV to RGB
         vec3 hsv2rgb(vec3 c) {
@@ -135,8 +139,10 @@
             // Convert to centered coordinates
             vec2 p = (uv - center) * vec2(u_resolution.x / u_resolution.y, 1.0);
             
-            // Rotate coordinates
-            float rotationRad = u_rotation * 3.14159 / 180.0;
+            // Rotate coordinates (manual rotation + auto rotation)
+            float autoRotation = -u_time * u_autoRotationSpeed; // Auto rotation in degrees (reversed direction)
+            float totalRotation = u_rotation + autoRotation;
+            float rotationRad = totalRotation * 3.14159 / 180.0;
             float cosRot = cos(rotationRad);
             float sinRot = sin(rotationRad);
             vec2 rotatedP = vec2(
@@ -171,10 +177,14 @@
             star = min(star, 1.0);
             
             // Convert hue to RGB (hue in degrees, saturation=1.0, value=1.0)
-            vec3 hsv = vec3(u_hue / 360.0, 1.0, 1.0);
+            // Add slow automatic hue shift over time (full cycle every 30 seconds)
+            float autoHueShift = u_time * 12.0; // 360 degrees / 30 seconds = 12 deg/sec
+            float finalHue = mod(u_hue + autoHueShift, 360.0);
+            vec3 hsv = vec3(finalHue / 360.0, 1.0, 1.0);
             vec3 color = hsv2rgb(hsv) * star;
             
-            gl_FragColor = vec4(color, 1.0);
+            // Apply opacity for blend control
+            gl_FragColor = vec4(color, u_blendOpacity);
         }
     </script>
     
@@ -228,8 +238,19 @@
             
             // Fade based on expansion (further from center = more faded)
             float distFromCenter = length(dir);
+            // Use logarithmic fade curve for smoother transitions
+            // Map distance to fade using a power curve for more gradual fade
             float fadeAmount = smoothstep(0.0, 0.8, distFromCenter); // Fade as it expands
-            float fade = 1.0 - fadeAmount * u_fadeAmount; // Use parameterized fade amount
+            // Apply logarithmic fade: fade = 1 - fadeAmount^fadePower
+            // Higher fadeAmount values create more gradual fades
+            float fadePower = 1.0 + u_fadeAmount * 2.0; // Range: 1.0 to 3.0
+            float fade = 1.0 - pow(fadeAmount, fadePower);
+            
+            // Decay factor: reduce brightness over time to prevent accumulation
+            // Estimate age based on distance (further = older = more decay)
+            float ageEstimate = distFromCenter * 2.0; // Rough estimate of "age"
+            float decayRate = 0.98; // Decay 2% per frame (adjustable)
+            float decay = pow(decayRate, ageEstimate); // Exponential decay
             
             // Hue shift based on expansion
             float hueShift = distFromCenter * u_hueShiftAmount; // Use parameterized hue shift
@@ -237,15 +258,30 @@
             // Convert RGB to HSV, shift hue, convert back
             vec3 hsv = rgb2hsv(history.rgb);
             hsv.x = fract(hsv.x + hueShift); // Shift hue (wrap around)
-            hsv.z *= fade; // Apply fade to value
+            hsv.z *= fade * decay; // Apply both fade and decay to value
             vec3 shiftedColor = hsv2rgb(hsv);
             
-            gl_FragColor = vec4(shiftedColor, history.a * fade);
+            // Clamp to prevent overflow from additive blending
+            shiftedColor = clamp(shiftedColor, 0.0, 1.0);
+            
+            gl_FragColor = vec4(shiftedColor, history.a * fade * decay);
         }
     </script>
     
     <div id="dev-toolbox">
         <h3>Dev Controls</h3>
+        
+        <div class="control-group">
+            <label for="preset-select">Preset</label>
+            <select id="preset-select" style="width: 100%; font-size: 11px; padding: 2px; background: #333; color: #eee; border: 1px solid #555;">
+                <option value="">-- Select Preset --</option>
+            </select>
+            <div style="margin-top: 8px; display: flex; gap: 5px;">
+                <input type="text" id="preset-name-input" placeholder="Preset name" style="flex: 1; font-size: 11px; padding: 4px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
+                <button id="save-preset-btn" style="font-size: 11px; padding: 4px 8px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Save</button>
+                <button id="delete-preset-btn" style="font-size: 11px; padding: 4px 8px; background: #a00; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Delete</button>
+            </div>
+        </div>
         
         <div class="control-group">
             <label for="spikes-slider">Number of Spikes</label>
@@ -267,14 +303,26 @@
         
         <div class="control-group">
             <label for="dilation-slider">Dilation Speed</label>
-            <input type="range" id="dilation-slider" min="1.0" max="1.05" value="1.01" step="0.001">
-            <div class="value" id="dilation-value">1.010</div>
+            <input type="range" id="dilation-slider" min="0" max="200" value="20" step="1">
+            <div class="value" id="dilation-value">1.01</div>
         </div>
         
         <div class="control-group">
             <label for="fade-slider">Fade Amount</label>
-            <input type="range" id="fade-slider" min="0.0" max="1.0" value="0.3" step="0.01">
+            <input type="range" id="fade-slider" min="0" max="100" value="30" step="1">
             <div class="value" id="fade-value">0.30</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="emanation-rate-slider">Emanation Rate (per second)</label>
+            <input type="range" id="emanation-rate-slider" min="2" max="30" value="2" step="0.1">
+            <div class="value" id="emanation-rate-value">2.0</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="auto-rotation-slider">Auto Rotation Speed (deg/sec)</label>
+            <input type="range" id="auto-rotation-slider" min="0" max="30" value="30" step="1">
+            <div class="value" id="auto-rotation-value">30°</div>
         </div>
         
         <div class="control-group">
@@ -287,6 +335,23 @@
             <label for="rotation-slider">Star Rotation</label>
             <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
             <div class="value" id="rotation-value">0°</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="blend-mode-select">Blend Mode</label>
+            <select id="blend-mode-select" style="width: 100%; font-size: 11px; padding: 2px; background: #333; color: #eee; border: 1px solid #555;">
+                <option value="additive">Additive</option>
+                <option value="alpha" selected>Alpha Blend</option>
+                <option value="multiply">Multiply</option>
+                <option value="screen">Screen</option>
+                <option value="overlay">Overlay</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label for="blend-opacity-slider">Blend Opacity</label>
+            <input type="range" id="blend-opacity-slider" min="0.0" max="1.0" value="0.3" step="0.01">
+            <div class="value" id="blend-opacity-value">0.30</div>
         </div>
     </div>
     
@@ -464,7 +529,48 @@
                 }
             }
             
-            render(uniforms, dilationFactor, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation) {
+            setBlendMode(mode, opacity) {
+                const gl = this.gl;
+                
+                switch(mode) {
+                    case 'additive':
+                        // Additive: src + dst (bright, accumulates)
+                        gl.blendFunc(gl.ONE, gl.ONE);
+                        gl.blendEquation(gl.FUNC_ADD);
+                        break;
+                    case 'alpha':
+                        // Alpha blend: src * alpha + dst * (1 - alpha)
+                        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                        gl.blendEquation(gl.FUNC_ADD);
+                        break;
+                    case 'multiply':
+                        // Multiply: src * dst (darker)
+                        gl.blendFunc(gl.DST_COLOR, gl.ZERO);
+                        gl.blendEquation(gl.FUNC_ADD);
+                        break;
+                    case 'screen':
+                        // Screen: 1 - (1 - src) * (1 - dst) (lighter)
+                        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
+                        gl.blendEquation(gl.FUNC_ADD);
+                        break;
+                    case 'overlay':
+                        // Overlay: if dst < 0.5: 2 * multiply, else: 2 * screen - 1
+                        // True overlay requires reading destination buffer (not possible with simple blend funcs)
+                        // Approximation: use a combination that's closer to overlay behavior
+                        // Using DST_COLOR with ONE gives multiply-like effect for darker areas
+                        gl.blendFunc(gl.DST_COLOR, gl.ONE);
+                        gl.blendEquation(gl.FUNC_ADD);
+                        break;
+                    default:
+                        gl.blendFunc(gl.ONE, gl.ONE);
+                        gl.blendEquation(gl.FUNC_ADD);
+                }
+                
+                // Apply opacity by modifying blend color (requires shader modification)
+                // For now, opacity affects the shape shader output
+            }
+            
+            render(uniforms, dilationFactor, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation) {
                 const gl = this.gl;
                 const dilationPositionLocation = gl.getAttribLocation(this.dilationProgram, 'a_position');
                 const shapePositionLocation = gl.getAttribLocation(this.program, 'a_position');
@@ -493,23 +599,31 @@
                 gl.clear(gl.COLOR_BUFFER_BIT);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 
-                // Step 2: Always draw current shape on top (current star stays visible)
-                gl.useProgram(this.program);
-                gl.enableVertexAttribArray(shapePositionLocation);
-                gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
-                gl.vertexAttribPointer(shapePositionLocation, 2, gl.FLOAT, false, 0, 0);
-                
-                // Enable additive blending for shape
-                gl.enable(gl.BLEND);
-                gl.blendFunc(gl.ONE, gl.ONE);
-                
-                Object.keys(uniforms).forEach(name => {
-                    this.setUniform(name, uniforms[name]);
-                });
-                this.setUniform('u_resolution', [this.canvas.width, this.canvas.height]);
-                
-                gl.drawArrays(gl.TRIANGLES, 0, 6);
-                gl.disable(gl.BLEND);
+                // Step 2: Draw current shape (only add to history if shouldCaptureShape is true)
+                // This controls the emanation rate - how frequently new shapes are captured
+                if (shouldCaptureShape) {
+                    gl.useProgram(this.program);
+                    gl.enableVertexAttribArray(shapePositionLocation);
+                    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+                    gl.vertexAttribPointer(shapePositionLocation, 2, gl.FLOAT, false, 0, 0);
+                    
+                    // Enable blending with configurable mode
+                    gl.enable(gl.BLEND);
+                    this.setBlendMode(blendMode, blendOpacity);
+                    
+                    Object.keys(uniforms).forEach(name => {
+                        this.setUniform(name, uniforms[name]);
+                    });
+                    this.setUniform('u_resolution', [this.canvas.width, this.canvas.height]);
+                    // For captured shapes: use manual rotation as base offset (no auto-rotation)
+                    // This preserves the rotation offset while freezing the shape
+                    this.setUniform('u_rotation', rotation); // Manual rotation offset
+                    this.setUniform('u_autoRotationSpeed', 0.0); // Disable auto-rotation for captured shapes (they're frozen)
+                    this.setUniform('u_blendOpacity', blendOpacity);
+                    
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+                    gl.disable(gl.BLEND);
+                }
                 
                 // Step 3: Display current texture to screen
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -535,15 +649,17 @@
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
                 gl.vertexAttribPointer(shapePositionLocation, 2, gl.FLOAT, false, 0, 0);
                 
-                // Enable additive blending for shape
+                // Enable blending with configurable mode
                 gl.enable(gl.BLEND);
-                gl.blendFunc(gl.ONE, gl.ONE);
+                this.setBlendMode(blendMode, blendOpacity);
                 
                 Object.keys(uniforms).forEach(name => {
                     this.setUniform(name, uniforms[name]);
                 });
                 this.setUniform('u_resolution', [this.canvas.width, this.canvas.height]);
                 this.setUniform('u_rotation', rotation);
+                this.setUniform('u_autoRotationSpeed', autoRotationSpeed);
+                this.setUniform('u_blendOpacity', blendOpacity);
                 
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disable(gl.BLEND);
@@ -613,15 +729,36 @@
             const fadeValue = document.getElementById('fade-value');
             const hueShiftValue = document.getElementById('hue-shift-value');
             const rotationValue = document.getElementById('rotation-value');
+            const blendModeSelect = document.getElementById('blend-mode-select');
+            const blendOpacitySlider = document.getElementById('blend-opacity-slider');
+            const blendOpacityValue = document.getElementById('blend-opacity-value');
             
             // Current values (initialize from sliders)
             let spikes = parseFloat(spikesSlider.value);
             let hue = parseFloat(hueSlider.value);
             let scale = parseFloat(scaleSlider.value);
-            let dilationSpeed = parseFloat(dilationSlider.value);
-            let fadeAmount = parseFloat(fadeSlider.value);
+            // Initialize dilation speed with exponential mapping
+            // Map slider (0-200) to dilation speed, with middle (100) = 1.0
+            const initialDilationSlider = parseFloat(dilationSlider.value);
+            // Use very steep curve (1/8 power) for super granular control near 1.0
+            // Adjust range so slider value 100 maps to exactly 1.0
+            const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0); // Power value at middle
+            const range = (1.22 - 0.88) / (1.0 - midPower); // Adjusted range
+            const min = 1.0 - midPower * range; // Adjusted minimum
+            let dilationSpeed = min + Math.pow(initialDilationSlider / 200.0, 1.0 / 8.0) * range;
+            // Initialize fade amount with logarithmic mapping
+            const initialFadeSlider = parseFloat(fadeSlider.value);
+            let fadeAmount = Math.pow(initialFadeSlider / 100.0, 1.0 / 3.0);
             let hueShiftAmount = parseFloat(hueShiftSlider.value);
             let rotation = parseFloat(rotationSlider.value);
+            let blendMode = blendModeSelect.value;
+            let blendOpacity = parseFloat(blendOpacitySlider.value);
+            const emanationRateSlider = document.getElementById('emanation-rate-slider');
+            const emanationRateValue = document.getElementById('emanation-rate-value');
+            let emanationRate = parseFloat(emanationRateSlider.value); // Emanations per second
+            const autoRotationSlider = document.getElementById('auto-rotation-slider');
+            const autoRotationValue = document.getElementById('auto-rotation-value');
+            let autoRotationSpeed = parseFloat(autoRotationSlider.value); // Degrees per second
         
             // Update sliders
             spikesSlider.addEventListener('input', (e) => {
@@ -640,13 +777,25 @@
             });
             
             dilationSlider.addEventListener('input', (e) => {
-                dilationSpeed = parseFloat(e.target.value);
-                dilationValue.textContent = dilationSpeed.toFixed(3);
+                // Map slider value (0-200) to dilation speed, with middle (100) = 1.0
+                const sliderValue = parseFloat(e.target.value);
+                // Use very steep curve (1/8 power) for super granular control near 1.0
+                // Adjust range so slider value 100 maps to exactly 1.0
+                const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0); // Power value at middle
+                const range = (1.22 - 0.88) / (1.0 - midPower); // Adjusted range
+                const min = 1.0 - midPower * range; // Adjusted minimum
+                dilationSpeed = min + Math.pow(sliderValue / 200.0, 1.0 / 8.0) * range;
+                dilationValue.textContent = dilationSpeed.toFixed(4); // More decimal places for precision
             });
             
             fadeSlider.addEventListener('input', (e) => {
-                fadeAmount = parseFloat(e.target.value);
-                fadeValue.textContent = fadeAmount.toFixed(2);
+                // Map slider value (0-100) to logarithmic fade amount (0-1)
+                // More granular near 0, less granular near 1
+                const sliderValue = parseFloat(e.target.value);
+                // Use exponential mapping: fadeAmount = (sliderValue/100)^(1/3)
+                // This gives more precision near 0
+                fadeAmount = Math.pow(sliderValue / 100.0, 1.0 / 3.0);
+                fadeValue.textContent = fadeAmount.toFixed(3);
             });
             
             hueShiftSlider.addEventListener('input', (e) => {
@@ -659,30 +808,211 @@
                 rotationValue.textContent = rotation + '°';
             });
             
+            blendModeSelect.addEventListener('change', (e) => {
+                blendMode = e.target.value;
+            });
+            
+            blendOpacitySlider.addEventListener('input', (e) => {
+                blendOpacity = parseFloat(e.target.value);
+                blendOpacityValue.textContent = blendOpacity.toFixed(2);
+            });
+            
+            emanationRateSlider.addEventListener('input', (e) => {
+                emanationRate = parseFloat(e.target.value);
+                emanationRateValue.textContent = emanationRate.toFixed(1);
+            });
+            
+            autoRotationSlider.addEventListener('input', (e) => {
+                autoRotationSpeed = parseFloat(e.target.value);
+                autoRotationValue.textContent = autoRotationSpeed + '°';
+            });
+            
+            // Preset management
+            const presetSelect = document.getElementById('preset-select');
+            const presetNameInput = document.getElementById('preset-name-input');
+            const savePresetBtn = document.getElementById('save-preset-btn');
+            const deletePresetBtn = document.getElementById('delete-preset-btn');
+            
+            // Load presets from localStorage
+            function loadPresets() {
+                const presets = JSON.parse(localStorage.getItem('sandboxPresets') || '{}');
+                presetSelect.innerHTML = '<option value="">-- Select Preset --</option>';
+                Object.keys(presets).forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    presetSelect.appendChild(option);
+                });
+                return presets;
+            }
+            
+            // Save current state as preset
+            function savePreset(name) {
+                if (!name || name.trim() === '') {
+                    alert('Please enter a preset name');
+                    return;
+                }
+                
+                const preset = {
+                    spikes: spikes,
+                    hue: hue,
+                    scale: scale,
+                    dilationSlider: parseFloat(dilationSlider.value), // Store slider value for proper restoration
+                    fadeSlider: parseFloat(fadeSlider.value), // Store slider value for proper restoration
+                    hueShiftAmount: hueShiftAmount,
+                    rotation: rotation,
+                    blendMode: blendMode,
+                    blendOpacity: blendOpacity,
+                    emanationRate: emanationRate,
+                    autoRotationSpeed: autoRotationSpeed
+                };
+                
+                const presets = loadPresets();
+                presets[name] = preset;
+                localStorage.setItem('sandboxPresets', JSON.stringify(presets));
+                loadPresets();
+                presetNameInput.value = '';
+                alert(`Preset "${name}" saved!`);
+            }
+            
+            // Load preset
+            function loadPreset(name) {
+                const presets = loadPresets();
+                if (!presets[name]) {
+                    alert('Preset not found');
+                    return;
+                }
+                
+                const preset = presets[name];
+                
+                // Set all values
+                spikes = preset.spikes;
+                hue = preset.hue;
+                scale = preset.scale;
+                hueShiftAmount = preset.hueShiftAmount;
+                rotation = preset.rotation;
+                blendMode = preset.blendMode;
+                blendOpacity = preset.blendOpacity;
+                emanationRate = preset.emanationRate;
+                autoRotationSpeed = preset.autoRotationSpeed;
+                
+                // Update sliders
+                spikesSlider.value = spikes;
+                spikesValue.textContent = spikes;
+                hueSlider.value = hue;
+                hueValue.textContent = hue + '°';
+                scaleSlider.value = scale;
+                scaleValue.textContent = scale.toFixed(2);
+                dilationSlider.value = preset.dilationSlider || 20;
+                const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                const range = (1.22 - 0.88) / (1.0 - midPower);
+                const min = 1.0 - midPower * range;
+                dilationSpeed = min + Math.pow(parseFloat(dilationSlider.value) / 200.0, 1.0 / 8.0) * range;
+                dilationValue.textContent = dilationSpeed.toFixed(4);
+                fadeSlider.value = preset.fadeSlider || 30;
+                fadeAmount = Math.pow(parseFloat(fadeSlider.value) / 100.0, 1.0 / 3.0);
+                fadeValue.textContent = fadeAmount.toFixed(3);
+                hueShiftSlider.value = hueShiftAmount;
+                hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+                rotationSlider.value = rotation;
+                rotationValue.textContent = rotation + '°';
+                blendModeSelect.value = blendMode;
+                blendOpacitySlider.value = blendOpacity;
+                blendOpacityValue.textContent = blendOpacity.toFixed(2);
+                emanationRateSlider.value = emanationRate;
+                emanationRateValue.textContent = emanationRate.toFixed(1);
+                autoRotationSlider.value = autoRotationSpeed;
+                autoRotationValue.textContent = autoRotationSpeed + '°';
+            }
+            
+            // Delete preset
+            function deletePreset(name) {
+                if (!name || name.trim() === '') {
+                    alert('Please select a preset to delete');
+                    return;
+                }
+                
+                if (!confirm(`Delete preset "${name}"?`)) {
+                    return;
+                }
+                
+                const presets = loadPresets();
+                delete presets[name];
+                localStorage.setItem('sandboxPresets', JSON.stringify(presets));
+                loadPresets();
+                presetSelect.value = '';
+            }
+            
+            // Initialize presets
+            loadPresets();
+            
+            // Load last active preset on page load
+            const lastActivePreset = localStorage.getItem('sandboxLastActivePreset');
+            if (lastActivePreset) {
+                const presets = loadPresets();
+                if (presets[lastActivePreset]) {
+                    presetSelect.value = lastActivePreset;
+                    loadPreset(lastActivePreset);
+                }
+            }
+            
+            // Event listeners
+            presetSelect.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    loadPreset(e.target.value);
+                    localStorage.setItem('sandboxLastActivePreset', e.target.value);
+                }
+            });
+            
+            savePresetBtn.addEventListener('click', () => {
+                const presetName = presetNameInput.value.trim();
+                savePreset(presetName);
+                if (presetName) {
+                    localStorage.setItem('sandboxLastActivePreset', presetName);
+                    presetSelect.value = presetName;
+                }
+            });
+            
+            deletePresetBtn.addEventListener('click', () => {
+                const presetToDelete = presetSelect.value;
+                deletePreset(presetToDelete);
+                if (localStorage.getItem('sandboxLastActivePreset') === presetToDelete) {
+                    localStorage.removeItem('sandboxLastActivePreset');
+                }
+            });
+            
             let startTime = Date.now();
             let lastCaptureTime = 0;
-            const CAPTURE_INTERVAL = 0.5; // 2 per second
+            const TARGET_FPS = 60;
+            const FRAME_TIME = 1000 / TARGET_FPS; // ~16.67ms per frame
             
             function render() {
                 const currentTime = (Date.now() - startTime) / 1000.0;
                 
+                // Calculate capture interval from emanation rate (emanations per second)
+                const captureInterval = 1.0 / emanationRate;
+                
                 // Check if it's time to capture a new shape
-                const shouldCaptureShape = (currentTime - lastCaptureTime) >= CAPTURE_INTERVAL;
+                const shouldCaptureShape = (currentTime - lastCaptureTime) >= captureInterval;
                 if (shouldCaptureShape) {
                     lastCaptureTime = currentTime;
                 }
+                
+                // Calculate total rotation (manual + auto) for capturing
+                // This ensures captured shapes preserve their rotation at capture time
+                const totalRotation = rotation + (currentTime * autoRotationSpeed);
                 
                 renderer.render({
                     u_time: currentTime,
                     u_spikes: spikes,
                     u_hue: hue,
                     u_scale: scale
-                }, dilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation);
-                
-                requestAnimationFrame(render);
+                }, dilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation);
             }
             
-            render();
+            // Use setInterval for fixed 60fps instead of requestAnimationFrame
+            setInterval(render, FRAME_TIME);
+            render(); // Initial render
         })();
     </script>
 </body>
