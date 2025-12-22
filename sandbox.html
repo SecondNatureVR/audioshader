@@ -348,10 +348,45 @@
             vec2 scaledDir = dir / u_expansionFactor; // Scale inward to sample outward
             vec2 sampleUV = scaledDir + center;
             
-            vec4 history = texture2D(u_history, sampleUV);
+            // Check if current pixel is at the center (within small radius)
+            float distFromCenter = length(dir);
+            float centerRadius = 0.002; // Very small radius around center (about 2 pixels at 1000px resolution)
+            
+            vec4 history;
+            if (distFromCenter < centerRadius) {
+                // At center: sample neighboring pixels and average them
+                // Sample 8 neighboring pixels in a ring around center
+                float sampleRadius = 0.003; // Slightly larger radius for neighbors
+                vec4 neighborSum = vec4(0.0);
+                float neighborCount = 0.0;
+                
+                // Sample neighbors in 8 directions
+                for (float angle = 0.0; angle < 6.28318; angle += 0.785398) { // 8 directions (2*PI/8)
+                    vec2 neighborDir = vec2(cos(angle), sin(angle)) * sampleRadius;
+                    vec2 neighborUV = sampleUV + neighborDir;
+                    vec4 neighbor = texture2D(u_history, neighborUV);
+                    neighborSum += neighbor;
+                    neighborCount += 1.0;
+                }
+                
+                // Use average of neighbors, or black if no valid neighbors
+                history = neighborCount > 0.0 ? neighborSum / neighborCount : vec4(0.0, 0.0, 0.0, 0.0);
+            } else {
+                // Check if we're sampling from the center region (prevent center pixels from propagating outward)
+                vec2 sampleDir = sampleUV - center;
+                float sampleDistFromCenter = length(sampleDir);
+                
+                if (sampleDistFromCenter < centerRadius) {
+                    // If sampling from center, use black/transparent to prevent propagation
+                    history = vec4(0.0, 0.0, 0.0, 0.0);
+                } else {
+                    // Normal sampling
+                    history = texture2D(u_history, sampleUV);
+                }
+            }
             
             // Fade based on expansion (further from center = more faded)
-            float distFromCenter = length(dir);
+            // distFromCenter already calculated above
             // Use logarithmic fade curve for smoother transitions
             // Map distance to fade using a power curve for more gradual fade
             float fadeAmount = smoothstep(0.0, 0.8, distFromCenter); // Fade as it expands
@@ -768,6 +803,10 @@
                 const dilationPositionLocation = gl.getAttribLocation(this.dilationProgram, 'a_position');
                 const shapePositionLocation = gl.getAttribLocation(this.program, 'a_position');
                 
+                // Calculate center pixel coordinates for clearing
+                const centerX = Math.floor(this.canvas.width / 2);
+                const centerY = Math.floor(this.canvas.height / 2);
+                
                 // Step 1: Dilation pass - expand history texture
                 gl.bindFramebuffer(gl.FRAMEBUFFER, this.currentFramebuffer);
                 gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -791,6 +830,13 @@
                 gl.clearColor(0, 0, 0, 1);
                 gl.clear(gl.COLOR_BUFFER_BIT);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
+                
+                // Clear center 4 pixels to prevent white accumulation
+                gl.enable(gl.SCISSOR_TEST);
+                gl.scissor(centerX - 1, centerY - 1, 2, 2);
+                gl.clearColor(0, 0, 0, 0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.disable(gl.SCISSOR_TEST);
                 
                 // Step 2: Draw current shape (only add to history if shouldCaptureShape is true)
                 // This controls the emanation rate - how frequently new shapes are captured
