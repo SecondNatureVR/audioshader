@@ -24,6 +24,10 @@ let metrics = {
     u_bandEnergy: [0.5, 0.5, 0.5]
 };
 
+// Frame history for ripple effect (stores last 20 frames)
+const MAX_RIPPLE_HISTORY = 20;
+let rippleHistory = [];
+
 async function init() {
     try {
         const canvas = document.getElementById('canvas');
@@ -33,9 +37,9 @@ async function init() {
         
         renderer = new Renderer(canvas);
         
-        // Initialize renderer with shaders
+        // Initialize renderer with shaders (using water ripple shader)
         console.log('Initializing renderer...');
-        await renderer.init('shaders/vertex.glsl', 'shaders/fragment.glsl');
+        await renderer.init('shaders/vertex.glsl', 'shaders/fragment-water.glsl');
         console.log('Renderer initialized successfully');
         console.log('Starting render loop...');
         
@@ -260,6 +264,40 @@ function render() {
             }
         }
         
+        // Add current frame to ripple history at exactly 3Hz (every ~0.333 seconds)
+        const RIPPLE_RATE = 1.0 / 3.0; // 3 times per second
+        const shouldAddFrame = rippleHistory.length === 0 || 
+                              (currentTime - rippleHistory[rippleHistory.length - 1].time) >= RIPPLE_RATE;
+        
+        if (shouldAddFrame) {
+            rippleHistory.push({
+                time: currentTime,
+                amp: metrics.u_audioAmp,
+                bandEnergy: [...metrics.u_bandEnergy],
+                coherence: metrics.u_coherence,
+                mud: metrics.u_mud,
+                harshness: metrics.u_harshness,
+                compression: metrics.u_compression,
+                collision: metrics.u_collision,
+                phaseRisk: metrics.u_phaseRisk
+            });
+            
+            // Keep only last N frames
+            if (rippleHistory.length > MAX_RIPPLE_HISTORY) {
+                rippleHistory.shift();
+            }
+        }
+        
+        // Debug: log ripple history occasionally
+        if (frameCount % 120 === 0 && rippleHistory.length > 0) {
+            console.log('Ripple history:', {
+                count: rippleHistory.length,
+                oldest: rippleHistory[0].time,
+                newest: rippleHistory[rippleHistory.length - 1].time,
+                ageRange: currentTime - rippleHistory[0].time
+            });
+        }
+        
         // Update legend visuals
         if (legend) {
             legend.update(metrics);
@@ -270,12 +308,65 @@ function render() {
             meters.updateAll(metrics);
         }
         
-        // Pass time + resolution + all metrics
+        // Prepare ripple data arrays (always MAX_RIPPLE_HISTORY length for shader)
+        const rippleTimes = new Float32Array(MAX_RIPPLE_HISTORY);
+        const rippleAmps = new Float32Array(MAX_RIPPLE_HISTORY);
+        const rippleBandEnergy = new Array(MAX_RIPPLE_HISTORY);
+        const rippleCoherence = new Float32Array(MAX_RIPPLE_HISTORY);
+        const rippleMud = new Float32Array(MAX_RIPPLE_HISTORY);
+        const rippleHarshness = new Float32Array(MAX_RIPPLE_HISTORY);
+        const rippleCompression = new Float32Array(MAX_RIPPLE_HISTORY);
+        const rippleCollision = new Float32Array(MAX_RIPPLE_HISTORY);
+        const ripplePhaseRisk = new Float32Array(MAX_RIPPLE_HISTORY);
+        
+        // Fill arrays with history data
+        for (let i = 0; i < MAX_RIPPLE_HISTORY; i++) {
+            if (i < rippleHistory.length) {
+                const frame = rippleHistory[i];
+                rippleTimes[i] = frame.time;
+                rippleAmps[i] = frame.amp;
+                rippleBandEnergy[i] = frame.bandEnergy;
+                rippleCoherence[i] = frame.coherence;
+                rippleMud[i] = frame.mud;
+                rippleHarshness[i] = frame.harshness;
+                rippleCompression[i] = frame.compression;
+                rippleCollision[i] = frame.collision;
+                ripplePhaseRisk[i] = frame.phaseRisk;
+            } else {
+                // Fill with zeros for unused slots
+                rippleTimes[i] = 0;
+                rippleAmps[i] = 0;
+                rippleBandEnergy[i] = [0, 0, 0];
+                rippleCoherence[i] = 0;
+                rippleMud[i] = 0;
+                rippleHarshness[i] = 0;
+                rippleCompression[i] = 0;
+                rippleCollision[i] = 0;
+                ripplePhaseRisk[i] = 0;
+            }
+        }
+        
+        const rippleData = {
+            u_rippleCount: rippleHistory.length,
+            u_rippleTimes: Array.from(rippleTimes),
+            u_rippleAmps: Array.from(rippleAmps),
+            u_rippleBandEnergy: rippleBandEnergy,
+            u_rippleCoherence: Array.from(rippleCoherence),
+            u_rippleMud: Array.from(rippleMud),
+            u_rippleHarshness: Array.from(rippleHarshness),
+            u_rippleCompression: Array.from(rippleCompression),
+            u_rippleCollision: Array.from(rippleCollision),
+            u_ripplePhaseRisk: Array.from(ripplePhaseRisk)
+        };
+        
+        // Pass time + resolution + all metrics + ripple history
         renderer.render({
             u_time: currentTime,
-            ...metrics
+            ...metrics,
+            ...rippleData
         });
         
+        frameCount++;
         requestAnimationFrame(render);
     } catch (err) {
         console.error('Render error:', err);

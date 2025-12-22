@@ -110,7 +110,18 @@ class Renderer {
             // Spatial metrics (v2)
             'u_stereoWidth',
             'u_panPosition',
-            'u_spatialDepth'
+            'u_spatialDepth',
+            // Ripple history
+            'u_rippleCount',
+            'u_rippleTimes[0]',
+            'u_rippleAmps[0]',
+            'u_rippleBandEnergy[0]',
+            'u_rippleCoherence[0]',
+            'u_rippleMud[0]',
+            'u_rippleHarshness[0]',
+            'u_rippleCompression[0]',
+            'u_rippleCollision[0]',
+            'u_ripplePhaseRisk[0]'
         ];
         
         uniformNames.forEach(name => {
@@ -154,6 +165,53 @@ class Renderer {
     
     setUniform(name, value) {
         const gl = this.gl;
+        
+        // Handle array uniforms (ripple history)
+        if (name.startsWith('u_ripple') && Array.isArray(value) && value.length > 0) {
+            // For array uniforms in GLSL, we need to get location using [0] syntax
+            let baseName = name;
+            if (!baseName.includes('[')) {
+                // If name doesn't have brackets, add [0]
+                baseName = name + '[0]';
+            } else {
+                // Replace any index with [0]
+                baseName = name.replace(/\[\d+\]$/, '[0]');
+            }
+            
+            const location = gl.getUniformLocation(this.program, baseName);
+            
+            if (location === null) {
+                // Debug: log missing uniform
+                if (name === 'u_rippleTimes' || name === 'u_rippleAmps') {
+                    console.warn(`Ripple uniform not found: ${baseName}`);
+                }
+                return; // Uniform doesn't exist
+            }
+            
+            // Determine array type and set
+            if (name.includes('Times') || name.includes('Amps') || 
+                name.includes('Coherence') || name.includes('Mud') || 
+                name.includes('Harshness') || name.includes('Compression') || 
+                name.includes('Collision') || name.includes('PhaseRisk')) {
+                // Float array
+                const floatArray = new Float32Array(value);
+                gl.uniform1fv(location, floatArray);
+            } else if (name.includes('BandEnergy')) {
+                // Vec3 array - need to flatten
+                const flatArray = new Float32Array(value.length * 3);
+                for (let i = 0; i < value.length; i++) {
+                    if (Array.isArray(value[i]) && value[i].length >= 3) {
+                        flatArray[i * 3] = value[i][0];
+                        flatArray[i * 3 + 1] = value[i][1];
+                        flatArray[i * 3 + 2] = value[i][2];
+                    }
+                }
+                gl.uniform3fv(location, flatArray);
+            }
+            return;
+        }
+        
+        // Handle regular uniforms
         const location = this.uniformLocations[name];
         
         if (location === null || location === undefined) {
