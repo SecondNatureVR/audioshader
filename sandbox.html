@@ -270,10 +270,222 @@
             cursor: pointer;
             border: none;
         }
+        
+        /* Curve Editor Styles */
+        .curve-btn {
+            display: none; /* Hidden by default */
+            width: 18px;
+            height: 18px;
+            margin-left: 6px;
+            cursor: pointer;
+            vertical-align: middle;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            color: #aaa;
+            font-size: 14px;
+            line-height: 16px;
+            text-align: center;
+            user-select: none;
+            font-weight: bold;
+        }
+        
+        /* Show curve button on hover of control-group */
+        .control-group:hover .curve-btn {
+            display: inline-block;
+        }
+        
+        .curve-btn:hover {
+            background: #444;
+            border-color: #0af;
+            color: #0af;
+        }
+        
+        .curve-editor-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .curve-editor-overlay.active {
+            display: flex;
+        }
+        
+        .curve-editor {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            min-width: 500px;
+            max-width: 600px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .curve-editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .curve-editor-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .curve-editor-close {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            line-height: 1;
+        }
+        
+        .curve-editor-close:hover {
+            color: #fff;
+        }
+        
+        .curve-canvas-container {
+            position: relative;
+            margin: 15px 0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #0a0a0a;
+        }
+        
+        .curve-canvas {
+            display: block;
+            width: 100%;
+            height: 300px;
+            cursor: crosshair;
+        }
+        
+        .curve-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .curve-control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .curve-control-group label {
+            font-size: 11px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .curve-control-group input[type="number"] {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 100%;
+        }
+        
+        .curve-control-group input[type="number"]:focus {
+            outline: none;
+            border-color: #0af;
+        }
+        
+        .curve-power-slider {
+            margin-top: 10px;
+        }
+        
+        .curve-power-slider label {
+            display: block;
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        
+        .curve-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: flex-end;
+        }
+        
+        .curve-btn-action {
+            padding: 6px 12px;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .curve-btn-action:hover {
+            background: #444;
+            border-color: #666;
+        }
+        
+        .curve-btn-primary {
+            background: #0af;
+            border-color: #0af;
+        }
+        
+        .curve-btn-primary:hover {
+            background: #1bf;
+        }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    
+    <!-- Curve Editor Overlay -->
+    <div id="curve-editor-overlay" class="curve-editor-overlay">
+        <div class="curve-editor">
+            <div class="curve-editor-header">
+                <div class="curve-editor-title" id="curve-editor-title">Parameter Curve Editor</div>
+                <button class="curve-editor-close" id="curve-editor-close">&times;</button>
+            </div>
+            <div class="curve-canvas-container">
+                <canvas id="curve-canvas" class="curve-canvas"></canvas>
+            </div>
+            <div class="curve-controls">
+                <div class="curve-control-group">
+                    <label>Min Value</label>
+                    <input type="number" id="curve-min" step="any" value="0">
+                </div>
+                <div class="curve-control-group">
+                    <label>Max Value</label>
+                    <input type="number" id="curve-max" step="any" value="1">
+                </div>
+            </div>
+            <div class="curve-power-slider">
+                <label>Curve Power (exponent): <span id="curve-power-value">1.0</span></label>
+                <input type="range" id="curve-power" min="0.1" max="5" step="0.1" value="1.0">
+            </div>
+            <div class="curve-actions">
+                <button class="curve-btn-action" id="curve-reset">Reset</button>
+                <button class="curve-btn-action" id="curve-apply">Apply</button>
+                <button class="curve-btn-action curve-btn-primary" id="curve-close">Done</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Shader scripts (embedded to avoid CORS issues) -->
     <script id="star-vertex-shader" type="x-shader/x-vertex">
@@ -612,7 +824,7 @@
         
         <div class="section-header">Shape</div>
         <div class="control-group">
-            <label for="spikiness-slider">Spikiness</label>
+            <label for="spikiness-slider">Spikiness<span class="curve-btn" data-param="spikiness" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="spikiness-slider" min="0" max="100" value="50" step="1">
                 <div class="value" contenteditable="true" id="spikiness-value">0.50</div>
@@ -620,7 +832,7 @@
         </div>
         
         <div class="control-group">
-            <label for="spike-frequency-slider">Frequency</label>
+            <label for="spike-frequency-slider">Frequency<span class="curve-btn" data-param="spikeFrequency" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="spike-frequency-slider" min="2" max="20" value="5" step="0.1">
                 <div class="value" contenteditable="true" id="spike-frequency-value">5.0</div>
@@ -628,7 +840,7 @@
         </div>
         
         <div class="control-group">
-            <label for="spike-sharpness-slider">Sharpness</label>
+            <label for="spike-sharpness-slider">Sharpness<span class="curve-btn" data-param="spikeSharpness" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="spike-sharpness-slider" min="0" max="100" value="0" step="1">
                 <div class="value" contenteditable="true" id="spike-sharpness-value">0.00</div>
@@ -638,7 +850,7 @@
         <div class="section-header">Appearance</div>
         <div class="two-column">
             <div class="control-group">
-                <label for="hue-slider">Hue</label>
+                <label for="hue-slider">Hue<span class="curve-btn" data-param="hue" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="hue-slider" min="0" max="360" value="45" step="1">
                     <div class="value" contenteditable="true" id="hue-value">45°</div>
@@ -646,7 +858,7 @@
             </div>
             
             <div class="control-group">
-                <label for="scale-slider">Scale</label>
+                <label for="scale-slider">Scale<span class="curve-btn" data-param="scale" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="scale-slider" min="0.05" max="1.0" value="0.2" step="0.01">
                     <div class="value" contenteditable="true" id="scale-value">0.20</div>
@@ -656,7 +868,7 @@
         
         <div class="two-column">
             <div class="control-group">
-                <label for="fill-size-slider">Fill Size</label>
+                <label for="fill-size-slider">Fill Size<span class="curve-btn" data-param="fillSize" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="fill-size-slider" min="0" max="100" value="0" step="1">
                     <div class="value" contenteditable="true" id="fill-size-value">0.00</div>
@@ -664,7 +876,7 @@
             </div>
             
             <div class="control-group">
-                <label for="fill-opacity-slider">Fill Opacity</label>
+                <label for="fill-opacity-slider">Fill Opacity<span class="curve-btn" data-param="fillOpacity" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="fill-opacity-slider" min="0" max="100" value="60" step="1">
                     <div class="value" contenteditable="true" id="fill-opacity-value">0.60</div>
@@ -674,7 +886,7 @@
         
         <div class="section-header">Emanation</div>
         <div class="control-group">
-            <label for="dilation-slider">Dilation Speed</label>
+            <label for="dilation-slider">Dilation Speed<span class="curve-btn" data-param="dilationSpeed" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="dilation-slider" min="0" max="200" value="20" step="1">
                 <div class="value" contenteditable="true" id="dilation-value">1.01</div>
@@ -682,7 +894,7 @@
         </div>
         
         <div class="control-group">
-            <label for="fade-slider">Fade Amount</label>
+            <label for="fade-slider">Fade Amount<span class="curve-btn" data-param="fadeAmount" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="fade-slider" min="0" max="100" value="30" step="1">
                 <div class="value" contenteditable="true" id="fade-value">0.30</div>
@@ -690,7 +902,7 @@
         </div>
         
         <div class="control-group">
-            <label for="emanation-rate-slider">Rate (per sec)</label>
+            <label for="emanation-rate-slider">Rate (per sec)<span class="curve-btn" data-param="emanationRate" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="emanation-rate-slider" min="2" max="200" value="2" step="0.1">
                 <div class="value" contenteditable="true" id="emanation-rate-value">2.0</div>
@@ -700,7 +912,7 @@
         <div class="section-header">Filters</div>
         <div class="two-column">
             <div class="control-group">
-                <label for="noise-amount-slider">Noise Amount</label>
+                <label for="noise-amount-slider">Noise Amount<span class="curve-btn" data-param="noiseAmount" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="noise-amount-slider" min="0" max="100" value="0" step="1">
                     <div class="value" contenteditable="true" id="noise-amount-value">0.00</div>
@@ -708,7 +920,7 @@
             </div>
             
             <div class="control-group">
-                <label for="noise-rate-slider">Noise Rate (1.0 = every 2s)</label>
+                <label for="noise-rate-slider">Noise Rate (1.0 = every 2s)<span class="curve-btn" data-param="noiseRate" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="noise-rate-slider" min="0" max="100" value="0" step="0.1">
                     <div class="value" contenteditable="true" id="noise-rate-value">0.0</div>
@@ -716,7 +928,7 @@
             </div>
             
             <div class="control-group">
-                <label for="blur-amount-slider">Blur Amount</label>
+                <label for="blur-amount-slider">Blur Amount<span class="curve-btn" data-param="blurAmount" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="blur-amount-slider" min="0" max="100" value="0" step="1">
                     <div class="value" contenteditable="true" id="blur-amount-value">0.00</div>
@@ -724,7 +936,7 @@
             </div>
             
             <div class="control-group">
-                <label for="blur-rate-slider">Blur Rate (1.0 = every 2s)</label>
+                <label for="blur-rate-slider">Blur Rate (1.0 = every 2s)<span class="curve-btn" data-param="blurRate" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="blur-rate-slider" min="0" max="100" value="0" step="0.1">
                     <div class="value" contenteditable="true" id="blur-rate-value">0.0</div>
@@ -735,7 +947,7 @@
         <div class="section-header">Rotation</div>
         <div class="two-column">
             <div class="control-group">
-                <label for="rotation-slider">Manual</label>
+                <label for="rotation-slider">Manual<span class="curve-btn" data-param="rotation" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
                     <div class="value" contenteditable="true" id="rotation-value">0°</div>
@@ -743,7 +955,7 @@
             </div>
             
             <div class="control-group">
-                <label for="auto-rotation-slider">Auto (deg/s)</label>
+                <label for="auto-rotation-slider">Auto (deg/s)<span class="curve-btn" data-param="autoRotationSpeed" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="auto-rotation-slider" min="0" max="200" value="50" step="1">
                     <div class="value" contenteditable="true" id="auto-rotation-value">30°</div>
@@ -754,7 +966,7 @@
         <div class="section-header">Effects</div>
         <div class="two-column">
             <div class="control-group">
-                <label for="hue-shift-slider">Hue Shift</label>
+                <label for="hue-shift-slider">Hue Shift<span class="curve-btn" data-param="hueShiftAmount" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="hue-shift-slider" min="0.0" max="0.2" value="0.05" step="0.001">
                     <div class="value" contenteditable="true" id="hue-shift-value">0.050</div>
@@ -762,7 +974,7 @@
             </div>
             
             <div class="control-group">
-                <label for="blend-opacity-slider">Opacity</label>
+                <label for="blend-opacity-slider">Opacity<span class="curve-btn" data-param="blendOpacity" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="blend-opacity-slider" min="0.0" max="1.0" value="0.3" step="0.01">
                     <div class="value" contenteditable="true" id="blend-opacity-value">0.30</div>
@@ -787,7 +999,7 @@
                 <button id="randomize-btn" style="flex: 1; font-size: 10px; padding: 6px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: 500;">Randomize</button>
                 <button id="jiggle-btn" style="flex: 1; font-size: 10px; padding: 6px; background: #a0a; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: 500;">Jiggle</button>
             </div>
-            <label for="jiggle-amount-slider">Jiggle Amount</label>
+            <label for="jiggle-amount-slider">Jiggle Amount<span class="curve-btn" data-param="jiggleAmount" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="jiggle-amount-slider" min="0" max="100" value="10" step="1">
                 <div class="value" contenteditable="true" id="jiggle-amount-value">10%</div>
@@ -1167,6 +1379,319 @@
         
         const { renderer, canvas } = init();
         
+        // Curve Editor System
+        (() => {
+            const curveEditorOverlay = document.getElementById('curve-editor-overlay');
+            const curveEditorClose = document.getElementById('curve-editor-close');
+            const curveCanvas = document.getElementById('curve-canvas');
+            const curveCtx = curveCanvas.getContext('2d');
+            const curveMinInput = document.getElementById('curve-min');
+            const curveMaxInput = document.getElementById('curve-max');
+            const curvePowerSlider = document.getElementById('curve-power');
+            const curvePowerValue = document.getElementById('curve-power-value');
+            const curveEditorTitle = document.getElementById('curve-editor-title');
+            const curveResetBtn = document.getElementById('curve-reset');
+            const curveApplyBtn = document.getElementById('curve-apply');
+            const curveDoneBtn = document.getElementById('curve-close');
+            
+            let currentParam = null;
+            let curveSettings = {}; // Store curve settings per parameter
+            let isDragging = false;
+            let dragStartX = 0;
+            let dragStartY = 0;
+            
+            // Default curve settings
+            function getDefaultCurveSettings() {
+                return {
+                    min: 0,
+                    max: 1,
+                    power: 1.0, // Linear by default
+                    type: 'power' // 'power' for exponential, could extend to 'bezier' later
+                };
+            }
+            
+            // Parameter-specific default settings
+            function getParamDefaultSettings(paramName) {
+                const defaults = {
+                    // Shape parameters (0-1 range)
+                    'spikiness': { min: 0, max: 1, power: 1.0 },
+                    'spikeSharpness': { min: 0, max: 1, power: 1.0 },
+                    'fillSize': { min: 0, max: 1, power: 1.0 },
+                    'fillOpacity': { min: 0, max: 1, power: 1.0 },
+                    'blendOpacity': { min: 0, max: 1, power: 1.0 },
+                    'jiggleAmount': { min: 0, max: 1, power: 1.0 },
+                    
+                    // Frequency parameters
+                    'spikeFrequency': { min: 2, max: 20, power: 1.0 },
+                    
+                    // Angle parameters
+                    'hue': { min: 0, max: 360, power: 1.0 },
+                    'rotation': { min: 0, max: 360, power: 1.0 },
+                    
+                    // Scale parameters
+                    'scale': { min: 0.05, max: 1.0, power: 1.0 },
+                    
+                    // Rate parameters (with exponential curves)
+                    'emanationRate': { min: 2, max: 200, power: 1.0 },
+                    'noiseRate': { min: 0, max: 10, power: 0.333 }, // Exponential (1/3 power)
+                    'blurRate': { min: 0, max: 10, power: 0.333 }, // Exponential (1/3 power)
+                    'autoRotationSpeed': { min: -1, max: 360, power: 0.5 }, // Exponential (0.5 power, range -1 to 360)
+                    
+                    // Amount parameters (with exponential curves)
+                    'noiseAmount': { min: 0, max: 1, power: 0.25 }, // Exponential (1/4 power)
+                    'blurAmount': { min: 0, max: 1, power: 0.25 }, // Exponential (1/4 power)
+                    'fadeAmount': { min: 0, max: 5, power: 0.333 }, // Exponential (1/3 power, range 0-5)
+                    'hueShiftAmount': { min: 0, max: 0.2, power: 1.0 },
+                    
+                    // Dilation speed (complex mapping - approximate with range)
+                    'dilationSpeed': { min: 0.88, max: 1.22, power: 0.125 }, // Very slow exponential (1/8 power)
+                };
+                return defaults[paramName] || null;
+            }
+            
+            // Get or create curve settings for a parameter
+            function getCurveSettings(paramName) {
+                if (!curveSettings[paramName]) {
+                    // Start with parameter-specific defaults if available
+                    const paramDefaults = getParamDefaultSettings(paramName);
+                    curveSettings[paramName] = { ...getDefaultCurveSettings(), ...(paramDefaults || {}) };
+                    // Load from localStorage if available (overrides defaults)
+                    const saved = localStorage.getItem(`curve_${paramName}`);
+                    if (saved) {
+                        try {
+                            curveSettings[paramName] = { ...curveSettings[paramName], ...JSON.parse(saved) };
+                        } catch (e) {
+                            console.warn('Failed to load curve settings for', paramName);
+                        }
+                    }
+                }
+                return curveSettings[paramName];
+            }
+            
+            // Save curve settings
+            function saveCurveSettings(paramName) {
+                if (curveSettings[paramName]) {
+                    localStorage.setItem(`curve_${paramName}`, JSON.stringify(curveSettings[paramName]));
+                }
+            }
+            
+            // Map slider value (0-100) to output using curve
+            function mapValue(sliderValue, settings) {
+                if (!settings) settings = getDefaultCurveSettings();
+                const normalized = sliderValue / 100.0;
+                const curved = Math.pow(normalized, settings.power);
+                return settings.min + curved * (settings.max - settings.min);
+            }
+            
+            // Reverse map: output value to slider (0-100)
+            function reverseMapValue(outputValue, settings) {
+                if (!settings) settings = getDefaultCurveSettings();
+                const normalized = (outputValue - settings.min) / (settings.max - settings.min);
+                if (normalized <= 0) return 0;
+                if (normalized >= 1) return 100;
+                const curved = Math.pow(normalized, 1.0 / settings.power);
+                return curved * 100;
+            }
+            
+            // Draw curve on canvas
+            function drawCurve() {
+                const width = curveCanvas.width = curveCanvas.offsetWidth;
+                const height = curveCanvas.height = curveCanvas.offsetHeight;
+                const padding = 40;
+                const w = width - padding * 2;
+                const h = height - padding * 2;
+                
+                curveCtx.clearRect(0, 0, width, height);
+                curveCtx.fillStyle = '#0a0a0a';
+                curveCtx.fillRect(0, 0, width, height);
+                
+                const settings = currentParam ? getCurveSettings(currentParam) : getDefaultCurveSettings();
+                
+                // Draw grid
+                curveCtx.strokeStyle = '#222';
+                curveCtx.lineWidth = 1;
+                for (let i = 0; i <= 10; i++) {
+                    const x = padding + (w * i / 10);
+                    const y = padding + (h * i / 10);
+                    curveCtx.beginPath();
+                    curveCtx.moveTo(x, padding);
+                    curveCtx.lineTo(x, padding + h);
+                    curveCtx.stroke();
+                    curveCtx.beginPath();
+                    curveCtx.moveTo(padding, y);
+                    curveCtx.lineTo(padding + w, y);
+                    curveCtx.stroke();
+                }
+                
+                // Draw axes
+                curveCtx.strokeStyle = '#555';
+                curveCtx.lineWidth = 2;
+                curveCtx.beginPath();
+                curveCtx.moveTo(padding, padding);
+                curveCtx.lineTo(padding, padding + h);
+                curveCtx.lineTo(padding + w, padding + h);
+                curveCtx.stroke();
+                
+                // Draw curve
+                curveCtx.strokeStyle = '#0af';
+                curveCtx.lineWidth = 2;
+                curveCtx.beginPath();
+                for (let i = 0; i <= 100; i++) {
+                    const x = padding + (w * i / 100);
+                    const normalized = i / 100.0;
+                    const curved = Math.pow(normalized, settings.power);
+                    const outputValue = settings.min + curved * (settings.max - settings.min);
+                    const normalizedOutput = (outputValue - settings.min) / (settings.max - settings.min);
+                    const y = padding + h - (normalizedOutput * h);
+                    if (i === 0) {
+                        curveCtx.moveTo(x, y);
+                    } else {
+                        curveCtx.lineTo(x, y);
+                    }
+                }
+                curveCtx.stroke();
+                
+                // Draw current slider position if applicable
+                if (currentParam) {
+                    const slider = document.getElementById(`${currentParam}-slider`);
+                    if (slider) {
+                        const sliderValue = parseFloat(slider.value);
+                        const x = padding + (w * sliderValue / 100);
+                        const output = mapValue(sliderValue, settings);
+                        const normalizedOutput = (output - settings.min) / (settings.max - settings.min);
+                        const y = padding + h - (normalizedOutput * h);
+                        
+                        curveCtx.fillStyle = '#ff0';
+                        curveCtx.beginPath();
+                        curveCtx.arc(x, y, 5, 0, Math.PI * 2);
+                        curveCtx.fill();
+                    }
+                }
+                
+                // Draw labels
+                curveCtx.fillStyle = '#aaa';
+                curveCtx.font = '10px monospace';
+                curveCtx.textAlign = 'center';
+                curveCtx.fillText('Input (0-100)', padding + w / 2, height - 10);
+                curveCtx.save();
+                curveCtx.translate(15, padding + h / 2);
+                curveCtx.rotate(-Math.PI / 2);
+                curveCtx.fillText('Output', 0, 0);
+                curveCtx.restore();
+                
+                // Draw min/max labels
+                curveCtx.fillStyle = '#888';
+                curveCtx.font = '9px monospace';
+                curveCtx.textAlign = 'right';
+                curveCtx.fillText(settings.max.toFixed(2), padding - 10, padding + 5);
+                curveCtx.fillText(settings.min.toFixed(2), padding - 10, padding + h + 5);
+                curveCtx.textAlign = 'left';
+                curveCtx.fillText('0', padding + 5, height - 10);
+                curveCtx.fillText('100', padding + w - 25, height - 10);
+            }
+            
+            // Open curve editor for a parameter
+            function openCurveEditor(paramName) {
+                currentParam = paramName;
+                const settings = getCurveSettings(paramName);
+                
+                // Update UI
+                const paramLabel = document.querySelector(`[data-param="${paramName}"]`)?.parentElement?.textContent || paramName;
+                curveEditorTitle.textContent = `Curve Editor: ${paramLabel}`;
+                curveMinInput.value = settings.min;
+                curveMaxInput.value = settings.max;
+                curvePowerSlider.value = settings.power;
+                curvePowerValue.textContent = settings.power.toFixed(2);
+                
+                // Show editor
+                curveEditorOverlay.classList.add('active');
+                drawCurve();
+                
+                // Update canvas on resize
+                window.addEventListener('resize', drawCurve);
+            }
+            
+            // Close curve editor
+            function closeCurveEditor() {
+                curveEditorOverlay.classList.remove('active');
+                currentParam = null;
+                window.removeEventListener('resize', drawCurve);
+            }
+            
+            // Apply curve settings
+            function applyCurveSettings() {
+                if (!currentParam) return;
+                
+                const settings = getCurveSettings(currentParam);
+                settings.min = parseFloat(curveMinInput.value) || 0;
+                settings.max = parseFloat(curveMaxInput.value) || 1;
+                settings.power = parseFloat(curvePowerSlider.value) || 1.0;
+                
+                // Ensure min < max
+                if (settings.min >= settings.max) {
+                    settings.max = settings.min + 0.01;
+                    curveMaxInput.value = settings.max;
+                }
+                
+                saveCurveSettings(currentParam);
+                drawCurve();
+                
+                // Trigger update of current slider value
+                const slider = document.getElementById(`${currentParam}-slider`);
+                if (slider && slider.oninput) {
+                    slider.oninput({ target: slider });
+                }
+            }
+            
+            // Reset curve to default
+            function resetCurve() {
+                if (!currentParam) return;
+                curveSettings[currentParam] = getDefaultCurveSettings();
+                curveMinInput.value = curveSettings[currentParam].min;
+                curveMaxInput.value = curveSettings[currentParam].max;
+                curvePowerSlider.value = curveSettings[currentParam].power;
+                curvePowerValue.textContent = curveSettings[currentParam].power.toFixed(2);
+                drawCurve();
+            }
+            
+            // Event listeners
+            curveEditorClose.addEventListener('click', closeCurveEditor);
+            curveDoneBtn.addEventListener('click', () => {
+                applyCurveSettings();
+                closeCurveEditor();
+            });
+            curveApplyBtn.addEventListener('click', applyCurveSettings);
+            curveResetBtn.addEventListener('click', resetCurve);
+            
+            curveMinInput.addEventListener('input', () => {
+                applyCurveSettings();
+            });
+            
+            curveMaxInput.addEventListener('input', () => {
+                applyCurveSettings();
+            });
+            
+            curvePowerSlider.addEventListener('input', (e) => {
+                curvePowerValue.textContent = parseFloat(e.target.value).toFixed(2);
+                applyCurveSettings();
+            });
+            
+            // Click outside to close
+            curveEditorOverlay.addEventListener('click', (e) => {
+                if (e.target === curveEditorOverlay) {
+                    closeCurveEditor();
+                }
+            });
+            
+            // Make curve editor available globally
+            window.CurveEditor = {
+                open: openCurveEditor,
+                mapValue: mapValue,
+                reverseMapValue: reverseMapValue,
+                getCurveSettings: getCurveSettings
+            };
+        })();
+        
         (() => {
             // Get slider elements
             const spikinessSlider = document.getElementById('spikiness-slider');
@@ -1435,45 +1960,97 @@
                 }
             }
             
+            // Helper function to map slider value using curve editor
+            function mapParamValue(paramName, sliderValue, sliderMax = 100) {
+                const settings = window.CurveEditor?.getCurveSettings(paramName);
+                if (settings && window.CurveEditor) {
+                    // Normalize slider value to 0-100 range
+                    const normalized = (sliderValue / sliderMax) * 100;
+                    return window.CurveEditor.mapValue(normalized, settings);
+                }
+                return null; // Will fall back to original mapping
+            }
+            
+            // Helper function to reverse map value to slider using curve editor
+            function reverseMapParamValue(paramName, value, sliderMax = 100) {
+                const settings = window.CurveEditor?.getCurveSettings(paramName);
+                if (settings && window.CurveEditor) {
+                    const sliderValue = window.CurveEditor.reverseMapValue(value, settings);
+                    // Convert from 0-100 range to actual slider range
+                    return (sliderValue / 100.0) * sliderMax;
+                }
+                return null; // Will fall back to original mapping
+            }
+            
             // Current values (initialize from sliders, or from preset if one was loaded)
-            let spikiness = parseFloat(spikinessSlider.value) / 100.0; // Convert 0-100 to 0-1
-            let spikeFrequency = parseFloat(spikeFrequencySlider.value);
-            let spikeSharpness = parseFloat(spikeSharpnessSlider.value) / 100.0; // Convert 0-100 to 0-1
-            let hue = parseFloat(hueSlider.value);
-            let scale = parseFloat(scaleSlider.value);
-            // Initialize dilation speed with exponential mapping
-            // Map slider (0-200) to dilation speed, with middle (100) = 1.0
+            const initialSpikinessSlider = parseFloat(spikinessSlider.value);
+            let spikiness = mapParamValue('spikiness', initialSpikinessSlider) ?? (initialSpikinessSlider / 100.0);
+            
+            const initialSpikeFrequencySlider = parseFloat(spikeFrequencySlider.value);
+            let spikeFrequency = mapParamValue('spikeFrequency', initialSpikeFrequencySlider, 20) ?? initialSpikeFrequencySlider;
+            
+            const initialSpikeSharpnessSlider = parseFloat(spikeSharpnessSlider.value);
+            let spikeSharpness = mapParamValue('spikeSharpness', initialSpikeSharpnessSlider) ?? (initialSpikeSharpnessSlider / 100.0);
+            
+            const initialHueSlider = parseFloat(hueSlider.value);
+            let hue = mapParamValue('hue', initialHueSlider, 360) ?? initialHueSlider;
+            
+            const initialScaleSlider = parseFloat(scaleSlider.value);
+            let scale = mapParamValue('scale', initialScaleSlider, 1.0) ?? initialScaleSlider;
+            
+            // Initialize dilation speed
             const initialDilationSlider = parseFloat(dilationSlider.value);
-            // Use very steep curve (1/8 power) for super granular control near 1.0
-            // Adjust range so slider value 100 maps to exactly 1.0
-            const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0); // Power value at middle
-            const range = (1.22 - 0.88) / (1.0 - midPower); // Adjusted range
-            const min = 1.0 - midPower * range; // Adjusted minimum
-            let dilationSpeed = min + Math.pow(initialDilationSlider / 200.0, 1.0 / 8.0) * range;
-            // Initialize fade amount with logarithmic mapping (0 to 5.0 range)
+            let dilationSpeed = mapParamValue('dilationSpeed', initialDilationSlider, 200);
+            if (dilationSpeed === null) {
+                // Fallback to original exponential mapping
+                const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                const range = (1.22 - 0.88) / (1.0 - midPower);
+                const min = 1.0 - midPower * range;
+                dilationSpeed = min + Math.pow(initialDilationSlider / 200.0, 1.0 / 8.0) * range;
+            }
+            
+            // Initialize fade amount
             const initialFadeSlider = parseFloat(fadeSlider.value);
-            // Map slider 0-100 to 0 to 5.0 (logarithmic curve)
-            fadeAmount = Math.pow(initialFadeSlider / 100.0, 1.0 / 3.0) * 5.0;
-            let hueShiftAmount = parseFloat(hueShiftSlider.value);
-            let rotation = parseFloat(rotationSlider.value);
+            fadeAmount = mapParamValue('fadeAmount', initialFadeSlider) ?? (Math.pow(initialFadeSlider / 100.0, 1.0 / 3.0) * 5.0);
+            
+            const initialHueShiftSlider = parseFloat(hueShiftSlider.value);
+            let hueShiftAmount = mapParamValue('hueShiftAmount', initialHueShiftSlider, 0.2) ?? initialHueShiftSlider;
+            
+            const initialRotationSlider = parseFloat(rotationSlider.value);
+            let rotation = mapParamValue('rotation', initialRotationSlider, 360) ?? initialRotationSlider;
+            
             let blendMode = blendModeSelect.value;
-            let blendOpacity = parseFloat(blendOpacitySlider.value);
-            let fillSize = parseFloat(fillSizeSlider.value) / 100.0; // Convert 0-100 to 0-1
-            let fillOpacity = parseFloat(fillOpacitySlider.value) / 100.0; // Convert 0-100 to 0-1
-            let emanationRate = parseFloat(emanationRateSlider.value); // Emanations per second
-            // Initialize noise amount with exponential mapping (0-100 slider to 0-1, granular near 0)
+            
+            const initialBlendOpacitySlider = parseFloat(blendOpacitySlider.value);
+            let blendOpacity = mapParamValue('blendOpacity', initialBlendOpacitySlider, 1.0) ?? initialBlendOpacitySlider;
+            
+            const initialFillSizeSlider = parseFloat(fillSizeSlider.value);
+            let fillSize = mapParamValue('fillSize', initialFillSizeSlider) ?? (initialFillSizeSlider / 100.0);
+            
+            const initialFillOpacitySlider = parseFloat(fillOpacitySlider.value);
+            let fillOpacity = mapParamValue('fillOpacity', initialFillOpacitySlider) ?? (initialFillOpacitySlider / 100.0);
+            
+            const initialEmanationRateSlider = parseFloat(emanationRateSlider.value);
+            let emanationRate = mapParamValue('emanationRate', initialEmanationRateSlider, 200) ?? initialEmanationRateSlider;
+            
+            // Initialize noise amount with curve editor mapping
             const initialNoiseSlider = parseFloat(noiseAmountSlider.value);
-            let noiseAmount = Math.pow(initialNoiseSlider / 100.0, 1.0 / 4.0); // Exponential curve for granularity near 0
-            // Initialize noise rate: map slider (0-100) to rate (0-10) with slow exponential curve, where 1.0 = every 2 seconds
+            let noiseAmount = mapParamValue('noiseAmount', initialNoiseSlider) ?? (Math.pow(initialNoiseSlider / 100.0, 1.0 / 4.0));
+            
+            // Initialize noise rate
             const initialNoiseRateSlider = parseFloat(noiseRateSlider.value);
-            let noiseRate = Math.pow(initialNoiseRateSlider / 100.0, 1.0 / 3.0) * 10.0; // Slow exponential curve (1/3 power)
-            // Initialize blur amount with exponential mapping (0-100 slider to 0-1, granular near 0)
+            let noiseRate = mapParamValue('noiseRate', initialNoiseRateSlider) ?? (Math.pow(initialNoiseRateSlider / 100.0, 1.0 / 3.0) * 10.0);
+            
+            // Initialize blur amount
             const initialBlurSlider = parseFloat(blurAmountSlider.value);
-            let blurAmount = Math.pow(initialBlurSlider / 100.0, 1.0 / 4.0); // Exponential curve for granularity near 0
-            // Initialize blur rate: map slider (0-100) to rate (0-10) with slow exponential curve, where 1.0 = every 2 seconds
+            let blurAmount = mapParamValue('blurAmount', initialBlurSlider) ?? (Math.pow(initialBlurSlider / 100.0, 1.0 / 4.0));
+            
+            // Initialize blur rate
             const initialBlurRateSlider = parseFloat(blurRateSlider.value);
-            let blurRate = Math.pow(initialBlurRateSlider / 100.0, 1.0 / 3.0) * 10.0; // Slow exponential curve (1/3 power)
-            let jiggleAmount = parseFloat(jiggleAmountSlider.value) / 100.0; // Convert 0-100 to 0-1
+            let blurRate = mapParamValue('blurRate', initialBlurRateSlider) ?? (Math.pow(initialBlurRateSlider / 100.0, 1.0 / 3.0) * 10.0);
+            
+            const initialJiggleAmountSlider = parseFloat(jiggleAmountSlider.value);
+            let jiggleAmount = mapParamValue('jiggleAmount', initialJiggleAmountSlider) ?? (initialJiggleAmountSlider / 100.0);
             jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
             let jiggleEnabled = false;
             
@@ -1503,11 +2080,13 @@
             let targetBaseFillOpacity = baseFillOpacity;
             let targetBaseRotation = baseRotation;
             let targetBaseHueShiftAmount = baseHueShiftAmount;
-            // Initialize auto rotation speed with exponential mapping
-            // Map slider (0-200) to rotation speed (-1 to 360)
+            // Initialize auto rotation speed
             const initialAutoRotationSlider = parseFloat(autoRotationSlider.value);
-            // Use exponential curve for granular control
-            let autoRotationSpeed = -1.0 + Math.pow(initialAutoRotationSlider / 200.0, 0.5) * 361.0; // Range: -1 to 360
+            let autoRotationSpeed = mapParamValue('autoRotationSpeed', initialAutoRotationSlider, 200);
+            if (autoRotationSpeed === null) {
+                // Fallback to original exponential mapping
+                autoRotationSpeed = -1.0 + Math.pow(initialAutoRotationSlider / 200.0, 0.5) * 361.0;
+            }
             
             // Now load the preset if one was found (this will override the default values)
             if (presetLoaded) {
@@ -1549,7 +2128,8 @@
             
             // Update sliders
             spikinessSlider.addEventListener('input', (e) => {
-                spikiness = parseFloat(e.target.value) / 100.0;
+                const sliderValue = parseFloat(e.target.value);
+                spikiness = mapParamValue('spikiness', sliderValue) ?? (sliderValue / 100.0);
                 spikinessValue.textContent = spikiness.toFixed(2);
                 updateBaseValues();
             });
@@ -1559,15 +2139,21 @@
                 (val) => val.toFixed(2),
                 (val) => {
                     spikiness = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(1, val));
-                    spikinessSlider.value = Math.round(clampedForSlider * 100);
+                    const settings = window.CurveEditor?.getCurveSettings('spikiness');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        spikinessSlider.value = reverseMapParamValue('spikiness', clampedForDisplay) ?? (clampedForDisplay * 100);
+                    } else {
+                        const clampedForSlider = Math.max(0, Math.min(1, val));
+                        spikinessSlider.value = Math.round(clampedForSlider * 100);
+                    }
                     updateBaseValues();
                 }
             );
             
             spikeFrequencySlider.addEventListener('input', (e) => {
-                spikeFrequency = parseFloat(e.target.value);
+                const sliderValue = parseFloat(e.target.value);
+                spikeFrequency = mapParamValue('spikeFrequency', sliderValue, 20) ?? sliderValue;
                 spikeFrequencyValue.textContent = spikeFrequency.toFixed(1);
                 updateBaseValues();
             });
@@ -1577,15 +2163,21 @@
                 (val) => val.toFixed(1),
                 (val) => {
                     spikeFrequency = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(2, Math.min(20, val));
-                    spikeFrequencySlider.value = clampedForSlider;
+                    const settings = window.CurveEditor?.getCurveSettings('spikeFrequency');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        spikeFrequencySlider.value = reverseMapParamValue('spikeFrequency', clampedForDisplay, 20) ?? clampedForDisplay;
+                    } else {
+                        const clampedForSlider = Math.max(2, Math.min(20, val));
+                        spikeFrequencySlider.value = clampedForSlider;
+                    }
                     updateBaseValues();
                 }
             );
             
             spikeSharpnessSlider.addEventListener('input', (e) => {
-                spikeSharpness = parseFloat(e.target.value) / 100.0;
+                const sliderValue = parseFloat(e.target.value);
+                spikeSharpness = mapParamValue('spikeSharpness', sliderValue) ?? (sliderValue / 100.0);
                 spikeSharpnessValue.textContent = spikeSharpness.toFixed(2);
                 updateBaseValues();
             });
@@ -1595,16 +2187,22 @@
                 (val) => val.toFixed(2),
                 (val) => {
                     spikeSharpness = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(1, val));
-                    spikeSharpnessSlider.value = Math.round(clampedForSlider * 100);
+                    const settings = window.CurveEditor?.getCurveSettings('spikeSharpness');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        spikeSharpnessSlider.value = reverseMapParamValue('spikeSharpness', clampedForDisplay) ?? (clampedForDisplay * 100);
+                    } else {
+                        const clampedForSlider = Math.max(0, Math.min(1, val));
+                        spikeSharpnessSlider.value = Math.round(clampedForSlider * 100);
+                    }
                     updateBaseValues();
                 }
             );
             
             hueSlider.addEventListener('input', (e) => {
-                hue = parseFloat(e.target.value);
-                hueValue.textContent = hue + '°';
+                const sliderValue = parseFloat(e.target.value);
+                hue = mapParamValue('hue', sliderValue, 360) ?? sliderValue;
+                hueValue.textContent = Math.round(hue) + '°';
                 updateBaseValues();
             });
             
@@ -1613,15 +2211,21 @@
                 (val) => Math.round(val) + '°',
                 (val) => {
                     hue = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(360, val));
-                    hueSlider.value = Math.round(clampedForSlider);
+                    const settings = window.CurveEditor?.getCurveSettings('hue');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        hueSlider.value = reverseMapParamValue('hue', clampedForDisplay, 360) ?? Math.round(clampedForDisplay);
+                    } else {
+                        const clampedForSlider = Math.max(0, Math.min(360, val));
+                        hueSlider.value = Math.round(clampedForSlider);
+                    }
                     updateBaseValues();
                 }
             );
             
             scaleSlider.addEventListener('input', (e) => {
-                scale = parseFloat(e.target.value);
+                const sliderValue = parseFloat(e.target.value);
+                scale = mapParamValue('scale', sliderValue, 1.0) ?? sliderValue;
                 scaleValue.textContent = scale.toFixed(2);
                 updateBaseValues();
             });
@@ -1631,10 +2235,17 @@
                 (val) => val.toFixed(2),
                 (val) => {
                     scale = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0.05, Math.min(1.0, val));
-                    scaleSlider.value = clampedForSlider.toFixed(2);
-                    scaleValue.textContent = clampedForSlider.toFixed(2);
+                    const settings = window.CurveEditor?.getCurveSettings('scale');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        const sliderVal = reverseMapParamValue('scale', clampedForDisplay, 1.0) ?? clampedForDisplay;
+                        scaleSlider.value = sliderVal.toFixed(2);
+                        scaleValue.textContent = clampedForDisplay.toFixed(2);
+                    } else {
+                        const clampedForSlider = Math.max(0.05, Math.min(1.0, val));
+                        scaleSlider.value = clampedForSlider.toFixed(2);
+                        scaleValue.textContent = clampedForSlider.toFixed(2);
+                    }
                     updateBaseValues();
                 }
             );
@@ -1651,15 +2262,16 @@
             }
             
             dilationSlider.addEventListener('input', (e) => {
-                // Map slider value (0-200) to dilation speed, with middle (100) = 1.0
                 const sliderValue = parseFloat(e.target.value);
-                // Use very steep curve (1/8 power) for super granular control near 1.0
-                // Adjust range so slider value 100 maps to exactly 1.0
-                const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0); // Power value at middle
-                const range = (1.22 - 0.88) / (1.0 - midPower); // Adjusted range
-                const min = 1.0 - midPower * range; // Adjusted minimum
-                dilationSpeed = min + Math.pow(sliderValue / 200.0, 1.0 / 8.0) * range;
-                dilationValue.textContent = dilationSpeed.toFixed(4); // More decimal places for precision
+                dilationSpeed = mapParamValue('dilationSpeed', sliderValue, 200);
+                if (dilationSpeed === null) {
+                    // Fallback to original exponential mapping
+                    const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                    const range = (1.22 - 0.88) / (1.0 - midPower);
+                    const min = 1.0 - midPower * range;
+                    dilationSpeed = min + Math.pow(sliderValue / 200.0, 1.0 / 8.0) * range;
+                }
+                dilationValue.textContent = dilationSpeed.toFixed(4);
             });
             
             handleValueEdit(dilationValue,
@@ -1682,9 +2294,8 @@
             }
             
             fadeSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to fade amount (0 to 5.0) with logarithmic curve
                 const sliderValue = parseFloat(e.target.value);
-                fadeAmount = Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 5.0;
+                fadeAmount = mapParamValue('fadeAmount', sliderValue) ?? (Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 5.0);
                 fadeValue.textContent = fadeAmount.toFixed(3);
             });
             
@@ -1701,7 +2312,8 @@
             );
             
             hueShiftSlider.addEventListener('input', (e) => {
-                hueShiftAmount = parseFloat(e.target.value);
+                const sliderValue = parseFloat(e.target.value);
+                hueShiftAmount = mapParamValue('hueShiftAmount', sliderValue, 0.2) ?? sliderValue;
                 hueShiftValue.textContent = hueShiftAmount.toFixed(3);
                 updateBaseValues();
             });
@@ -1711,16 +2323,22 @@
                 (val) => val.toFixed(3),
                 (val) => {
                     hueShiftAmount = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(0.2, val));
-                    hueShiftSlider.value = clampedForSlider.toFixed(3);
+                    const settings = window.CurveEditor?.getCurveSettings('hueShiftAmount');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        hueShiftSlider.value = reverseMapParamValue('hueShiftAmount', clampedForDisplay, 0.2) ?? clampedForDisplay.toFixed(3);
+                    } else {
+                        const clampedForSlider = Math.max(0, Math.min(0.2, val));
+                        hueShiftSlider.value = clampedForSlider.toFixed(3);
+                    }
                     updateBaseValues();
                 }
             );
             
             rotationSlider.addEventListener('input', (e) => {
-                rotation = parseFloat(e.target.value);
-                rotationValue.textContent = rotation + '°';
+                const sliderValue = parseFloat(e.target.value);
+                rotation = mapParamValue('rotation', sliderValue, 360) ?? sliderValue;
+                rotationValue.textContent = Math.round(rotation) + '°';
                 updateBaseValues();
             });
             
@@ -1729,9 +2347,14 @@
                 (val) => Math.round(val) + '°',
                 (val) => {
                     rotation = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(360, val));
-                    rotationSlider.value = Math.round(clampedForSlider);
+                    const settings = window.CurveEditor?.getCurveSettings('rotation');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        rotationSlider.value = reverseMapParamValue('rotation', clampedForDisplay, 360) ?? Math.round(clampedForDisplay);
+                    } else {
+                        const clampedForSlider = Math.max(0, Math.min(360, val));
+                        rotationSlider.value = Math.round(clampedForSlider);
+                    }
                     updateBaseValues();
                 }
             );
@@ -1742,7 +2365,8 @@
             });
             
             blendOpacitySlider.addEventListener('input', (e) => {
-                blendOpacity = parseFloat(e.target.value);
+                const sliderValue = parseFloat(e.target.value);
+                blendOpacity = mapParamValue('blendOpacity', sliderValue, 1.0) ?? sliderValue;
                 blendOpacityValue.textContent = blendOpacity.toFixed(2);
                 updateStatusIndicators();
             });
@@ -1760,7 +2384,8 @@
             );
             
             fillSizeSlider.addEventListener('input', (e) => {
-                fillSize = parseFloat(e.target.value) / 100.0;
+                const sliderValue = parseFloat(e.target.value);
+                fillSize = mapParamValue('fillSize', sliderValue) ?? (sliderValue / 100.0);
                 fillSizeValue.textContent = fillSize.toFixed(2);
                 updateBaseValues();
             });
@@ -1770,15 +2395,21 @@
                 (val) => val.toFixed(2),
                 (val) => {
                     fillSize = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(1, val));
-                    fillSizeSlider.value = Math.round(clampedForSlider * 100);
+                    const settings = window.CurveEditor?.getCurveSettings('fillSize');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        fillSizeSlider.value = reverseMapParamValue('fillSize', clampedForDisplay) ?? (clampedForDisplay * 100);
+                    } else {
+                        const clampedForSlider = Math.max(0, Math.min(1, val));
+                        fillSizeSlider.value = Math.round(clampedForSlider * 100);
+                    }
                     updateBaseValues();
                 }
             );
             
             fillOpacitySlider.addEventListener('input', (e) => {
-                fillOpacity = parseFloat(e.target.value) / 100.0;
+                const sliderValue = parseFloat(e.target.value);
+                fillOpacity = mapParamValue('fillOpacity', sliderValue) ?? (sliderValue / 100.0);
                 fillOpacityValue.textContent = fillOpacity.toFixed(2);
                 updateBaseValues();
             });
@@ -1788,15 +2419,21 @@
                 (val) => val.toFixed(2),
                 (val) => {
                     fillOpacity = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(1, val));
-                    fillOpacitySlider.value = Math.round(clampedForSlider * 100);
+                    const settings = window.CurveEditor?.getCurveSettings('fillOpacity');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        fillOpacitySlider.value = reverseMapParamValue('fillOpacity', clampedForDisplay) ?? (clampedForDisplay * 100);
+                    } else {
+                        const clampedForSlider = Math.max(0, Math.min(1, val));
+                        fillOpacitySlider.value = Math.round(clampedForSlider * 100);
+                    }
                     updateBaseValues();
                 }
             );
             
             emanationRateSlider.addEventListener('input', (e) => {
-                emanationRate = parseFloat(e.target.value);
+                const sliderValue = parseFloat(e.target.value);
+                emanationRate = mapParamValue('emanationRate', sliderValue, 200) ?? sliderValue;
                 emanationRateValue.textContent = emanationRate.toFixed(1);
                 updateStatusIndicators();
             });
@@ -1815,16 +2452,26 @@
             
             // Helper function to reverse-map noise amount to slider value
             function noiseAmountToSlider(amount) {
-                // Reverse: amount = (slider/100)^(1/4)
-                // slider = 100 * amount^4
+                // Use curve editor reverse mapping if available
+                const settings = window.CurveEditor?.getCurveSettings('noiseAmount');
+                if (settings && window.CurveEditor) {
+                    return window.CurveEditor.reverseMapValue(amount, settings);
+                }
+                // Fallback to default exponential mapping
                 return Math.round(100 * Math.pow(Math.max(0, Math.min(1, amount)), 4));
             }
             
-            // Noise amount slider with exponential mapping (0-100 slider to 0-1, granular near 0)
+            // Noise amount slider with curve editor mapping
             noiseAmountSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to noise amount (0-1) with exponential curve
+                // Map slider value (0-100) to noise amount using curve editor
                 const sliderValue = parseFloat(e.target.value);
-                noiseAmount = Math.pow(sliderValue / 100.0, 1.0 / 4.0);
+                const settings = window.CurveEditor?.getCurveSettings('noiseAmount');
+                if (settings && window.CurveEditor) {
+                    noiseAmount = window.CurveEditor.mapValue(sliderValue, settings);
+                } else {
+                    // Fallback to default exponential mapping
+                    noiseAmount = Math.pow(sliderValue / 100.0, 1.0 / 4.0);
+                }
                 noiseAmountValue.textContent = noiseAmount.toFixed(2);
                 updateStatusIndicators();
             });
@@ -1834,9 +2481,16 @@
                 (val) => val.toFixed(2),
                 (val) => {
                     noiseAmount = val;
-                    // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(1, val));
-                    noiseAmountSlider.value = noiseAmountToSlider(clampedForSlider);
+                    // Update slider position using curve editor reverse mapping
+                    // This will clamp the slider display to the curve's min/max range
+                    const settings = window.CurveEditor?.getCurveSettings('noiseAmount');
+                    if (settings) {
+                        const clampedForDisplay = Math.max(settings.min, Math.min(settings.max, val));
+                        noiseAmountSlider.value = noiseAmountToSlider(clampedForDisplay);
+                    } else {
+                        const clampedForSlider = Math.max(0, Math.min(1, val));
+                        noiseAmountSlider.value = noiseAmountToSlider(clampedForSlider);
+                    }
                     updateBaseValues();
                 }
             );
@@ -1851,9 +2505,8 @@
             
             // Noise rate slider (0-100 slider maps to 0-10 rate with slow exponential curve, where 1.0 = every 2 seconds)
             noiseRateSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to noise rate (0-10) with slow exponential curve
                 const sliderValue = parseFloat(e.target.value);
-                noiseRate = Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 10.0;
+                noiseRate = mapParamValue('noiseRate', sliderValue) ?? (Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 10.0);
                 noiseRateValue.textContent = noiseRate.toFixed(2);
                 updateStatusIndicators();
             });
@@ -1880,9 +2533,8 @@
             
             // Blur amount slider with exponential mapping (0-100 slider to 0-1, granular near 0)
             blurAmountSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to blur amount (0-1) with exponential curve
                 const sliderValue = parseFloat(e.target.value);
-                blurAmount = Math.pow(sliderValue / 100.0, 1.0 / 4.0);
+                blurAmount = mapParamValue('blurAmount', sliderValue) ?? (Math.pow(sliderValue / 100.0, 1.0 / 4.0));
                 blurAmountValue.textContent = blurAmount.toFixed(2);
                 updateStatusIndicators();
             });
@@ -1909,9 +2561,8 @@
             
             // Blur rate slider (0-100 slider maps to 0-10 rate with slow exponential curve, where 1.0 = every 2 seconds)
             blurRateSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to blur rate (0-10) with slow exponential curve
                 const sliderValue = parseFloat(e.target.value);
-                blurRate = Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 10.0;
+                blurRate = mapParamValue('blurRate', sliderValue) ?? (Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 10.0);
                 blurRateValue.textContent = blurRate.toFixed(2);
                 updateStatusIndicators();
             });
@@ -1936,9 +2587,12 @@
             }
             
             autoRotationSlider.addEventListener('input', (e) => {
-                // Map slider value (0-200) to rotation speed (-1 to 360) with exponential curve
                 const sliderValue = parseFloat(e.target.value);
-                autoRotationSpeed = -1.0 + Math.pow(sliderValue / 200.0, 0.5) * 361.0;
+                autoRotationSpeed = mapParamValue('autoRotationSpeed', sliderValue, 200);
+                if (autoRotationSpeed === null) {
+                    // Fallback to original exponential mapping
+                    autoRotationSpeed = -1.0 + Math.pow(sliderValue / 200.0, 0.5) * 361.0;
+                }
                 autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
                 updateStatusIndicators();
             });
@@ -1954,6 +2608,17 @@
                     updateBaseValues();
                 }
             );
+            
+            // Wire up curve editor buttons
+            document.querySelectorAll('.curve-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const paramName = btn.getAttribute('data-param');
+                    if (paramName && window.CurveEditor) {
+                        window.CurveEditor.open(paramName);
+                    }
+                });
+            });
             
             // Save current state as preset
             function savePreset(name) {
@@ -2219,7 +2884,8 @@
             
             // Jiggle functionality
             jiggleAmountSlider.addEventListener('input', (e) => {
-                jiggleAmount = parseFloat(e.target.value) / 100.0;
+                const sliderValue = parseFloat(e.target.value);
+                jiggleAmount = mapParamValue('jiggleAmount', sliderValue) ?? (sliderValue / 100.0);
                 jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
             });
             
