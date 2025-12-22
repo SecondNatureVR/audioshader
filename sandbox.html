@@ -117,7 +117,9 @@
 
         uniform vec2 u_resolution;
         uniform float u_time;
-        uniform float u_spikes;
+        uniform float u_spikiness;      // 0.0 = circle, 1.0 = maximum spikes
+        uniform float u_spikeFrequency; // Continuous number of spikes (2-20)
+        uniform float u_spikeSharpness; // 0.0 = rounded, 1.0 = sharp spikes
         uniform float u_hue;
         uniform float u_scale;
         uniform float u_rotation;
@@ -150,18 +152,34 @@
                 p.x * sinRot + p.y * cosRot
             );
             
-            // Draw a star
+            // Draw a morphing shape (circle to spikes)
             float angle = atan(rotatedP.y, rotatedP.x);
             float dist = length(rotatedP);
             
-            // Star shape with configurable number of spikes
-            float numSpikes = floor(u_spikes);
-            
-            // Calculate star radius pattern (varies with angle to create spikes)
-            // Base radius scales with u_scale, then adds spikes
+            // Base radius scales with u_scale
             float baseRadius = u_scale * 0.4;
-            float spikeAmount = u_scale * 0.25;
-            float r = baseRadius + spikeAmount * cos(angle * numSpikes);
+            
+            // Calculate shape modulation
+            // Use continuous spike frequency (not discrete)
+            float modulation = cos(angle * u_spikeFrequency);
+            
+            // Apply sharpness: sharper spikes use power function
+            // When sharpness = 0: smooth cosine wave
+            // When sharpness = 1: sharp peaks (using power function)
+            float sharpModulation;
+            if (u_spikeSharpness < 0.01) {
+                // No sharpness: use smooth cosine
+                sharpModulation = modulation;
+            } else {
+                // Apply power function to sharpen peaks
+                // Higher sharpness = steeper peaks
+                float power = 1.0 / (1.0 + u_spikeSharpness * 3.0); // Range: 1.0 to ~0.25
+                sharpModulation = pow(abs(modulation), power) * sign(modulation);
+            }
+            
+            // Apply spikiness: interpolate between circle (0) and spiked shape (1)
+            float spikeAmount = u_scale * 0.25 * u_spikiness;
+            float r = baseRadius + spikeAmount * sharpModulation;
             
             // Draw the star - use a smooth falloff
             float lineWidth = 0.012;
@@ -242,9 +260,20 @@
             // Map distance to fade using a power curve for more gradual fade
             float fadeAmount = smoothstep(0.0, 0.8, distFromCenter); // Fade as it expands
             // Apply logarithmic fade: fade = 1 - fadeAmount^fadePower
-            // Higher fadeAmount values create more gradual fades
-            float fadePower = 1.0 + u_fadeAmount * 2.0; // Range: 1.0 to 3.0
-            float fade = 1.0 - pow(fadeAmount, fadePower);
+            // u_fadeAmount range: -1.5 to 5.0
+            // Negative values invert fade behavior (brighten as it expands)
+            // Positive values create gradual fades
+            float fade;
+            if (u_fadeAmount < 0.0) {
+                // Negative fade: brighten as it expands (inverted fade)
+                // Map -1.5 to 0.0 → fadePower from 4.0 to 1.0
+                float fadePower = 1.0 - u_fadeAmount * 2.0; // Range: 1.0 to 4.0 when u_fadeAmount is -1.5 to 0
+                fade = pow(fadeAmount, fadePower); // As fadeAmount increases (expands), fade increases (brightens)
+            } else {
+                // Positive fade: normal fade behavior (fade out as it expands)
+                float fadePower = 1.0 + u_fadeAmount * 2.0; // Range: 1.0 to 11.0 when u_fadeAmount is 0 to 5
+                fade = 1.0 - pow(fadeAmount, fadePower);
+            }
             
             // Decay factor: reduce brightness over time to prevent accumulation
             // Estimate age based on distance (further = older = more decay)
@@ -284,9 +313,21 @@
         </div>
         
         <div class="control-group">
-            <label for="spikes-slider">Number of Spikes</label>
-            <input type="range" id="spikes-slider" min="3" max="20" value="5" step="1">
-            <div class="value" id="spikes-value">5</div>
+            <label for="spikiness-slider">Spikiness</label>
+            <input type="range" id="spikiness-slider" min="0" max="100" value="50" step="1">
+            <div class="value" id="spikiness-value">0.50</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="spike-frequency-slider">Spike Frequency</label>
+            <input type="range" id="spike-frequency-slider" min="2" max="20" value="5" step="0.1">
+            <div class="value" id="spike-frequency-value">5.0</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="spike-sharpness-slider">Spike Sharpness</label>
+            <input type="range" id="spike-sharpness-slider" min="0" max="100" value="0" step="1">
+            <div class="value" id="spike-sharpness-value">0.00</div>
         </div>
         
         <div class="control-group">
@@ -321,7 +362,7 @@
         
         <div class="control-group">
             <label for="auto-rotation-slider">Auto Rotation Speed (deg/sec)</label>
-            <input type="range" id="auto-rotation-slider" min="0" max="30" value="30" step="1">
+            <input type="range" id="auto-rotation-slider" min="0" max="200" value="50" step="1">
             <div class="value" id="auto-rotation-value">30°</div>
         </div>
         
@@ -615,9 +656,7 @@
                         this.setUniform(name, uniforms[name]);
                     });
                     this.setUniform('u_resolution', [this.canvas.width, this.canvas.height]);
-                    // For captured shapes: use manual rotation as base offset (no auto-rotation)
-                    // This preserves the rotation offset while freezing the shape
-                    this.setUniform('u_rotation', rotation); // Manual rotation offset
+                    this.setUniform('u_rotation', totalRotation); // Capture total rotation at this moment
                     this.setUniform('u_autoRotationSpeed', 0.0); // Disable auto-rotation for captured shapes (they're frozen)
                     this.setUniform('u_blendOpacity', blendOpacity);
                     
@@ -715,14 +754,18 @@
         
         (() => {
             // Get slider elements
-            const spikesSlider = document.getElementById('spikes-slider');
+            const spikinessSlider = document.getElementById('spikiness-slider');
+            const spikeFrequencySlider = document.getElementById('spike-frequency-slider');
+            const spikeSharpnessSlider = document.getElementById('spike-sharpness-slider');
             const hueSlider = document.getElementById('hue-slider');
             const scaleSlider = document.getElementById('scale-slider');
             const dilationSlider = document.getElementById('dilation-slider');
             const fadeSlider = document.getElementById('fade-slider');
             const hueShiftSlider = document.getElementById('hue-shift-slider');
             const rotationSlider = document.getElementById('rotation-slider');
-            const spikesValue = document.getElementById('spikes-value');
+            const spikinessValue = document.getElementById('spikiness-value');
+            const spikeFrequencyValue = document.getElementById('spike-frequency-value');
+            const spikeSharpnessValue = document.getElementById('spike-sharpness-value');
             const hueValue = document.getElementById('hue-value');
             const scaleValue = document.getElementById('scale-value');
             const dilationValue = document.getElementById('dilation-value');
@@ -733,8 +776,130 @@
             const blendOpacitySlider = document.getElementById('blend-opacity-slider');
             const blendOpacityValue = document.getElementById('blend-opacity-value');
             
-            // Current values (initialize from sliders)
-            let spikes = parseFloat(spikesSlider.value);
+            // Get emanation rate slider before initializing values
+            const emanationRateSlider = document.getElementById('emanation-rate-slider');
+            const emanationRateValue = document.getElementById('emanation-rate-value');
+            const autoRotationSlider = document.getElementById('auto-rotation-slider');
+            const autoRotationValue = document.getElementById('auto-rotation-value');
+            
+            // Get preset management elements before defining functions
+            const presetSelect = document.getElementById('preset-select');
+            const presetNameInput = document.getElementById('preset-name-input');
+            const savePresetBtn = document.getElementById('save-preset-btn');
+            const deletePresetBtn = document.getElementById('delete-preset-btn');
+            
+            // Preset management functions (need to be defined before we try to load presets)
+            // Load presets from localStorage
+            function loadPresets() {
+                const presets = JSON.parse(localStorage.getItem('sandboxPresets') || '{}');
+                presetSelect.innerHTML = '<option value="">-- Select Preset --</option>';
+                Object.keys(presets).forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    presetSelect.appendChild(option);
+                });
+                return presets;
+            }
+            
+            // Load preset
+            function loadPreset(name) {
+                const presets = loadPresets();
+                if (!presets[name]) {
+                    alert('Preset not found');
+                    return;
+                }
+                
+                const preset = presets[name];
+                
+                // Set all values
+                // Handle migration from old "spikes" parameter to new shape parameters
+                if (preset.spikes !== undefined) {
+                    // Old preset format: convert discrete spikes to continuous parameters
+                    const oldSpikes = preset.spikes;
+                    spikiness = 0.8; // Default spikiness for old presets
+                    spikeFrequency = Math.max(2.0, Math.min(20.0, oldSpikes)); // Use old spike count as frequency
+                    spikeSharpness = 0.0; // Default sharpness
+                } else {
+                    // New preset format
+                    spikiness = preset.spikiness !== undefined ? preset.spikiness : 0.5;
+                    spikeFrequency = preset.spikeFrequency !== undefined ? preset.spikeFrequency : 5.0;
+                    spikeSharpness = preset.spikeSharpness !== undefined ? preset.spikeSharpness : 0.0;
+                }
+                hue = preset.hue;
+                scale = preset.scale;
+                hueShiftAmount = preset.hueShiftAmount;
+                rotation = preset.rotation;
+                blendMode = preset.blendMode;
+                blendOpacity = preset.blendOpacity;
+                emanationRate = preset.emanationRate;
+                autoRotationSpeed = preset.autoRotationSpeed;
+                
+                // Update sliders
+                spikinessSlider.value = Math.round(spikiness * 100);
+                spikinessValue.textContent = spikiness.toFixed(2);
+                spikeFrequencySlider.value = spikeFrequency;
+                spikeFrequencyValue.textContent = spikeFrequency.toFixed(1);
+                spikeSharpnessSlider.value = Math.round(spikeSharpness * 100);
+                spikeSharpnessValue.textContent = spikeSharpness.toFixed(2);
+                hueSlider.value = hue;
+                hueValue.textContent = hue + '°';
+                scaleSlider.value = scale;
+                scaleValue.textContent = scale.toFixed(2);
+                dilationSlider.value = preset.dilationSlider || 20;
+                const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                const range = (1.22 - 0.88) / (1.0 - midPower);
+                const min = 1.0 - midPower * range;
+                dilationSpeed = min + Math.pow(parseFloat(dilationSlider.value) / 200.0, 1.0 / 8.0) * range;
+                dilationValue.textContent = dilationSpeed.toFixed(4);
+                fadeSlider.value = preset.fadeSlider || 30;
+                const fadeSliderVal = parseFloat(fadeSlider.value);
+                if (fadeSliderVal < 23.08) {
+                    fadeAmount = -1.5 + (fadeSliderVal / 23.08) * 1.5;
+                } else {
+                    const normalizedPos = (fadeSliderVal - 23.08) / (100.0 - 23.08);
+                    fadeAmount = Math.pow(normalizedPos, 1.0 / 3.0) * 5.0;
+                }
+                fadeValue.textContent = fadeAmount.toFixed(3);
+                hueShiftSlider.value = hueShiftAmount;
+                hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+                rotationSlider.value = rotation;
+                rotationValue.textContent = rotation + '°';
+                blendModeSelect.value = blendMode;
+                blendOpacitySlider.value = blendOpacity;
+                blendOpacityValue.textContent = blendOpacity.toFixed(2);
+                emanationRateSlider.value = emanationRate;
+                emanationRateValue.textContent = emanationRate.toFixed(1);
+                // Use stored slider value if available, otherwise reverse map from speed value
+                if (preset.autoRotationSlider !== undefined) {
+                    autoRotationSlider.value = preset.autoRotationSlider;
+                    autoRotationSpeed = -1.0 + Math.pow(preset.autoRotationSlider / 200.0, 0.5) * 361.0;
+                } else {
+                    // Fallback: reverse map from speed value
+                    const sliderValue = Math.round(200 * Math.pow((autoRotationSpeed + 1) / 361.0, 2));
+                    autoRotationSlider.value = sliderValue;
+                }
+                autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+            }
+            
+            // Initialize presets dropdown
+            loadPresets();
+            
+            // Try to load last active preset BEFORE initializing default values
+            const lastActivePreset = localStorage.getItem('sandboxLastActivePreset');
+            let presetLoaded = false;
+            if (lastActivePreset) {
+                const presets = loadPresets();
+                if (presets[lastActivePreset]) {
+                    presetSelect.value = lastActivePreset;
+                    presetLoaded = true;
+                }
+            }
+            
+            // Current values (initialize from sliders, or from preset if one was loaded)
+            let spikiness = parseFloat(spikinessSlider.value) / 100.0; // Convert 0-100 to 0-1
+            let spikeFrequency = parseFloat(spikeFrequencySlider.value);
+            let spikeSharpness = parseFloat(spikeSharpnessSlider.value) / 100.0; // Convert 0-100 to 0-1
             let hue = parseFloat(hueSlider.value);
             let scale = parseFloat(scaleSlider.value);
             // Initialize dilation speed with exponential mapping
@@ -746,24 +911,50 @@
             const range = (1.22 - 0.88) / (1.0 - midPower); // Adjusted range
             const min = 1.0 - midPower * range; // Adjusted minimum
             let dilationSpeed = min + Math.pow(initialDilationSlider / 200.0, 1.0 / 8.0) * range;
-            // Initialize fade amount with logarithmic mapping
+            // Initialize fade amount with logarithmic mapping (-1.5 to 5.0 range)
             const initialFadeSlider = parseFloat(fadeSlider.value);
-            let fadeAmount = Math.pow(initialFadeSlider / 100.0, 1.0 / 3.0);
+            // Map slider 0-100 to -1.5 to 5.0
+            // Use curve: at 0 → -1.5, at 100 → 5.0
+            // Logarithmic curve for positive values, linear for negative
+            let fadeAmount;
+            if (initialFadeSlider < 23.08) {
+                // Negative range: 0-23.08 maps to -1.5 to 0 (linear)
+                fadeAmount = -1.5 + (initialFadeSlider / 23.08) * 1.5;
+            } else {
+                // Positive range: 23.08-100 maps to 0 to 5.0 (logarithmic)
+                const normalizedPos = (initialFadeSlider - 23.08) / (100.0 - 23.08);
+                fadeAmount = Math.pow(normalizedPos, 1.0 / 3.0) * 5.0;
+            }
             let hueShiftAmount = parseFloat(hueShiftSlider.value);
             let rotation = parseFloat(rotationSlider.value);
             let blendMode = blendModeSelect.value;
             let blendOpacity = parseFloat(blendOpacitySlider.value);
-            const emanationRateSlider = document.getElementById('emanation-rate-slider');
-            const emanationRateValue = document.getElementById('emanation-rate-value');
             let emanationRate = parseFloat(emanationRateSlider.value); // Emanations per second
-            const autoRotationSlider = document.getElementById('auto-rotation-slider');
-            const autoRotationValue = document.getElementById('auto-rotation-value');
-            let autoRotationSpeed = parseFloat(autoRotationSlider.value); // Degrees per second
+            // Initialize auto rotation speed with exponential mapping
+            // Map slider (0-200) to rotation speed (-1 to 360)
+            const initialAutoRotationSlider = parseFloat(autoRotationSlider.value);
+            // Use exponential curve for granular control
+            let autoRotationSpeed = -1.0 + Math.pow(initialAutoRotationSlider / 200.0, 0.5) * 361.0; // Range: -1 to 360
+            
+            // Now load the preset if one was found (this will override the default values)
+            if (presetLoaded) {
+                loadPreset(lastActivePreset);
+            }
         
             // Update sliders
-            spikesSlider.addEventListener('input', (e) => {
-                spikes = parseFloat(e.target.value);
-                spikesValue.textContent = spikes;
+            spikinessSlider.addEventListener('input', (e) => {
+                spikiness = parseFloat(e.target.value) / 100.0;
+                spikinessValue.textContent = spikiness.toFixed(2);
+            });
+            
+            spikeFrequencySlider.addEventListener('input', (e) => {
+                spikeFrequency = parseFloat(e.target.value);
+                spikeFrequencyValue.textContent = spikeFrequency.toFixed(1);
+            });
+            
+            spikeSharpnessSlider.addEventListener('input', (e) => {
+                spikeSharpness = parseFloat(e.target.value) / 100.0;
+                spikeSharpnessValue.textContent = spikeSharpness.toFixed(2);
             });
             
             hueSlider.addEventListener('input', (e) => {
@@ -789,12 +980,16 @@
             });
             
             fadeSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to logarithmic fade amount (0-1)
-                // More granular near 0, less granular near 1
+                // Map slider value (0-100) to fade amount (-1.5 to 5.0)
                 const sliderValue = parseFloat(e.target.value);
-                // Use exponential mapping: fadeAmount = (sliderValue/100)^(1/3)
-                // This gives more precision near 0
-                fadeAmount = Math.pow(sliderValue / 100.0, 1.0 / 3.0);
+                if (sliderValue < 23.08) {
+                    // Negative range: 0-23.08 maps to -1.5 to 0 (linear)
+                    fadeAmount = -1.5 + (sliderValue / 23.08) * 1.5;
+                } else {
+                    // Positive range: 23.08-100 maps to 0 to 5.0 (logarithmic)
+                    const normalizedPos = (sliderValue - 23.08) / (100.0 - 23.08);
+                    fadeAmount = Math.pow(normalizedPos, 1.0 / 3.0) * 5.0;
+                }
                 fadeValue.textContent = fadeAmount.toFixed(3);
             });
             
@@ -823,28 +1018,11 @@
             });
             
             autoRotationSlider.addEventListener('input', (e) => {
-                autoRotationSpeed = parseFloat(e.target.value);
-                autoRotationValue.textContent = autoRotationSpeed + '°';
+                // Map slider value (0-200) to rotation speed (-1 to 360) with exponential curve
+                const sliderValue = parseFloat(e.target.value);
+                autoRotationSpeed = -1.0 + Math.pow(sliderValue / 200.0, 0.5) * 361.0;
+                autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
             });
-            
-            // Preset management
-            const presetSelect = document.getElementById('preset-select');
-            const presetNameInput = document.getElementById('preset-name-input');
-            const savePresetBtn = document.getElementById('save-preset-btn');
-            const deletePresetBtn = document.getElementById('delete-preset-btn');
-            
-            // Load presets from localStorage
-            function loadPresets() {
-                const presets = JSON.parse(localStorage.getItem('sandboxPresets') || '{}');
-                presetSelect.innerHTML = '<option value="">-- Select Preset --</option>';
-                Object.keys(presets).forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = name;
-                    option.textContent = name;
-                    presetSelect.appendChild(option);
-                });
-                return presets;
-            }
             
             // Save current state as preset
             function savePreset(name) {
@@ -854,7 +1032,9 @@
                 }
                 
                 const preset = {
-                    spikes: spikes,
+                    spikiness: spikiness,
+                    spikeFrequency: spikeFrequency,
+                    spikeSharpness: spikeSharpness,
                     hue: hue,
                     scale: scale,
                     dilationSlider: parseFloat(dilationSlider.value), // Store slider value for proper restoration
@@ -864,7 +1044,8 @@
                     blendMode: blendMode,
                     blendOpacity: blendOpacity,
                     emanationRate: emanationRate,
-                    autoRotationSpeed: autoRotationSpeed
+                    autoRotationSpeed: autoRotationSpeed, // Store actual value (will reverse map to slider on load)
+                    autoRotationSlider: parseFloat(autoRotationSlider.value) // Also store slider for easier restoration
                 };
                 
                 const presets = loadPresets();
@@ -873,56 +1054,6 @@
                 loadPresets();
                 presetNameInput.value = '';
                 alert(`Preset "${name}" saved!`);
-            }
-            
-            // Load preset
-            function loadPreset(name) {
-                const presets = loadPresets();
-                if (!presets[name]) {
-                    alert('Preset not found');
-                    return;
-                }
-                
-                const preset = presets[name];
-                
-                // Set all values
-                spikes = preset.spikes;
-                hue = preset.hue;
-                scale = preset.scale;
-                hueShiftAmount = preset.hueShiftAmount;
-                rotation = preset.rotation;
-                blendMode = preset.blendMode;
-                blendOpacity = preset.blendOpacity;
-                emanationRate = preset.emanationRate;
-                autoRotationSpeed = preset.autoRotationSpeed;
-                
-                // Update sliders
-                spikesSlider.value = spikes;
-                spikesValue.textContent = spikes;
-                hueSlider.value = hue;
-                hueValue.textContent = hue + '°';
-                scaleSlider.value = scale;
-                scaleValue.textContent = scale.toFixed(2);
-                dilationSlider.value = preset.dilationSlider || 20;
-                const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
-                const range = (1.22 - 0.88) / (1.0 - midPower);
-                const min = 1.0 - midPower * range;
-                dilationSpeed = min + Math.pow(parseFloat(dilationSlider.value) / 200.0, 1.0 / 8.0) * range;
-                dilationValue.textContent = dilationSpeed.toFixed(4);
-                fadeSlider.value = preset.fadeSlider || 30;
-                fadeAmount = Math.pow(parseFloat(fadeSlider.value) / 100.0, 1.0 / 3.0);
-                fadeValue.textContent = fadeAmount.toFixed(3);
-                hueShiftSlider.value = hueShiftAmount;
-                hueShiftValue.textContent = hueShiftAmount.toFixed(3);
-                rotationSlider.value = rotation;
-                rotationValue.textContent = rotation + '°';
-                blendModeSelect.value = blendMode;
-                blendOpacitySlider.value = blendOpacity;
-                blendOpacityValue.textContent = blendOpacity.toFixed(2);
-                emanationRateSlider.value = emanationRate;
-                emanationRateValue.textContent = emanationRate.toFixed(1);
-                autoRotationSlider.value = autoRotationSpeed;
-                autoRotationValue.textContent = autoRotationSpeed + '°';
             }
             
             // Delete preset
@@ -941,19 +1072,6 @@
                 localStorage.setItem('sandboxPresets', JSON.stringify(presets));
                 loadPresets();
                 presetSelect.value = '';
-            }
-            
-            // Initialize presets
-            loadPresets();
-            
-            // Load last active preset on page load
-            const lastActivePreset = localStorage.getItem('sandboxLastActivePreset');
-            if (lastActivePreset) {
-                const presets = loadPresets();
-                if (presets[lastActivePreset]) {
-                    presetSelect.value = lastActivePreset;
-                    loadPreset(lastActivePreset);
-                }
             }
             
             // Event listeners
@@ -1004,7 +1122,9 @@
                 
                 renderer.render({
                     u_time: currentTime,
-                    u_spikes: spikes,
+                    u_spikiness: spikiness,
+                    u_spikeFrequency: spikeFrequency,
+                    u_spikeSharpness: spikeSharpness,
                     u_hue: hue,
                     u_scale: scale
                 }, dilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation);
