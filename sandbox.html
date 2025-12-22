@@ -25,6 +25,72 @@
             height: 100%;
         }
         
+        #hotkey-legend {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+            color: #fff;
+            font-size: 10px;
+            z-index: 1001;
+            font-family: monospace;
+            min-width: 220px;
+        }
+        
+        #hotkey-legend h4 {
+            margin: 0 0 8px 0;
+            font-size: 10px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            border-bottom: 1px solid #333;
+            padding-bottom: 6px;
+        }
+        
+        #hotkey-legend .hotkey-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding: 2px 0;
+        }
+        
+        #hotkey-legend .hotkey-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        #hotkey-legend .hotkey-key {
+            color: #0af;
+            font-weight: 600;
+            min-width: 60px;
+        }
+        
+        #hotkey-legend .hotkey-desc {
+            color: #bbb;
+            text-align: right;
+            flex: 1;
+        }
+        
+        #status-indicators {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            margin-top: 0;
+            display: flex;
+            gap: 4px;
+            font-size: 9px;
+            z-index: 1002;
+            pointer-events: none;
+        }
+        
+        #status-indicators span {
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
         #dev-toolbox {
             position: fixed;
             top: 10px;
@@ -418,6 +484,44 @@
         }
     </script>
     
+    <div id="hotkey-legend">
+        <h4>Hotkeys</h4>
+        <div class="hotkey-item">
+            <span class="hotkey-key">Space</span>
+            <span class="hotkey-desc">Toggle Freeze</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">R</span>
+            <span class="hotkey-desc">Randomize</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">← →</span>
+            <span class="hotkey-desc">Cycle Presets</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">J</span>
+            <span class="hotkey-desc">Toggle Jiggle</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">Esc</span>
+            <span class="hotkey-desc">Clear Screen</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">↑</span>
+            <span class="hotkey-desc">Accelerate</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">↓</span>
+            <span class="hotkey-desc">Decelerate</span>
+        </div>
+    </div>
+    
+    <div id="status-indicators">
+        <span id="freeze-indicator" style="display: none; background: #0af; color: #fff;">FREEZE</span>
+        <span id="jiggle-indicator" style="display: none; background: #a0a; color: #fff;">JIGGLE</span>
+        <span id="unsaved-indicator" style="display: none; background: #fa0; color: #fff;">UNSAVED</span>
+    </div>
+    
     <div id="dev-toolbox">
         <h3>Controls</h3>
         
@@ -430,6 +534,11 @@
                 <input type="text" id="preset-name-input" placeholder="Name" style="flex: 1; font-size: 10px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
                 <button id="save-preset-btn" style="font-size: 10px; padding: 3px 6px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Save</button>
                 <button id="delete-preset-btn" style="font-size: 10px; padding: 3px 6px; background: #a00; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Del</button>
+            </div>
+            <div style="margin-top: 6px; display: flex; gap: 4px;">
+                <button id="export-presets-btn" style="font-size: 10px; padding: 3px 6px; background: #0a0; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Export</button>
+                <label for="import-presets-input" style="font-size: 10px; padding: 3px 6px; background: #fa0; color: #fff; border: none; border-radius: 3px; cursor: pointer; display: inline-block; height: auto; line-height: normal; box-sizing: border-box;">Import</label>
+                <input type="file" id="import-presets-input" accept=".json,.txt" style="display: none;">
             </div>
         </div>
         
@@ -993,6 +1102,65 @@
             const presetNameInput = document.getElementById('preset-name-input');
             const savePresetBtn = document.getElementById('save-preset-btn');
             const deletePresetBtn = document.getElementById('delete-preset-btn');
+            const exportPresetsBtn = document.getElementById('export-presets-btn');
+            const importPresetsInput = document.getElementById('import-presets-input');
+            
+            // Status indicators
+            const freezeIndicator = document.getElementById('freeze-indicator');
+            const jiggleIndicator = document.getElementById('jiggle-indicator');
+            const unsavedIndicator = document.getElementById('unsaved-indicator');
+            const statusIndicators = document.getElementById('status-indicators');
+            const hotkeyLegend = document.getElementById('hotkey-legend');
+            
+            // Position status indicators below hotkey legend
+            function positionStatusIndicators() {
+                if (hotkeyLegend && statusIndicators) {
+                    const rect = hotkeyLegend.getBoundingClientRect();
+                    statusIndicators.style.top = (rect.bottom + 6) + 'px';
+                    statusIndicators.style.left = rect.left + 'px';
+                }
+            }
+            // Position on load and resize
+            positionStatusIndicators();
+            window.addEventListener('resize', positionStatusIndicators);
+            
+            // Track last loaded preset for unsaved changes detection
+            let lastLoadedPresetName = null;
+            let lastLoadedPresetValues = null;
+            
+            // Function to update status indicators
+            function updateStatusIndicators() {
+                freezeIndicator.style.display = freezeEnabled ? 'inline-block' : 'none';
+                jiggleIndicator.style.display = jiggleEnabled ? 'inline-block' : 'none';
+                
+                // Check if current values differ from last loaded preset
+                if (lastLoadedPresetName && lastLoadedPresetValues) {
+                    const currentValues = {
+                        spikiness, spikeFrequency, spikeSharpness, hue, scale,
+                        fillSize, fillOpacity, rotation, hueShiftAmount,
+                        dilationSpeed, fadeAmount, emanationRate, autoRotationSpeed,
+                        blendMode, blendOpacity
+                    };
+                    
+                    // Compare values (with small tolerance for floating point)
+                    let hasChanges = false;
+                    for (const [key, currentValue] of Object.entries(currentValues)) {
+                        const lastValue = lastLoadedPresetValues[key];
+                        if (lastValue !== undefined && Math.abs(currentValue - lastValue) > 0.001) {
+                            hasChanges = true;
+                            break;
+                        }
+                    }
+                    // Also check blendMode (string comparison)
+                    if (currentValues.blendMode !== lastLoadedPresetValues.blendMode) {
+                        hasChanges = true;
+                    }
+                    
+                    unsavedIndicator.style.display = hasChanges ? 'inline-block' : 'none';
+                } else {
+                    unsavedIndicator.style.display = 'none';
+                }
+            }
             
             // Preset management functions (need to be defined before we try to load presets)
             // Load presets from localStorage
@@ -1086,6 +1254,9 @@
                     autoRotationSlider.value = sliderValue;
                 }
                 autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                
+                // Update dropdown to show the loaded preset
+                presetSelect.value = name;
             }
             
             // Initialize presets dropdown
@@ -1142,6 +1313,18 @@
             let baseFillOpacity = fillOpacity;
             let baseRotation = rotation;
             let baseHueShiftAmount = hueShiftAmount;
+            
+            // Target origins for jiggle when user edits params during jiggle
+            // Jiggle will smoothly ease its orbit center toward these targets
+            let targetBaseSpikiness = baseSpikiness;
+            let targetBaseSpikeFrequency = baseSpikeFrequency;
+            let targetBaseSpikeSharpness = baseSpikeSharpness;
+            let targetBaseHue = baseHue;
+            let targetBaseScale = baseScale;
+            let targetBaseFillSize = baseFillSize;
+            let targetBaseFillOpacity = baseFillOpacity;
+            let targetBaseRotation = baseRotation;
+            let targetBaseHueShiftAmount = baseHueShiftAmount;
             // Initialize auto rotation speed with exponential mapping
             // Map slider (0-200) to rotation speed (-1 to 360)
             const initialAutoRotationSlider = parseFloat(autoRotationSlider.value);
@@ -1151,6 +1334,11 @@
             // Now load the preset if one was found (this will override the default values)
             if (presetLoaded) {
                 loadPreset(lastActivePreset);
+            } else {
+                // If no preset loaded, initialize status indicators
+                if (typeof updateStatusIndicators === 'function') {
+                    updateStatusIndicators();
+                }
             }
         
             // Helper function to handle editable value changes
@@ -1371,11 +1559,13 @@
             
             blendModeSelect.addEventListener('change', (e) => {
                 blendMode = e.target.value;
+                updateStatusIndicators();
             });
             
             blendOpacitySlider.addEventListener('input', (e) => {
                 blendOpacity = parseFloat(e.target.value);
                 blendOpacityValue.textContent = blendOpacity.toFixed(2);
+                updateStatusIndicators();
             });
             
             handleValueEdit(blendOpacityValue,
@@ -1429,6 +1619,7 @@
             emanationRateSlider.addEventListener('input', (e) => {
                 emanationRate = parseFloat(e.target.value);
                 emanationRateValue.textContent = emanationRate.toFixed(1);
+                updateStatusIndicators();
             });
             
             handleValueEdit(emanationRateValue,
@@ -1455,6 +1646,7 @@
                 const sliderValue = parseFloat(e.target.value);
                 autoRotationSpeed = -1.0 + Math.pow(sliderValue / 200.0, 0.5) * 361.0;
                 autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                updateStatusIndicators();
             });
             
             handleValueEdit(autoRotationValue,
@@ -1536,6 +1728,10 @@
                     localStorage.setItem('sandboxLastActivePreset', presetName);
                     presetSelect.value = presetName;
                 }
+                // Update preset names list for hotkeys (if updatePresetNames is defined)
+                if (typeof updatePresetNames === 'function') {
+                    updatePresetNames();
+                }
             });
             
             deletePresetBtn.addEventListener('click', () => {
@@ -1544,6 +1740,77 @@
                 if (localStorage.getItem('sandboxLastActivePreset') === presetToDelete) {
                     localStorage.removeItem('sandboxLastActivePreset');
                 }
+                // Update preset names list for hotkeys (if updatePresetNames is defined)
+                if (typeof updatePresetNames === 'function') {
+                    updatePresetNames();
+                }
+            });
+            
+            // Export presets to JSON file
+            exportPresetsBtn.addEventListener('click', () => {
+                const presets = loadPresets();
+                const jsonString = JSON.stringify(presets, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'sandbox-presets.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert(`Exported ${Object.keys(presets).length} preset(s) to sandbox-presets.json`);
+            });
+            
+            // Import presets from JSON file
+            importPresetsInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const importedPresets = JSON.parse(event.target.result);
+                        
+                        if (typeof importedPresets !== 'object' || Array.isArray(importedPresets)) {
+                            alert('Invalid preset file format. Expected an object with preset names as keys.');
+                            return;
+                        }
+                        
+                        // Load current presets
+                        const currentPresets = loadPresets();
+                        
+                        // Merge imported presets with current presets (imported presets take precedence for conflicts)
+                        let importedCount = 0;
+                        let overwrittenCount = 0;
+                        for (const [name, preset] of Object.entries(importedPresets)) {
+                            if (currentPresets[name]) {
+                                overwrittenCount++;
+                            } else {
+                                importedCount++;
+                            }
+                            currentPresets[name] = preset;
+                        }
+                        
+                        // Save merged presets
+                        localStorage.setItem('sandboxPresets', JSON.stringify(currentPresets));
+                        loadPresets();
+                        
+                        // Update preset names list for hotkeys (if updatePresetNames is defined)
+                        if (typeof updatePresetNames === 'function') {
+                            updatePresetNames();
+                        }
+                        
+                        // Reset file input
+                        e.target.value = '';
+                        
+                        const message = `Imported ${importedCount} new preset(s)${overwrittenCount > 0 ? ` and overwrote ${overwrittenCount} existing preset(s)` : ''}.`;
+                        alert(message);
+                    } catch (error) {
+                        alert(`Error importing presets: ${error.message}`);
+                    }
+                };
+                reader.readAsText(file);
             });
             
             // Randomize function
@@ -1659,18 +1926,29 @@
                 jiggleBtn.style.background = jiggleEnabled ? '#a00' : '#a0a';
                 
                 if (!jiggleEnabled) {
-                    // Reset to base values when stopping jiggle
-                    spikiness = baseSpikiness;
-                    spikeFrequency = baseSpikeFrequency;
-                    spikeSharpness = baseSpikeSharpness;
-                    hue = baseHue;
-                    scale = baseScale;
-                    fillSize = baseFillSize;
-                    fillOpacity = baseFillOpacity;
-                    rotation = baseRotation;
-                    hueShiftAmount = baseHueShiftAmount;
+                    // Keep current jiggled values and update base values to match
+                    // This way the values persist when jiggle is turned off
+                    baseSpikiness = spikiness;
+                    baseSpikeFrequency = spikeFrequency;
+                    baseSpikeSharpness = spikeSharpness;
+                    baseHue = hue;
+                    baseScale = scale;
+                    baseFillSize = fillSize;
+                    baseFillOpacity = fillOpacity;
+                    baseRotation = rotation;
+                    baseHueShiftAmount = hueShiftAmount;
+                    // Targets match new bases
+                    targetBaseSpikiness = baseSpikiness;
+                    targetBaseSpikeFrequency = baseSpikeFrequency;
+                    targetBaseSpikeSharpness = baseSpikeSharpness;
+                    targetBaseHue = baseHue;
+                    targetBaseScale = baseScale;
+                    targetBaseFillSize = baseFillSize;
+                    targetBaseFillOpacity = baseFillOpacity;
+                    targetBaseRotation = baseRotation;
+                    targetBaseHueShiftAmount = baseHueShiftAmount;
                     
-                    // Update sliders
+                    // Update sliders to reflect current values (they should already match, but ensure sync)
                     spikinessSlider.value = Math.round(spikiness * 100);
                     spikeFrequencySlider.value = spikeFrequency;
                     spikeSharpnessSlider.value = Math.round(spikeSharpness * 100);
@@ -1680,6 +1958,9 @@
                     fillOpacitySlider.value = Math.round(fillOpacity * 100);
                     rotationSlider.value = Math.round(rotation);
                     hueShiftSlider.value = hueShiftAmount.toFixed(3);
+                    
+                    // Update status indicators (unsaved state may have changed)
+                    updateStatusIndicators();
                 } else {
                     // Store current values as base when starting jiggle
                     baseSpikiness = spikiness;
@@ -1691,12 +1972,26 @@
                     baseFillOpacity = fillOpacity;
                     baseRotation = rotation;
                     baseHueShiftAmount = hueShiftAmount;
+                    // Targets start at current bases
+                    targetBaseSpikiness = baseSpikiness;
+                    targetBaseSpikeFrequency = baseSpikeFrequency;
+                    targetBaseSpikeSharpness = baseSpikeSharpness;
+                    targetBaseHue = baseHue;
+                    targetBaseScale = baseScale;
+                    targetBaseFillSize = baseFillSize;
+                    targetBaseFillOpacity = baseFillOpacity;
+                    targetBaseRotation = baseRotation;
+                    targetBaseHueShiftAmount = baseHueShiftAmount;
                 }
+                
+                // Update jiggle indicator
+                updateStatusIndicators();
             });
             
-            // Update base values when sliders change (if jiggle is off)
+            // Update base values when sliders change
             function updateBaseValues() {
                 if (!jiggleEnabled) {
+                    // When jiggle is off, bases track current values directly
                     baseSpikiness = spikiness;
                     baseSpikeFrequency = spikeFrequency;
                     baseSpikeSharpness = spikeSharpness;
@@ -1706,8 +2001,38 @@
                     baseFillOpacity = fillOpacity;
                     baseRotation = rotation;
                     baseHueShiftAmount = hueShiftAmount;
+                    
+                    targetBaseSpikiness = baseSpikiness;
+                    targetBaseSpikeFrequency = baseSpikeFrequency;
+                    targetBaseSpikeSharpness = baseSpikeSharpness;
+                    targetBaseHue = baseHue;
+                    targetBaseScale = baseScale;
+                    targetBaseFillSize = baseFillSize;
+                    targetBaseFillOpacity = baseFillOpacity;
+                    targetBaseRotation = baseRotation;
+                    targetBaseHueShiftAmount = baseHueShiftAmount;
+                } else {
+                    // When jiggle is on, treat current values as new desired origins
+                    // Jiggle will smoothly ease its orbit center toward these targets
+                    targetBaseSpikiness = spikiness;
+                    targetBaseSpikeFrequency = spikeFrequency;
+                    targetBaseSpikeSharpness = spikeSharpness;
+                    targetBaseHue = hue;
+                    targetBaseScale = scale;
+                    targetBaseFillSize = fillSize;
+                    targetBaseFillOpacity = fillOpacity;
+                    targetBaseRotation = rotation;
+                    targetBaseHueShiftAmount = hueShiftAmount;
+                }
+                // Update status indicators to check for unsaved changes
+                if (typeof updateStatusIndicators === 'function') {
+                    updateStatusIndicators();
                 }
             }
+            
+            // Hotkey state variables (declared before render function)
+            let freezeEnabled = false;
+            let originalDilationSpeed = dilationSpeed;
             
             let startTime = Date.now();
             let lastCaptureTime = 0;
@@ -1719,6 +2044,18 @@
                 
                 // Apply jiggle if enabled
                 if (jiggleEnabled && jiggleAmount > 0) {
+                    // Ease bases toward targets so jiggle orbits move smoothly when user edits params
+                    const originLerp = 0.1;
+                    baseSpikiness += (targetBaseSpikiness - baseSpikiness) * originLerp;
+                    baseSpikeFrequency += (targetBaseSpikeFrequency - baseSpikeFrequency) * originLerp;
+                    baseSpikeSharpness += (targetBaseSpikeSharpness - baseSpikeSharpness) * originLerp;
+                    baseHue += (targetBaseHue - baseHue) * originLerp;
+                    baseScale += (targetBaseScale - baseScale) * originLerp;
+                    baseFillSize += (targetBaseFillSize - baseFillSize) * originLerp;
+                    baseFillOpacity += (targetBaseFillOpacity - baseFillOpacity) * originLerp;
+                    baseRotation += (targetBaseRotation - baseRotation) * originLerp;
+                    baseHueShiftAmount += (targetBaseHueShiftAmount - baseHueShiftAmount) * originLerp;
+                    
                     // Use time-based seed for smooth jiggle
                     const seed = currentTime * 2.0; // Speed of jiggle
                     
@@ -1745,8 +2082,7 @@
                     fillOpacity = baseFillOpacity + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount;
                     fillOpacity = Math.max(0, Math.min(1, fillOpacity));
                     
-                    rotation = baseRotation + (Math.sin(seed * 0.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 180.0; // ±180 range
-                    rotation = ((rotation % 360) + 360) % 360; // Wrap around
+                    // Manual rotation does not jiggle; keep rotation from user / auto-rotation
                     
                     hueShiftAmount = baseHueShiftAmount + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1; // ±0.1 range
                     hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
@@ -1765,6 +2101,9 @@
                 // This ensures captured shapes preserve their rotation at capture time
                 const totalRotation = rotation + (currentTime * autoRotationSpeed);
                 
+                // Apply freeze: if frozen, set dilation to 1.0 (no expansion)
+                const effectiveDilationSpeed = freezeEnabled ? 1.0 : dilationSpeed;
+                
                 renderer.render({
                     u_time: currentTime,
                     u_spikiness: spikiness,
@@ -1774,12 +2113,169 @@
                     u_scale: scale,
                     u_fillSize: fillSize,
                     u_fillOpacity: fillOpacity
-                }, dilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation);
+                }, effectiveDilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation);
             }
             
             // Use setInterval for fixed 60fps instead of requestAnimationFrame
             setInterval(render, FRAME_TIME);
             render(); // Initial render
+            
+            // Hotkey handlers
+            let presetNames = [];
+            
+            // Store reference to original loadPresets before it gets wrapped
+            const originalLoadPresetsForHotkeys = loadPresets;
+            
+            // Update preset names list (use original function to avoid circular reference)
+            function updatePresetNames() {
+                const presets = originalLoadPresetsForHotkeys();
+                presetNames = Object.keys(presets);
+            }
+            updatePresetNames();
+            
+            // Track current preset index
+            let currentPresetIndex = -1;
+            
+            // Find current preset index
+            function findCurrentPresetIndex() {
+                const currentPreset = presetSelect.value;
+                currentPresetIndex = presetNames.indexOf(currentPreset);
+                if (currentPresetIndex === -1 && presetNames.length > 0) {
+                    currentPresetIndex = 0;
+                }
+            }
+            
+            // Keyboard event listeners
+            document.addEventListener('keydown', (e) => {
+                // Ignore hotkeys while typing in text inputs or editable fields
+                const active = document.activeElement;
+                if (active) {
+                    const tag = active.tagName;
+                    const type = active.type;
+                    const isTextInput = tag === 'INPUT' && type !== 'range' && type !== 'checkbox' && type !== 'radio';
+                    const isTextArea = tag === 'TEXTAREA';
+                    const isEditable = active.isContentEditable;
+                    if (isTextInput || isTextArea || isEditable) {
+                        return;
+                    }
+                }
+                
+                // Prevent default for our hotkeys (but allow shift for future use)
+                if (e.key === ' ' || e.key === 'r' || e.key === 'R' || 
+                    e.key === 'j' || e.key === 'J' || e.key === 'Escape' ||
+                    e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+                    e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                }
+                
+                // Space: Toggle freeze (set dilation to 1.0 = no expansion)
+                if (e.key === ' ') {
+                    freezeEnabled = !freezeEnabled;
+                    if (freezeEnabled) {
+                        // Store original dilation speed
+                        originalDilationSpeed = dilationSpeed;
+                        dilationSpeed = 1.0; // No dilation when frozen (1.0 = no expansion)
+                    } else {
+                        // Restore original dilation speed
+                        dilationSpeed = originalDilationSpeed;
+                    }
+                    updateStatusIndicators();
+                }
+                
+                // R: Randomize
+                if (e.key === 'r' || e.key === 'R') {
+                    randomizeAll();
+                }
+                
+                // Left/Right arrows: Cycle presets (stub for future refinement)
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                    console.log('Preset cycling via arrow keys: TODO refine behavior');
+                }
+                
+                // Up arrow: accelerate auto params (rotation, hue shift, dilation)
+                if (e.key === 'ArrowUp') {
+                    // Increase auto rotation speed (up to a max) - slower step
+                    autoRotationSpeed = Math.min(360.0, autoRotationSpeed + 0.5);
+                    autoRotationSlider.value = Math.round(200 * Math.pow(Math.max(0, Math.min(1, (autoRotationSpeed + 1) / 361.0)), 2));
+                    autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                    
+                    // Increase hue shift amount (up to max 0.2) - slower step
+                    hueShiftAmount = Math.min(0.2, hueShiftAmount + 0.0002);
+                    hueShiftSlider.value = hueShiftAmount.toFixed(3);
+                    hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+                    
+                    // Push dilation further away from 1.0 - slower step
+                    const delta = dilationSpeed >= 1.0 ? 0.001 : -0.001;
+                    dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed + delta));
+                    dilationSlider.value = (function dilationSpeedToSlider(speed) {
+                        const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                        const range = (1.22 - 0.88) / (1.0 - midPower);
+                        const min = 1.0 - midPower * range;
+                        const normalized = (speed - min) / range;
+                        return Math.round(200 * Math.pow(Math.max(0, Math.min(1, normalized)), 8));
+                    })(dilationSpeed);
+                    dilationValue.textContent = dilationSpeed.toFixed(4);
+                    
+                    updateBaseValues();
+                    updateStatusIndicators();
+                }
+                
+                // Down arrow: decelerate auto params towards neutral
+                if (e.key === 'ArrowDown') {
+                    // Gently damp auto rotation towards 0 - slower step
+                    autoRotationSpeed *= 0.98;
+                    autoRotationSlider.value = Math.round(200 * Math.pow(Math.max(0, Math.min(1, (autoRotationSpeed + 1) / 361.0)), 2));
+                    autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                    
+                    // Gently damp hue shift towards 0 - slower step
+                    hueShiftAmount *= 0.98;
+                    hueShiftSlider.value = hueShiftAmount.toFixed(3);
+                    hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+                    
+                    // Bring dilation towards 1.0 (never snapping) - slower easing
+                    dilationSpeed = dilationSpeed + (1.0 - dilationSpeed) * 0.02;
+                    dilationSlider.value = (function dilationSpeedToSlider(speed) {
+                        const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                        const range = (1.22 - 0.88) / (1.0 - midPower);
+                        const min = 1.0 - midPower * range;
+                        const normalized = (speed - min) / range;
+                        return Math.round(200 * Math.pow(Math.max(0, Math.min(1, normalized)), 8));
+                    })(dilationSpeed);
+                    dilationValue.textContent = dilationSpeed.toFixed(4);
+                    
+                    updateBaseValues();
+                    updateStatusIndicators();
+                }
+                
+                // J: Toggle jiggle
+                if (e.key === 'j' || e.key === 'J') {
+                    jiggleBtn.click();
+                }
+                
+                // Esc: Clear screen
+                if (e.key === 'Escape') {
+                    // Clear both framebuffers
+                    const gl = renderer.gl;
+                    
+                    // Clear history framebuffer
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.historyFramebuffer);
+                    gl.viewport(0, 0, renderer.canvas.width, renderer.canvas.height);
+                    gl.clearColor(0, 0, 0, 1);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    
+                    // Clear current framebuffer
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, renderer.currentFramebuffer);
+                    gl.viewport(0, 0, renderer.canvas.width, renderer.canvas.height);
+                    gl.clearColor(0, 0, 0, 1);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                }
+            });
+            
+            // Note: We don't wrap loadPresets here because updatePresetNames
+            // already calls the original function directly to avoid circular references.
+            // If you need to update preset names after loading, call updatePresetNames() explicitly.
         })();
     </script>
 </body>
