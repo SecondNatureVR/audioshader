@@ -27,47 +27,137 @@
         
         #dev-toolbox {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(20, 20, 20, 0.9);
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 20, 20, 0.95);
             border: 1px solid #444;
-            border-radius: 8px;
-            padding: 20px;
+            border-radius: 6px;
+            padding: 12px;
             color: #fff;
-            min-width: 250px;
-            max-height: calc(100vh - 40px);
+            min-width: 280px;
+            max-width: 320px;
+            max-height: calc(100vh - 20px);
             overflow-y: auto;
             z-index: 1000;
+            font-size: 11px;
         }
         
         #dev-toolbox h3 {
-            margin-bottom: 15px;
-            font-size: 14px;
+            margin: 0 0 10px 0;
+            font-size: 11px;
             color: #aaa;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+            font-weight: 600;
         }
         
         .control-group {
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         
         .control-group label {
             display: block;
-            margin-bottom: 8px;
-            font-size: 12px;
-            color: #ccc;
+            margin-bottom: 4px;
+            font-size: 10px;
+            color: #bbb;
+            font-weight: 500;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-row input[type="range"] {
+            flex: 1;
+            margin: 0;
+        }
+        
+        .control-row .value {
+            font-size: 10px;
+            color: #888;
+            font-family: monospace;
+            min-width: 45px;
+            text-align: right;
+            padding: 2px 4px;
+            border: 1px solid transparent;
+            border-radius: 2px;
+            cursor: text;
+            user-select: text;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .control-row .value:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #555;
+        }
+        
+        .control-row .value:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #0af;
+            color: #fff;
         }
         
         .control-group input[type="range"] {
             width: 100%;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
         }
         
         .control-group .value {
-            font-size: 11px;
+            font-size: 10px;
             color: #888;
             font-family: monospace;
+            padding: 2px 4px;
+            border: 1px solid transparent;
+            border-radius: 2px;
+            cursor: text;
+            user-select: text;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .control-group .value:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #555;
+        }
+        
+        .control-group .value:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #0af;
+            color: #fff;
+        }
+        
+        .control-group select,
+        .control-group input[type="text"],
+        .control-group button {
+            font-size: 10px;
+            padding: 3px 6px;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .section-header {
+            margin-top: 12px;
+            margin-bottom: 6px;
+            font-size: 9px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            border-top: 1px solid #333;
+            padding-top: 8px;
+        }
+        
+        .section-header:first-child {
+            border-top: none;
+            padding-top: 0;
+            margin-top: 0;
         }
         
         input[type="range"] {
@@ -125,6 +215,8 @@
         uniform float u_rotation;
         uniform float u_autoRotationSpeed;
         uniform float u_blendOpacity;
+        uniform float u_fillSize;       // 0.0 = no fill, 1.0 = fill to edge
+        uniform float u_fillOpacity;   // 0.0 = transparent, 1.0 = opaque
 
         // Convert HSV to RGB
         vec3 hsv2rgb(vec3 c) {
@@ -181,25 +273,29 @@
             float spikeAmount = u_scale * 0.25 * u_spikiness;
             float r = baseRadius + spikeAmount * sharpModulation;
             
-            // Draw the star - use a smooth falloff
+            // Draw the outline - this is the primary shape definition
             float lineWidth = 0.012;
-            float star = smoothstep(lineWidth, 0.0, abs(dist - r));
+            float outline = smoothstep(lineWidth, 0.0, abs(dist - r));
             
-            // Fill the star interior for better visibility
-            float innerRadius = r * 0.65;
-            if (dist < innerRadius) {
-                star = max(star, 0.6);
+            // Draw the fill separately - parameterized by size and opacity
+            float fillRadius = r * u_fillSize; // Fill size: 0.0 = no fill, 1.0 = fill to edge
+            float fill = 0.0;
+            if (u_fillSize > 0.0 && dist < fillRadius) {
+                // Smooth falloff for fill interior
+                float fillFalloff = smoothstep(fillRadius, fillRadius * 0.8, dist);
+                fill = fillFalloff * u_fillOpacity; // Apply fill opacity
             }
             
-            // Make it brighter
-            star = min(star, 1.0);
+            // Combine outline and fill
+            // Outline is always full brightness, fill adds to it with its opacity
+            float shape = max(outline, fill);
             
             // Convert hue to RGB (hue in degrees, saturation=1.0, value=1.0)
             // Add slow automatic hue shift over time (full cycle every 30 seconds)
             float autoHueShift = u_time * 12.0; // 360 degrees / 30 seconds = 12 deg/sec
             float finalHue = mod(u_hue + autoHueShift, 360.0);
             vec3 hsv = vec3(finalHue / 360.0, 1.0, 1.0);
-            vec3 color = hsv2rgb(hsv) * star;
+            vec3 color = hsv2rgb(hsv) * shape;
             
             // Apply opacity for blend control
             gl_FragColor = vec4(color, u_blendOpacity);
@@ -260,20 +356,10 @@
             // Map distance to fade using a power curve for more gradual fade
             float fadeAmount = smoothstep(0.0, 0.8, distFromCenter); // Fade as it expands
             // Apply logarithmic fade: fade = 1 - fadeAmount^fadePower
-            // u_fadeAmount range: -1.5 to 5.0
-            // Negative values invert fade behavior (brighten as it expands)
-            // Positive values create gradual fades
-            float fade;
-            if (u_fadeAmount < 0.0) {
-                // Negative fade: brighten as it expands (inverted fade)
-                // Map -1.5 to 0.0 → fadePower from 4.0 to 1.0
-                float fadePower = 1.0 - u_fadeAmount * 2.0; // Range: 1.0 to 4.0 when u_fadeAmount is -1.5 to 0
-                fade = pow(fadeAmount, fadePower); // As fadeAmount increases (expands), fade increases (brightens)
-            } else {
-                // Positive fade: normal fade behavior (fade out as it expands)
-                float fadePower = 1.0 + u_fadeAmount * 2.0; // Range: 1.0 to 11.0 when u_fadeAmount is 0 to 5
-                fade = 1.0 - pow(fadeAmount, fadePower);
-            }
+            // u_fadeAmount range: 0 to 5.0
+            // Higher values create more gradual fades
+            float fadePower = 1.0 + u_fadeAmount * 2.0; // Range: 1.0 to 11.0 when u_fadeAmount is 0 to 5
+            float fade = 1.0 - pow(fadeAmount, fadePower);
             
             // Decay factor: reduce brightness over time to prevent accumulation
             // Estimate age based on distance (further = older = more decay)
@@ -298,89 +384,148 @@
     </script>
     
     <div id="dev-toolbox">
-        <h3>Dev Controls</h3>
+        <h3>Controls</h3>
         
         <div class="control-group">
             <label for="preset-select">Preset</label>
-            <select id="preset-select" style="width: 100%; font-size: 11px; padding: 2px; background: #333; color: #eee; border: 1px solid #555;">
-                <option value="">-- Select Preset --</option>
+            <select id="preset-select" style="width: 100%; font-size: 10px; padding: 3px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
+                <option value="">-- Select --</option>
             </select>
-            <div style="margin-top: 8px; display: flex; gap: 5px;">
-                <input type="text" id="preset-name-input" placeholder="Preset name" style="flex: 1; font-size: 11px; padding: 4px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
-                <button id="save-preset-btn" style="font-size: 11px; padding: 4px 8px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Save</button>
-                <button id="delete-preset-btn" style="font-size: 11px; padding: 4px 8px; background: #a00; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Delete</button>
+            <div style="margin-top: 6px; display: flex; gap: 4px;">
+                <input type="text" id="preset-name-input" placeholder="Name" style="flex: 1; font-size: 10px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
+                <button id="save-preset-btn" style="font-size: 10px; padding: 3px 6px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Save</button>
+                <button id="delete-preset-btn" style="font-size: 10px; padding: 3px 6px; background: #a00; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Del</button>
+            </div>
+        </div>
+        
+        <div class="section-header">Shape</div>
+        <div class="control-group">
+            <label for="spikiness-slider">Spikiness</label>
+            <div class="control-row">
+                <input type="range" id="spikiness-slider" min="0" max="100" value="50" step="1">
+                <div class="value" contenteditable="true" id="spikiness-value">0.50</div>
             </div>
         </div>
         
         <div class="control-group">
-            <label for="spikiness-slider">Spikiness</label>
-            <input type="range" id="spikiness-slider" min="0" max="100" value="50" step="1">
-            <div class="value" id="spikiness-value">0.50</div>
+            <label for="spike-frequency-slider">Frequency</label>
+            <div class="control-row">
+                <input type="range" id="spike-frequency-slider" min="2" max="20" value="5" step="0.1">
+                <div class="value" contenteditable="true" id="spike-frequency-value">5.0</div>
+            </div>
         </div>
         
         <div class="control-group">
-            <label for="spike-frequency-slider">Spike Frequency</label>
-            <input type="range" id="spike-frequency-slider" min="2" max="20" value="5" step="0.1">
-            <div class="value" id="spike-frequency-value">5.0</div>
+            <label for="spike-sharpness-slider">Sharpness</label>
+            <div class="control-row">
+                <input type="range" id="spike-sharpness-slider" min="0" max="100" value="0" step="1">
+                <div class="value" contenteditable="true" id="spike-sharpness-value">0.00</div>
+            </div>
         </div>
         
-        <div class="control-group">
-            <label for="spike-sharpness-slider">Spike Sharpness</label>
-            <input type="range" id="spike-sharpness-slider" min="0" max="100" value="0" step="1">
-            <div class="value" id="spike-sharpness-value">0.00</div>
+        <div class="section-header">Appearance</div>
+        <div class="two-column">
+            <div class="control-group">
+                <label for="hue-slider">Hue</label>
+                <div class="control-row">
+                    <input type="range" id="hue-slider" min="0" max="360" value="45" step="1">
+                    <div class="value" contenteditable="true" id="hue-value">45°</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="scale-slider">Scale</label>
+                <div class="control-row">
+                    <input type="range" id="scale-slider" min="0.05" max="1.0" value="0.2" step="0.01">
+                    <div class="value" contenteditable="true" id="scale-value">0.20</div>
+                </div>
+            </div>
         </div>
         
-        <div class="control-group">
-            <label for="hue-slider">Hue</label>
-            <input type="range" id="hue-slider" min="0" max="360" value="45" step="1">
-            <div class="value" id="hue-value">45°</div>
+        <div class="two-column">
+            <div class="control-group">
+                <label for="fill-size-slider">Fill Size</label>
+                <div class="control-row">
+                    <input type="range" id="fill-size-slider" min="0" max="100" value="0" step="1">
+                    <div class="value" contenteditable="true" id="fill-size-value">0.00</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="fill-opacity-slider">Fill Opacity</label>
+                <div class="control-row">
+                    <input type="range" id="fill-opacity-slider" min="0" max="100" value="60" step="1">
+                    <div class="value" contenteditable="true" id="fill-opacity-value">0.60</div>
+                </div>
+            </div>
         </div>
         
-        <div class="control-group">
-            <label for="scale-slider">Scale</label>
-            <input type="range" id="scale-slider" min="0.05" max="1.0" value="0.2" step="0.01">
-            <div class="value" id="scale-value">0.20</div>
-        </div>
-        
+        <div class="section-header">Emanation</div>
         <div class="control-group">
             <label for="dilation-slider">Dilation Speed</label>
-            <input type="range" id="dilation-slider" min="0" max="200" value="20" step="1">
-            <div class="value" id="dilation-value">1.01</div>
+            <div class="control-row">
+                <input type="range" id="dilation-slider" min="0" max="200" value="20" step="1">
+                <div class="value" contenteditable="true" id="dilation-value">1.01</div>
+            </div>
         </div>
         
         <div class="control-group">
             <label for="fade-slider">Fade Amount</label>
-            <input type="range" id="fade-slider" min="0" max="100" value="30" step="1">
-            <div class="value" id="fade-value">0.30</div>
+            <div class="control-row">
+                <input type="range" id="fade-slider" min="0" max="100" value="30" step="1">
+                <div class="value" contenteditable="true" id="fade-value">0.30</div>
+            </div>
         </div>
         
         <div class="control-group">
-            <label for="emanation-rate-slider">Emanation Rate (per second)</label>
-            <input type="range" id="emanation-rate-slider" min="2" max="30" value="2" step="0.1">
-            <div class="value" id="emanation-rate-value">2.0</div>
+            <label for="emanation-rate-slider">Rate (per sec)</label>
+            <div class="control-row">
+                <input type="range" id="emanation-rate-slider" min="2" max="30" value="2" step="0.1">
+                <div class="value" contenteditable="true" id="emanation-rate-value">2.0</div>
+            </div>
         </div>
         
-        <div class="control-group">
-            <label for="auto-rotation-slider">Auto Rotation Speed (deg/sec)</label>
-            <input type="range" id="auto-rotation-slider" min="0" max="200" value="50" step="1">
-            <div class="value" id="auto-rotation-value">30°</div>
+        <div class="section-header">Rotation</div>
+        <div class="two-column">
+            <div class="control-group">
+                <label for="rotation-slider">Manual</label>
+                <div class="control-row">
+                    <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
+                    <div class="value" contenteditable="true" id="rotation-value">0°</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="auto-rotation-slider">Auto (deg/s)</label>
+                <div class="control-row">
+                    <input type="range" id="auto-rotation-slider" min="0" max="200" value="50" step="1">
+                    <div class="value" contenteditable="true" id="auto-rotation-value">30°</div>
+                </div>
+            </div>
         </div>
         
-        <div class="control-group">
-            <label for="hue-shift-slider">Hue Shift</label>
-            <input type="range" id="hue-shift-slider" min="0.0" max="0.2" value="0.05" step="0.001">
-            <div class="value" id="hue-shift-value">0.050</div>
-        </div>
-        
-        <div class="control-group">
-            <label for="rotation-slider">Star Rotation</label>
-            <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
-            <div class="value" id="rotation-value">0°</div>
+        <div class="section-header">Effects</div>
+        <div class="two-column">
+            <div class="control-group">
+                <label for="hue-shift-slider">Hue Shift</label>
+                <div class="control-row">
+                    <input type="range" id="hue-shift-slider" min="0.0" max="0.2" value="0.05" step="0.001">
+                    <div class="value" contenteditable="true" id="hue-shift-value">0.050</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="blend-opacity-slider">Opacity</label>
+                <div class="control-row">
+                    <input type="range" id="blend-opacity-slider" min="0.0" max="1.0" value="0.3" step="0.01">
+                    <div class="value" contenteditable="true" id="blend-opacity-value">0.30</div>
+                </div>
+            </div>
         </div>
         
         <div class="control-group">
             <label for="blend-mode-select">Blend Mode</label>
-            <select id="blend-mode-select" style="width: 100%; font-size: 11px; padding: 2px; background: #333; color: #eee; border: 1px solid #555;">
+            <select id="blend-mode-select" style="width: 100%; font-size: 10px; padding: 3px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
                 <option value="additive">Additive</option>
                 <option value="alpha" selected>Alpha Blend</option>
                 <option value="multiply">Multiply</option>
@@ -389,10 +534,17 @@
             </select>
         </div>
         
+        <div class="section-header">Actions</div>
         <div class="control-group">
-            <label for="blend-opacity-slider">Blend Opacity</label>
-            <input type="range" id="blend-opacity-slider" min="0.0" max="1.0" value="0.3" step="0.01">
-            <div class="value" id="blend-opacity-value">0.30</div>
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                <button id="randomize-btn" style="flex: 1; font-size: 10px; padding: 6px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: 500;">Randomize</button>
+                <button id="jiggle-btn" style="flex: 1; font-size: 10px; padding: 6px; background: #a0a; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: 500;">Jiggle</button>
+            </div>
+            <label for="jiggle-amount-slider">Jiggle Amount</label>
+            <div class="control-row">
+                <input type="range" id="jiggle-amount-slider" min="0" max="100" value="10" step="1">
+                <div class="value" contenteditable="true" id="jiggle-amount-value">10%</div>
+            </div>
         </div>
     </div>
     
@@ -775,6 +927,14 @@
             const blendModeSelect = document.getElementById('blend-mode-select');
             const blendOpacitySlider = document.getElementById('blend-opacity-slider');
             const blendOpacityValue = document.getElementById('blend-opacity-value');
+            const fillSizeSlider = document.getElementById('fill-size-slider');
+            const fillSizeValue = document.getElementById('fill-size-value');
+            const fillOpacitySlider = document.getElementById('fill-opacity-slider');
+            const fillOpacityValue = document.getElementById('fill-opacity-value');
+            const randomizeBtn = document.getElementById('randomize-btn');
+            const jiggleBtn = document.getElementById('jiggle-btn');
+            const jiggleAmountSlider = document.getElementById('jiggle-amount-slider');
+            const jiggleAmountValue = document.getElementById('jiggle-amount-value');
             
             // Get emanation rate slider before initializing values
             const emanationRateSlider = document.getElementById('emanation-rate-slider');
@@ -832,6 +992,8 @@
                 rotation = preset.rotation;
                 blendMode = preset.blendMode;
                 blendOpacity = preset.blendOpacity;
+                fillSize = preset.fillSize !== undefined ? preset.fillSize : 0.0;
+                fillOpacity = preset.fillOpacity !== undefined ? preset.fillOpacity : 0.6;
                 emanationRate = preset.emanationRate;
                 autoRotationSpeed = preset.autoRotationSpeed;
                 
@@ -853,13 +1015,7 @@
                 dilationSpeed = min + Math.pow(parseFloat(dilationSlider.value) / 200.0, 1.0 / 8.0) * range;
                 dilationValue.textContent = dilationSpeed.toFixed(4);
                 fadeSlider.value = preset.fadeSlider || 30;
-                const fadeSliderVal = parseFloat(fadeSlider.value);
-                if (fadeSliderVal < 23.08) {
-                    fadeAmount = -1.5 + (fadeSliderVal / 23.08) * 1.5;
-                } else {
-                    const normalizedPos = (fadeSliderVal - 23.08) / (100.0 - 23.08);
-                    fadeAmount = Math.pow(normalizedPos, 1.0 / 3.0) * 5.0;
-                }
+                fadeAmount = Math.pow(parseFloat(fadeSlider.value) / 100.0, 1.0 / 3.0) * 5.0;
                 fadeValue.textContent = fadeAmount.toFixed(3);
                 hueShiftSlider.value = hueShiftAmount;
                 hueShiftValue.textContent = hueShiftAmount.toFixed(3);
@@ -868,6 +1024,10 @@
                 blendModeSelect.value = blendMode;
                 blendOpacitySlider.value = blendOpacity;
                 blendOpacityValue.textContent = blendOpacity.toFixed(2);
+                fillSizeSlider.value = Math.round(fillSize * 100);
+                fillSizeValue.textContent = fillSize.toFixed(2);
+                fillOpacitySlider.value = Math.round(fillOpacity * 100);
+                fillOpacityValue.textContent = fillOpacity.toFixed(2);
                 emanationRateSlider.value = emanationRate;
                 emanationRateValue.textContent = emanationRate.toFixed(1);
                 // Use stored slider value if available, otherwise reverse map from speed value
@@ -911,25 +1071,31 @@
             const range = (1.22 - 0.88) / (1.0 - midPower); // Adjusted range
             const min = 1.0 - midPower * range; // Adjusted minimum
             let dilationSpeed = min + Math.pow(initialDilationSlider / 200.0, 1.0 / 8.0) * range;
-            // Initialize fade amount with logarithmic mapping (-1.5 to 5.0 range)
+            // Initialize fade amount with logarithmic mapping (0 to 5.0 range)
             const initialFadeSlider = parseFloat(fadeSlider.value);
-            // Map slider 0-100 to -1.5 to 5.0
-            // Use curve: at 0 → -1.5, at 100 → 5.0
-            // Logarithmic curve for positive values, linear for negative
-            let fadeAmount;
-            if (initialFadeSlider < 23.08) {
-                // Negative range: 0-23.08 maps to -1.5 to 0 (linear)
-                fadeAmount = -1.5 + (initialFadeSlider / 23.08) * 1.5;
-            } else {
-                // Positive range: 23.08-100 maps to 0 to 5.0 (logarithmic)
-                const normalizedPos = (initialFadeSlider - 23.08) / (100.0 - 23.08);
-                fadeAmount = Math.pow(normalizedPos, 1.0 / 3.0) * 5.0;
-            }
+            // Map slider 0-100 to 0 to 5.0 (logarithmic curve)
+            fadeAmount = Math.pow(initialFadeSlider / 100.0, 1.0 / 3.0) * 5.0;
             let hueShiftAmount = parseFloat(hueShiftSlider.value);
             let rotation = parseFloat(rotationSlider.value);
             let blendMode = blendModeSelect.value;
             let blendOpacity = parseFloat(blendOpacitySlider.value);
+            let fillSize = parseFloat(fillSizeSlider.value) / 100.0; // Convert 0-100 to 0-1
+            let fillOpacity = parseFloat(fillOpacitySlider.value) / 100.0; // Convert 0-100 to 0-1
             let emanationRate = parseFloat(emanationRateSlider.value); // Emanations per second
+            let jiggleAmount = parseFloat(jiggleAmountSlider.value) / 100.0; // Convert 0-100 to 0-1
+            jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
+            let jiggleEnabled = false;
+            
+            // Store base values for jiggle (when jiggle is off, these match current values)
+            let baseSpikiness = spikiness;
+            let baseSpikeFrequency = spikeFrequency;
+            let baseSpikeSharpness = spikeSharpness;
+            let baseHue = hue;
+            let baseScale = scale;
+            let baseFillSize = fillSize;
+            let baseFillOpacity = fillOpacity;
+            let baseRotation = rotation;
+            let baseHueShiftAmount = hueShiftAmount;
             // Initialize auto rotation speed with exponential mapping
             // Map slider (0-200) to rotation speed (-1 to 360)
             const initialAutoRotationSlider = parseFloat(autoRotationSlider.value);
@@ -941,31 +1107,135 @@
                 loadPreset(lastActivePreset);
             }
         
+            // Helper function to handle editable value changes
+            // Direct input bypasses clamping - allows any value
+            function handleValueEdit(valueElement, parseFn, formatFn, updateFn) {
+                valueElement.addEventListener('blur', (e) => {
+                    const text = e.target.textContent.trim();
+                    const numValue = parseFn(text);
+                    if (!isNaN(numValue)) {
+                        // No clamping - accept the value as-is
+                        const formatted = formatFn(numValue);
+                        e.target.textContent = formatted;
+                        updateFn(numValue);
+                    } else {
+                        // Restore previous value on invalid input
+                        const currentValue = parseFn(e.target.textContent);
+                        if (!isNaN(currentValue)) {
+                            e.target.textContent = formatFn(currentValue);
+                        }
+                    }
+                });
+                
+                valueElement.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.target.blur();
+                    }
+                });
+            }
+            
             // Update sliders
             spikinessSlider.addEventListener('input', (e) => {
                 spikiness = parseFloat(e.target.value) / 100.0;
                 spikinessValue.textContent = spikiness.toFixed(2);
+                updateBaseValues();
             });
+            
+            handleValueEdit(spikinessValue, 
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    spikiness = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(1, val));
+                    spikinessSlider.value = Math.round(clampedForSlider * 100);
+                    updateBaseValues();
+                }
+            );
             
             spikeFrequencySlider.addEventListener('input', (e) => {
                 spikeFrequency = parseFloat(e.target.value);
                 spikeFrequencyValue.textContent = spikeFrequency.toFixed(1);
+                updateBaseValues();
             });
+            
+            handleValueEdit(spikeFrequencyValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(1),
+                (val) => {
+                    spikeFrequency = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(2, Math.min(20, val));
+                    spikeFrequencySlider.value = clampedForSlider;
+                    updateBaseValues();
+                }
+            );
             
             spikeSharpnessSlider.addEventListener('input', (e) => {
                 spikeSharpness = parseFloat(e.target.value) / 100.0;
                 spikeSharpnessValue.textContent = spikeSharpness.toFixed(2);
+                updateBaseValues();
             });
+            
+            handleValueEdit(spikeSharpnessValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    spikeSharpness = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(1, val));
+                    spikeSharpnessSlider.value = Math.round(clampedForSlider * 100);
+                    updateBaseValues();
+                }
+            );
             
             hueSlider.addEventListener('input', (e) => {
                 hue = parseFloat(e.target.value);
                 hueValue.textContent = hue + '°';
+                updateBaseValues();
             });
+            
+            handleValueEdit(hueValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => Math.round(val) + '°',
+                (val) => {
+                    hue = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(360, val));
+                    hueSlider.value = Math.round(clampedForSlider);
+                    updateBaseValues();
+                }
+            );
             
             scaleSlider.addEventListener('input', (e) => {
                 scale = parseFloat(e.target.value);
                 scaleValue.textContent = scale.toFixed(2);
+                updateBaseValues();
             });
+            
+            handleValueEdit(scaleValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    scale = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0.05, Math.min(1.0, val));
+                    scaleSlider.value = clampedForSlider.toFixed(2);
+                    updateBaseValues();
+                }
+            );
+            
+            // Helper function to reverse-map dilation speed to slider value
+            function dilationSpeedToSlider(speed) {
+                const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                const range = (1.22 - 0.88) / (1.0 - midPower);
+                const min = 1.0 - midPower * range;
+                // Reverse: speed = min + (slider/200)^(1/8) * range
+                // slider = 200 * ((speed - min) / range)^8
+                const normalized = (speed - min) / range;
+                return Math.round(200 * Math.pow(Math.max(0, Math.min(1, normalized)), 8));
+            }
             
             dilationSlider.addEventListener('input', (e) => {
                 // Map slider value (0-200) to dilation speed, with middle (100) = 1.0
@@ -979,29 +1249,79 @@
                 dilationValue.textContent = dilationSpeed.toFixed(4); // More decimal places for precision
             });
             
-            fadeSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to fade amount (-1.5 to 5.0)
-                const sliderValue = parseFloat(e.target.value);
-                if (sliderValue < 23.08) {
-                    // Negative range: 0-23.08 maps to -1.5 to 0 (linear)
-                    fadeAmount = -1.5 + (sliderValue / 23.08) * 1.5;
-                } else {
-                    // Positive range: 23.08-100 maps to 0 to 5.0 (logarithmic)
-                    const normalizedPos = (sliderValue - 23.08) / (100.0 - 23.08);
-                    fadeAmount = Math.pow(normalizedPos, 1.0 / 3.0) * 5.0;
+            handleValueEdit(dilationValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(4),
+                (val) => {
+                    dilationSpeed = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0.88, Math.min(1.22, val));
+                    dilationSlider.value = dilationSpeedToSlider(clampedForSlider);
+                    updateBaseValues();
                 }
+            );
+            
+            // Helper function to reverse-map fade amount to slider value
+            function fadeAmountToSlider(amount) {
+                // Reverse: amount = (slider/100)^(1/3) * 5.0
+                // slider = 100 * (amount / 5.0)^3
+                return Math.round(100 * Math.pow(Math.max(0, Math.min(1, amount / 5.0)), 3));
+            }
+            
+            fadeSlider.addEventListener('input', (e) => {
+                // Map slider value (0-100) to fade amount (0 to 5.0) with logarithmic curve
+                const sliderValue = parseFloat(e.target.value);
+                fadeAmount = Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 5.0;
                 fadeValue.textContent = fadeAmount.toFixed(3);
             });
+            
+            handleValueEdit(fadeValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(3),
+                (val) => {
+                    fadeAmount = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(5.0, val));
+                    fadeSlider.value = fadeAmountToSlider(clampedForSlider);
+                    updateBaseValues();
+                }
+            );
             
             hueShiftSlider.addEventListener('input', (e) => {
                 hueShiftAmount = parseFloat(e.target.value);
                 hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+                updateBaseValues();
             });
+            
+            handleValueEdit(hueShiftValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(3),
+                (val) => {
+                    hueShiftAmount = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(0.2, val));
+                    hueShiftSlider.value = clampedForSlider.toFixed(3);
+                    updateBaseValues();
+                }
+            );
             
             rotationSlider.addEventListener('input', (e) => {
                 rotation = parseFloat(e.target.value);
                 rotationValue.textContent = rotation + '°';
+                updateBaseValues();
             });
+            
+            handleValueEdit(rotationValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => Math.round(val) + '°',
+                (val) => {
+                    rotation = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(360, val));
+                    rotationSlider.value = Math.round(clampedForSlider);
+                    updateBaseValues();
+                }
+            );
             
             blendModeSelect.addEventListener('change', (e) => {
                 blendMode = e.target.value;
@@ -1012,10 +1332,77 @@
                 blendOpacityValue.textContent = blendOpacity.toFixed(2);
             });
             
+            handleValueEdit(blendOpacityValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    blendOpacity = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(1, val));
+                    blendOpacitySlider.value = clampedForSlider.toFixed(2);
+                    updateBaseValues();
+                }
+            );
+            
+            fillSizeSlider.addEventListener('input', (e) => {
+                fillSize = parseFloat(e.target.value) / 100.0;
+                fillSizeValue.textContent = fillSize.toFixed(2);
+                updateBaseValues();
+            });
+            
+            handleValueEdit(fillSizeValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    fillSize = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(1, val));
+                    fillSizeSlider.value = Math.round(clampedForSlider * 100);
+                    updateBaseValues();
+                }
+            );
+            
+            fillOpacitySlider.addEventListener('input', (e) => {
+                fillOpacity = parseFloat(e.target.value) / 100.0;
+                fillOpacityValue.textContent = fillOpacity.toFixed(2);
+                updateBaseValues();
+            });
+            
+            handleValueEdit(fillOpacityValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    fillOpacity = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(1, val));
+                    fillOpacitySlider.value = Math.round(clampedForSlider * 100);
+                    updateBaseValues();
+                }
+            );
+            
             emanationRateSlider.addEventListener('input', (e) => {
                 emanationRate = parseFloat(e.target.value);
                 emanationRateValue.textContent = emanationRate.toFixed(1);
             });
+            
+            handleValueEdit(emanationRateValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(1),
+                (val) => {
+                    emanationRate = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(2, Math.min(30, val));
+                    emanationRateSlider.value = clampedForSlider;
+                    updateBaseValues();
+                }
+            );
+            
+            // Helper function to reverse-map auto rotation speed to slider value
+            function autoRotationSpeedToSlider(speed) {
+                // Reverse: speed = -1 + (slider/200)^0.5 * 361
+                // slider = 200 * ((speed + 1) / 361)^2
+                return Math.round(200 * Math.pow(Math.max(0, Math.min(1, (speed + 1) / 361.0)), 2));
+            }
             
             autoRotationSlider.addEventListener('input', (e) => {
                 // Map slider value (0-200) to rotation speed (-1 to 360) with exponential curve
@@ -1023,6 +1410,18 @@
                 autoRotationSpeed = -1.0 + Math.pow(sliderValue / 200.0, 0.5) * 361.0;
                 autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
             });
+            
+            handleValueEdit(autoRotationValue,
+                (text) => parseFloat(text.replace(/[^0-9.-]/g, '')),
+                (val) => val.toFixed(1) + '°',
+                (val) => {
+                    autoRotationSpeed = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(-1, Math.min(360, val));
+                    autoRotationSlider.value = autoRotationSpeedToSlider(clampedForSlider);
+                    updateBaseValues();
+                }
+            );
             
             // Save current state as preset
             function savePreset(name) {
@@ -1037,6 +1436,8 @@
                     spikeSharpness: spikeSharpness,
                     hue: hue,
                     scale: scale,
+                    fillSize: fillSize,
+                    fillOpacity: fillOpacity,
                     dilationSlider: parseFloat(dilationSlider.value), // Store slider value for proper restoration
                     fadeSlider: parseFloat(fadeSlider.value), // Store slider value for proper restoration
                     hueShiftAmount: hueShiftAmount,
@@ -1099,6 +1500,169 @@
                 }
             });
             
+            // Randomize function
+            function randomizeAll() {
+                // Randomize all parameters within their valid ranges
+                
+                // Shape parameters
+                spikiness = Math.random();
+                spikeFrequency = 2 + Math.random() * 18; // 2-20
+                spikeSharpness = Math.random();
+                hue = Math.random() * 360;
+                scale = 0.05 + Math.random() * 0.95; // 0.05-1.0
+                fillSize = Math.random();
+                fillOpacity = Math.random();
+                rotation = Math.random() * 360;
+                hueShiftAmount = Math.random() * 0.2; // 0-0.2
+                
+                // Blend parameters
+                const blendModes = ['additive', 'alpha', 'multiply', 'screen', 'overlay'];
+                blendMode = blendModes[Math.floor(Math.random() * blendModes.length)];
+                blendOpacity = Math.random();
+                
+                // Emanation parameters
+                // Dilation speed: 0.88-1.22 (use slider range 0-200, map to actual value)
+                const randomDilationSlider = Math.random() * 200;
+                const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                const range = (1.22 - 0.88) / (1.0 - midPower);
+                const min = 1.0 - midPower * range;
+                dilationSpeed = min + Math.pow(randomDilationSlider / 200.0, 1.0 / 8.0) * range;
+                
+                // Fade amount: 0-5.0 (use slider range 0-100, map to actual value)
+                const randomFadeSlider = Math.random() * 100;
+                fadeAmount = Math.pow(randomFadeSlider / 100.0, 1.0 / 3.0) * 5.0;
+                
+                // Emanation rate: 2-30
+                emanationRate = 2 + Math.random() * 28;
+                
+                // Auto rotation speed: -1 to 360 (use slider range 0-200, map to actual value)
+                const randomAutoRotationSlider = Math.random() * 200;
+                autoRotationSpeed = -1.0 + Math.pow(randomAutoRotationSlider / 200.0, 0.5) * 361.0;
+                
+                // Update sliders
+                spikinessSlider.value = Math.round(spikiness * 100);
+                spikinessValue.textContent = spikiness.toFixed(2);
+                spikeFrequencySlider.value = spikeFrequency;
+                spikeFrequencyValue.textContent = spikeFrequency.toFixed(1);
+                spikeSharpnessSlider.value = Math.round(spikeSharpness * 100);
+                spikeSharpnessValue.textContent = spikeSharpness.toFixed(2);
+                hueSlider.value = Math.round(hue);
+                hueValue.textContent = Math.round(hue) + '°';
+                scaleSlider.value = scale.toFixed(2);
+                scaleValue.textContent = scale.toFixed(2);
+                fillSizeSlider.value = Math.round(fillSize * 100);
+                fillSizeValue.textContent = fillSize.toFixed(2);
+                fillOpacitySlider.value = Math.round(fillOpacity * 100);
+                fillOpacityValue.textContent = fillOpacity.toFixed(2);
+                rotationSlider.value = Math.round(rotation);
+                rotationValue.textContent = Math.round(rotation) + '°';
+                hueShiftSlider.value = hueShiftAmount.toFixed(3);
+                hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+                
+                // Update blend controls
+                blendModeSelect.value = blendMode;
+                blendOpacitySlider.value = blendOpacity.toFixed(2);
+                blendOpacityValue.textContent = blendOpacity.toFixed(2);
+                
+                // Update emanation controls
+                dilationSlider.value = dilationSpeedToSlider(dilationSpeed);
+                dilationValue.textContent = dilationSpeed.toFixed(4);
+                fadeSlider.value = fadeAmountToSlider(fadeAmount);
+                fadeValue.textContent = fadeAmount.toFixed(3);
+                emanationRateSlider.value = emanationRate.toFixed(1);
+                emanationRateValue.textContent = emanationRate.toFixed(1);
+                
+                // Update auto rotation
+                autoRotationSlider.value = autoRotationSpeedToSlider(autoRotationSpeed);
+                autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                
+                // Update base values
+                baseSpikiness = spikiness;
+                baseSpikeFrequency = spikeFrequency;
+                baseSpikeSharpness = spikeSharpness;
+                baseHue = hue;
+                baseScale = scale;
+                baseFillSize = fillSize;
+                baseFillOpacity = fillOpacity;
+                baseRotation = rotation;
+                baseHueShiftAmount = hueShiftAmount;
+            }
+            
+            randomizeBtn.addEventListener('click', randomizeAll);
+            
+            // Jiggle functionality
+            jiggleAmountSlider.addEventListener('input', (e) => {
+                jiggleAmount = parseFloat(e.target.value) / 100.0;
+                jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
+            });
+            
+            handleValueEdit(jiggleAmountValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')) / 100.0, // Convert percentage to 0-1
+                (val) => Math.round(val * 100) + '%',
+                (val) => {
+                    jiggleAmount = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(1, val));
+                    jiggleAmountSlider.value = Math.round(clampedForSlider * 100);
+                }
+            );
+            
+            jiggleBtn.addEventListener('click', () => {
+                jiggleEnabled = !jiggleEnabled;
+                jiggleBtn.textContent = jiggleEnabled ? 'Stop Jiggle' : 'Jiggle';
+                jiggleBtn.style.background = jiggleEnabled ? '#a00' : '#a0a';
+                
+                if (!jiggleEnabled) {
+                    // Reset to base values when stopping jiggle
+                    spikiness = baseSpikiness;
+                    spikeFrequency = baseSpikeFrequency;
+                    spikeSharpness = baseSpikeSharpness;
+                    hue = baseHue;
+                    scale = baseScale;
+                    fillSize = baseFillSize;
+                    fillOpacity = baseFillOpacity;
+                    rotation = baseRotation;
+                    hueShiftAmount = baseHueShiftAmount;
+                    
+                    // Update sliders
+                    spikinessSlider.value = Math.round(spikiness * 100);
+                    spikeFrequencySlider.value = spikeFrequency;
+                    spikeSharpnessSlider.value = Math.round(spikeSharpness * 100);
+                    hueSlider.value = Math.round(hue);
+                    scaleSlider.value = scale.toFixed(2);
+                    fillSizeSlider.value = Math.round(fillSize * 100);
+                    fillOpacitySlider.value = Math.round(fillOpacity * 100);
+                    rotationSlider.value = Math.round(rotation);
+                    hueShiftSlider.value = hueShiftAmount.toFixed(3);
+                } else {
+                    // Store current values as base when starting jiggle
+                    baseSpikiness = spikiness;
+                    baseSpikeFrequency = spikeFrequency;
+                    baseSpikeSharpness = spikeSharpness;
+                    baseHue = hue;
+                    baseScale = scale;
+                    baseFillSize = fillSize;
+                    baseFillOpacity = fillOpacity;
+                    baseRotation = rotation;
+                    baseHueShiftAmount = hueShiftAmount;
+                }
+            });
+            
+            // Update base values when sliders change (if jiggle is off)
+            function updateBaseValues() {
+                if (!jiggleEnabled) {
+                    baseSpikiness = spikiness;
+                    baseSpikeFrequency = spikeFrequency;
+                    baseSpikeSharpness = spikeSharpness;
+                    baseHue = hue;
+                    baseScale = scale;
+                    baseFillSize = fillSize;
+                    baseFillOpacity = fillOpacity;
+                    baseRotation = rotation;
+                    baseHueShiftAmount = hueShiftAmount;
+                }
+            }
+            
             let startTime = Date.now();
             let lastCaptureTime = 0;
             const TARGET_FPS = 60;
@@ -1106,6 +1670,41 @@
             
             function render() {
                 const currentTime = (Date.now() - startTime) / 1000.0;
+                
+                // Apply jiggle if enabled
+                if (jiggleEnabled && jiggleAmount > 0) {
+                    // Use time-based seed for smooth jiggle
+                    const seed = currentTime * 2.0; // Speed of jiggle
+                    
+                    // Apply random offsets to each parameter based on jiggle amount
+                    // Using sin/cos with different frequencies for each parameter for smooth variation
+                    spikiness = baseSpikiness + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                    spikiness = Math.max(0, Math.min(1, spikiness));
+                    
+                    spikeFrequency = baseSpikeFrequency + (Math.sin(seed * 1.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 9.0; // ±9 range
+                    spikeFrequency = Math.max(2, Math.min(20, spikeFrequency));
+                    
+                    spikeSharpness = baseSpikeSharpness + (Math.sin(seed * 1.1) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                    spikeSharpness = Math.max(0, Math.min(1, spikeSharpness));
+                    
+                    hue = baseHue + (Math.sin(seed * 0.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 180.0; // ±180 range
+                    hue = ((hue % 360) + 360) % 360; // Wrap around
+                    
+                    scale = baseScale + (Math.sin(seed * 1.5) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.3; // ±0.3 range
+                    scale = Math.max(0.05, Math.min(1.0, scale));
+                    
+                    fillSize = baseFillSize + (Math.sin(seed * 1.2) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                    fillSize = Math.max(0, Math.min(1, fillSize));
+                    
+                    fillOpacity = baseFillOpacity + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                    fillOpacity = Math.max(0, Math.min(1, fillOpacity));
+                    
+                    rotation = baseRotation + (Math.sin(seed * 0.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 180.0; // ±180 range
+                    rotation = ((rotation % 360) + 360) % 360; // Wrap around
+                    
+                    hueShiftAmount = baseHueShiftAmount + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1; // ±0.1 range
+                    hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
+                }
                 
                 // Calculate capture interval from emanation rate (emanations per second)
                 const captureInterval = 1.0 / emanationRate;
@@ -1126,7 +1725,9 @@
                     u_spikeFrequency: spikeFrequency,
                     u_spikeSharpness: spikeSharpness,
                     u_hue: hue,
-                    u_scale: scale
+                    u_scale: scale,
+                    u_fillSize: fillSize,
+                    u_fillOpacity: fillOpacity
                 }, dilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation);
             }
             
