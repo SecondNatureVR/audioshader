@@ -1464,15 +1464,15 @@
             // Initialize noise amount with exponential mapping (0-100 slider to 0-1, granular near 0)
             const initialNoiseSlider = parseFloat(noiseAmountSlider.value);
             let noiseAmount = Math.pow(initialNoiseSlider / 100.0, 1.0 / 4.0); // Exponential curve for granularity near 0
-            // Initialize noise rate: map slider (0-100) to rate (0-5), where 1.0 = every 2 seconds
+            // Initialize noise rate: map slider (0-100) to rate (0-10) with slow exponential curve, where 1.0 = every 2 seconds
             const initialNoiseRateSlider = parseFloat(noiseRateSlider.value);
-            let noiseRate = (initialNoiseRateSlider / 100.0) * 5.0;
+            let noiseRate = Math.pow(initialNoiseRateSlider / 100.0, 1.0 / 3.0) * 10.0; // Slow exponential curve (1/3 power)
             // Initialize blur amount with exponential mapping (0-100 slider to 0-1, granular near 0)
             const initialBlurSlider = parseFloat(blurAmountSlider.value);
             let blurAmount = Math.pow(initialBlurSlider / 100.0, 1.0 / 4.0); // Exponential curve for granularity near 0
-            // Initialize blur rate: map slider (0-100) to rate (0-5), where 1.0 = every 2 seconds
+            // Initialize blur rate: map slider (0-100) to rate (0-10) with slow exponential curve, where 1.0 = every 2 seconds
             const initialBlurRateSlider = parseFloat(blurRateSlider.value);
-            let blurRate = (initialBlurRateSlider / 100.0) * 5.0;
+            let blurRate = Math.pow(initialBlurRateSlider / 100.0, 1.0 / 3.0) * 10.0; // Slow exponential curve (1/3 power)
             let jiggleAmount = parseFloat(jiggleAmountSlider.value) / 100.0; // Convert 0-100 to 0-1
             jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
             let jiggleEnabled = false;
@@ -1841,19 +1841,19 @@
                 }
             );
             
-            // Helper function to reverse-map noise rate to slider value
+            // Helper function to reverse-map noise rate to slider value (slow exponential curve)
             function noiseRateToSlider(rate) {
-                // Map rate (0-5) to slider (0-100)
-                // rate = (slider / 100) * 5.0
-                // slider = (rate / 5.0) * 100
-                return Math.round((Math.max(0, Math.min(5, rate)) / 5.0) * 100 * 10) / 10; // Round to 0.1
+                // Map rate (0-10) to slider (0-100) with exponential curve
+                // rate = (slider / 100)^(1/3) * 10.0
+                // slider = 100 * (rate / 10.0)^3
+                return Math.round(100 * Math.pow(Math.max(0, Math.min(1, rate / 10.0)), 3) * 10) / 10; // Round to 0.1
             }
             
-            // Noise rate slider (0-100 slider maps to 0-5 rate, where 1.0 = every 2 seconds)
+            // Noise rate slider (0-100 slider maps to 0-10 rate with slow exponential curve, where 1.0 = every 2 seconds)
             noiseRateSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to noise rate (0-5)
+                // Map slider value (0-100) to noise rate (0-10) with slow exponential curve
                 const sliderValue = parseFloat(e.target.value);
-                noiseRate = (sliderValue / 100.0) * 5.0;
+                noiseRate = Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 10.0;
                 noiseRateValue.textContent = noiseRate.toFixed(2);
                 updateStatusIndicators();
             });
@@ -1864,7 +1864,7 @@
                 (val) => {
                     noiseRate = val;
                     // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(5, val));
+                    const clampedForSlider = Math.max(0, Math.min(10, val));
                     noiseRateSlider.value = noiseRateToSlider(clampedForSlider);
                     updateBaseValues();
                 }
@@ -1899,19 +1899,19 @@
                 }
             );
             
-            // Helper function to reverse-map blur rate to slider value
+            // Helper function to reverse-map blur rate to slider value (slow exponential curve)
             function blurRateToSlider(rate) {
-                // Map rate (0-5) to slider (0-100)
-                // rate = (slider / 100) * 5.0
-                // slider = (rate / 5.0) * 100
-                return Math.round((Math.max(0, Math.min(5, rate)) / 5.0) * 100 * 10) / 10; // Round to 0.1
+                // Map rate (0-10) to slider (0-100) with exponential curve
+                // rate = (slider / 100)^(1/3) * 10.0
+                // slider = 100 * (rate / 10.0)^3
+                return Math.round(100 * Math.pow(Math.max(0, Math.min(1, rate / 10.0)), 3) * 10) / 10; // Round to 0.1
             }
             
-            // Blur rate slider (0-100 slider maps to 0-5 rate, where 1.0 = every 2 seconds)
+            // Blur rate slider (0-100 slider maps to 0-10 rate with slow exponential curve, where 1.0 = every 2 seconds)
             blurRateSlider.addEventListener('input', (e) => {
-                // Map slider value (0-100) to blur rate (0-5)
+                // Map slider value (0-100) to blur rate (0-10) with slow exponential curve
                 const sliderValue = parseFloat(e.target.value);
-                blurRate = (sliderValue / 100.0) * 5.0;
+                blurRate = Math.pow(sliderValue / 100.0, 1.0 / 3.0) * 10.0;
                 blurRateValue.textContent = blurRate.toFixed(2);
                 updateStatusIndicators();
             });
@@ -1922,7 +1922,7 @@
                 (val) => {
                     blurRate = val;
                     // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(0, Math.min(5, val));
+                    const clampedForSlider = Math.max(0, Math.min(10, val));
                     blurRateSlider.value = blurRateToSlider(clampedForSlider);
                     updateBaseValues();
                 }
@@ -2148,9 +2148,9 @@
                 
                 // Filter parameters
                 noiseAmount = Math.random(); // 0-1
-                noiseRate = Math.random() * 5.0; // 0-5 (time-based: interval = 2.0 / rate)
+                noiseRate = Math.random() * 10.0; // 0-10 (time-based: interval = 2.0 / rate)
                 blurAmount = Math.random(); // 0-1
-                blurRate = Math.random() * 5.0; // 0-5 (time-based: interval = 2.0 / rate)
+                blurRate = Math.random() * 10.0; // 0-10 (time-based: interval = 2.0 / rate)
                 
                 // Auto rotation speed: -1 to 360 (use slider range 0-200, map to actual value)
                 const randomAutoRotationSlider = Math.random() * 200;
