@@ -117,6 +117,23 @@
             font-weight: 600;
         }
         
+        .section-header {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-header::after {
+            content: '▾';
+            font-size: 10px;
+            color: #777;
+        }
+        
+        .section-header.collapsed::after {
+            content: '▸';
+        }
+        
         .control-group {
             margin-bottom: 10px;
         }
@@ -388,6 +405,11 @@
         uniform float u_expansionFactor;
         uniform float u_fadeAmount;
         uniform float u_hueShiftAmount;
+        uniform float u_noiseAmount;
+        uniform float u_noiseRate;
+        uniform float u_blurAmount;
+        uniform float u_blurRate;
+        uniform float u_time;
         varying vec2 v_uv;
 
         // Convert HSV to RGB
@@ -476,6 +498,42 @@
             hsv.x = fract(hsv.x + hueShift); // Shift hue (wrap around)
             hsv.z *= fade * decay; // Apply both fade and decay to value
             vec3 shiftedColor = hsv2rgb(hsv);
+            
+            // Apply simple radial blur based on u_blurAmount (time-based application)
+            if (u_blurAmount > 0.0 && u_blurRate > 0.0) {
+                // Calculate interval: rate 1.0 = every 2 seconds, rate 0.5 = every 4 seconds, etc.
+                float blurInterval = 2.0 / u_blurRate;
+                // Apply blur during a small window (0.1 seconds) of each interval
+                float blurWindow = 0.1;
+                float blurPhase = mod(u_time, blurInterval);
+                if (blurPhase < blurWindow) {
+                    float blurRadius = 1.5 * u_blurAmount / u_resolution.x;
+                    vec4 sum = vec4(shiftedColor, history.a);
+                    float count = 1.0;
+                    for (int i = 0; i < 6; i++) {
+                        float a = float(i) / 6.0 * 6.28318;
+                        vec2 offset = vec2(cos(a), sin(a)) * blurRadius;
+                        sum += texture2D(u_history, uv + offset);
+                        count += 1.0;
+                    }
+                    shiftedColor = (sum / count).rgb;
+                }
+            }
+            
+            // Apply animated noise based on u_noiseAmount and u_noiseRate (time-based application)
+            if (u_noiseAmount > 0.0 && u_noiseRate > 0.0) {
+                // Calculate interval: rate 1.0 = every 2 seconds, rate 0.5 = every 4 seconds, etc.
+                float noiseInterval = 2.0 / u_noiseRate;
+                // Apply noise during a small window (0.1 seconds) of each interval
+                float noiseWindow = 0.1;
+                float noisePhase = mod(u_time, noiseInterval);
+                if (noisePhase < noiseWindow) {
+                    float t = u_time * 10.0; // Animation speed within the window
+                    float n = fract(sin(dot(uv * (t + 1.0), vec2(12.9898,78.233))) * 43758.5453);
+                    vec3 grain = mix(vec3(1.0), vec3(n), u_noiseAmount);
+                    shiftedColor *= grain;
+                }
+            }
             
             // Clamp to prevent overflow from additive blending
             shiftedColor = clamp(shiftedColor, 0.0, 1.0);
@@ -634,8 +692,43 @@
         <div class="control-group">
             <label for="emanation-rate-slider">Rate (per sec)</label>
             <div class="control-row">
-                <input type="range" id="emanation-rate-slider" min="2" max="30" value="2" step="0.1">
+                <input type="range" id="emanation-rate-slider" min="2" max="200" value="2" step="0.1">
                 <div class="value" contenteditable="true" id="emanation-rate-value">2.0</div>
+            </div>
+        </div>
+        
+        <div class="section-header">Filters</div>
+        <div class="two-column">
+            <div class="control-group">
+                <label for="noise-amount-slider">Noise Amount</label>
+                <div class="control-row">
+                    <input type="range" id="noise-amount-slider" min="0" max="100" value="0" step="1">
+                    <div class="value" contenteditable="true" id="noise-amount-value">0.00</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="noise-rate-slider">Noise Rate (1.0 = every 2s)</label>
+                <div class="control-row">
+                    <input type="range" id="noise-rate-slider" min="0" max="100" value="0" step="0.1">
+                    <div class="value" contenteditable="true" id="noise-rate-value">0.0</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="blur-amount-slider">Blur Amount</label>
+                <div class="control-row">
+                    <input type="range" id="blur-amount-slider" min="0" max="100" value="0" step="1">
+                    <div class="value" contenteditable="true" id="blur-amount-value">0.00</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="blur-rate-slider">Blur Rate (1.0 = every 2s)</label>
+                <div class="control-row">
+                    <input type="range" id="blur-rate-slider" min="0" max="100" value="0" step="0.1">
+                    <div class="value" contenteditable="true" id="blur-rate-value">0.0</div>
+                </div>
             </div>
         </div>
         
@@ -917,7 +1010,7 @@
                 // For now, opacity affects the shape shader output
             }
             
-            render(uniforms, dilationFactor, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation) {
+            render(uniforms, dilationFactor, shouldCaptureShape, fadeAmount, hueShiftAmount, emanationRate, noiseAmount, noiseRate, blurAmount, blurRate, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation) {
                 const gl = this.gl;
                 const dilationPositionLocation = gl.getAttribLocation(this.dilationProgram, 'a_position');
                 const shapePositionLocation = gl.getAttribLocation(this.program, 'a_position');
@@ -944,6 +1037,11 @@
                 this.setUniform('u_expansionFactor', dilationFactor, this.dilationProgram);
                 this.setUniform('u_fadeAmount', fadeAmount, this.dilationProgram);
                 this.setUniform('u_hueShiftAmount', hueShiftAmount, this.dilationProgram);
+                this.setUniform('u_noiseAmount', noiseAmount, this.dilationProgram);
+                this.setUniform('u_noiseRate', noiseRate, this.dilationProgram);
+                this.setUniform('u_blurAmount', blurAmount, this.dilationProgram);
+                this.setUniform('u_blurRate', blurRate, this.dilationProgram);
+                this.setUniform('u_time', uniforms.u_time || 0.0, this.dilationProgram);
                 this.setUniform('u_resolution', [this.canvas.width, this.canvas.height], this.dilationProgram);
                 
                 gl.clearColor(0, 0, 0, 1);
@@ -1107,6 +1205,16 @@
             const autoRotationSlider = document.getElementById('auto-rotation-slider');
             const autoRotationValue = document.getElementById('auto-rotation-value');
             
+            // Filter sliders
+            const noiseAmountSlider = document.getElementById('noise-amount-slider');
+            const noiseAmountValue = document.getElementById('noise-amount-value');
+            const noiseRateSlider = document.getElementById('noise-rate-slider');
+            const noiseRateValue = document.getElementById('noise-rate-value');
+            const blurAmountSlider = document.getElementById('blur-amount-slider');
+            const blurAmountValue = document.getElementById('blur-amount-value');
+            const blurRateSlider = document.getElementById('blur-rate-slider');
+            const blurRateValue = document.getElementById('blur-rate-value');
+            
             // GIF capture state
             const captureCanvas = document.createElement('canvas');
             const captureCtx = captureCanvas.getContext('2d');
@@ -1186,6 +1294,24 @@
                 }
             }
             
+            // Collapsible dev-tool sections
+            const sectionHeaders = Array.from(document.querySelectorAll('#dev-toolbox .section-header'));
+            sectionHeaders.forEach((header) => {
+                header.addEventListener('click', () => {
+                    const collapsed = header.classList.toggle('collapsed');
+                    let el = header.nextElementSibling;
+                    while (el && !el.classList.contains('section-header')) {
+                        if (collapsed) {
+                            el.dataset._display = el.style.display || '';
+                            el.style.display = 'none';
+                        } else {
+                            el.style.display = el.dataset._display || '';
+                        }
+                        el = el.nextElementSibling;
+                    }
+                });
+            });
+            
             // Preset management functions (need to be defined before we try to load presets)
             // Load presets from localStorage
             function loadPresets() {
@@ -1232,7 +1358,11 @@
                 blendOpacity = preset.blendOpacity;
                 fillSize = preset.fillSize !== undefined ? preset.fillSize : 0.0;
                 fillOpacity = preset.fillOpacity !== undefined ? preset.fillOpacity : 0.6;
-                emanationRate = preset.emanationRate;
+                emanationRate = preset.emanationRate !== undefined ? preset.emanationRate : 2.0;
+                noiseAmount = preset.noiseAmount !== undefined ? preset.noiseAmount : 0.0;
+                noiseRate = preset.noiseRate !== undefined ? preset.noiseRate : 0.0;
+                blurAmount = preset.blurAmount !== undefined ? preset.blurAmount : 0.0;
+                blurRate = preset.blurRate !== undefined ? preset.blurRate : 0.0;
                 autoRotationSpeed = preset.autoRotationSpeed;
                 
                 // Update sliders
@@ -1268,6 +1398,14 @@
                 fillOpacityValue.textContent = fillOpacity.toFixed(2);
                 emanationRateSlider.value = emanationRate;
                 emanationRateValue.textContent = emanationRate.toFixed(1);
+                noiseAmountSlider.value = noiseAmountToSlider(noiseAmount);
+                noiseAmountValue.textContent = noiseAmount.toFixed(2);
+                noiseRateSlider.value = noiseRateToSlider(noiseRate);
+                noiseRateValue.textContent = noiseRate.toFixed(2);
+                blurAmountSlider.value = blurAmountToSlider(blurAmount);
+                blurAmountValue.textContent = blurAmount.toFixed(2);
+                blurRateSlider.value = blurRateToSlider(blurRate);
+                blurRateValue.textContent = blurRate.toFixed(2);
                 // Use stored slider value if available, otherwise reverse map from speed value
                 if (preset.autoRotationSlider !== undefined) {
                     autoRotationSlider.value = preset.autoRotationSlider;
@@ -1323,6 +1461,18 @@
             let fillSize = parseFloat(fillSizeSlider.value) / 100.0; // Convert 0-100 to 0-1
             let fillOpacity = parseFloat(fillOpacitySlider.value) / 100.0; // Convert 0-100 to 0-1
             let emanationRate = parseFloat(emanationRateSlider.value); // Emanations per second
+            // Initialize noise amount with exponential mapping (0-100 slider to 0-1, granular near 0)
+            const initialNoiseSlider = parseFloat(noiseAmountSlider.value);
+            let noiseAmount = Math.pow(initialNoiseSlider / 100.0, 1.0 / 4.0); // Exponential curve for granularity near 0
+            // Initialize noise rate: map slider (0-100) to rate (0-5), where 1.0 = every 2 seconds
+            const initialNoiseRateSlider = parseFloat(noiseRateSlider.value);
+            let noiseRate = (initialNoiseRateSlider / 100.0) * 5.0;
+            // Initialize blur amount with exponential mapping (0-100 slider to 0-1, granular near 0)
+            const initialBlurSlider = parseFloat(blurAmountSlider.value);
+            let blurAmount = Math.pow(initialBlurSlider / 100.0, 1.0 / 4.0); // Exponential curve for granularity near 0
+            // Initialize blur rate: map slider (0-100) to rate (0-5), where 1.0 = every 2 seconds
+            const initialBlurRateSlider = parseFloat(blurRateSlider.value);
+            let blurRate = (initialBlurRateSlider / 100.0) * 5.0;
             let jiggleAmount = parseFloat(jiggleAmountSlider.value) / 100.0; // Convert 0-100 to 0-1
             jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
             let jiggleEnabled = false;
@@ -1657,8 +1807,123 @@
                 (val) => {
                     emanationRate = val;
                     // Update slider with clamping for slider display only
-                    const clampedForSlider = Math.max(2, Math.min(30, val));
+                    const clampedForSlider = Math.max(2, Math.min(200, val));
                     emanationRateSlider.value = clampedForSlider;
+                    updateBaseValues();
+                }
+            );
+            
+            // Helper function to reverse-map noise amount to slider value
+            function noiseAmountToSlider(amount) {
+                // Reverse: amount = (slider/100)^(1/4)
+                // slider = 100 * amount^4
+                return Math.round(100 * Math.pow(Math.max(0, Math.min(1, amount)), 4));
+            }
+            
+            // Noise amount slider with exponential mapping (0-100 slider to 0-1, granular near 0)
+            noiseAmountSlider.addEventListener('input', (e) => {
+                // Map slider value (0-100) to noise amount (0-1) with exponential curve
+                const sliderValue = parseFloat(e.target.value);
+                noiseAmount = Math.pow(sliderValue / 100.0, 1.0 / 4.0);
+                noiseAmountValue.textContent = noiseAmount.toFixed(2);
+                updateStatusIndicators();
+            });
+            
+            handleValueEdit(noiseAmountValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    noiseAmount = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(1, val));
+                    noiseAmountSlider.value = noiseAmountToSlider(clampedForSlider);
+                    updateBaseValues();
+                }
+            );
+            
+            // Helper function to reverse-map noise rate to slider value
+            function noiseRateToSlider(rate) {
+                // Map rate (0-5) to slider (0-100)
+                // rate = (slider / 100) * 5.0
+                // slider = (rate / 5.0) * 100
+                return Math.round((Math.max(0, Math.min(5, rate)) / 5.0) * 100 * 10) / 10; // Round to 0.1
+            }
+            
+            // Noise rate slider (0-100 slider maps to 0-5 rate, where 1.0 = every 2 seconds)
+            noiseRateSlider.addEventListener('input', (e) => {
+                // Map slider value (0-100) to noise rate (0-5)
+                const sliderValue = parseFloat(e.target.value);
+                noiseRate = (sliderValue / 100.0) * 5.0;
+                noiseRateValue.textContent = noiseRate.toFixed(2);
+                updateStatusIndicators();
+            });
+            
+            handleValueEdit(noiseRateValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    noiseRate = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(5, val));
+                    noiseRateSlider.value = noiseRateToSlider(clampedForSlider);
+                    updateBaseValues();
+                }
+            );
+            
+            // Blur amount slider
+            // Helper function to reverse-map blur amount to slider value
+            function blurAmountToSlider(amount) {
+                // Reverse: amount = (slider/100)^(1/4)
+                // slider = 100 * amount^4
+                return Math.round(100 * Math.pow(Math.max(0, Math.min(1, amount)), 4));
+            }
+            
+            // Blur amount slider with exponential mapping (0-100 slider to 0-1, granular near 0)
+            blurAmountSlider.addEventListener('input', (e) => {
+                // Map slider value (0-100) to blur amount (0-1) with exponential curve
+                const sliderValue = parseFloat(e.target.value);
+                blurAmount = Math.pow(sliderValue / 100.0, 1.0 / 4.0);
+                blurAmountValue.textContent = blurAmount.toFixed(2);
+                updateStatusIndicators();
+            });
+            
+            handleValueEdit(blurAmountValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    blurAmount = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(1, val));
+                    blurAmountSlider.value = blurAmountToSlider(clampedForSlider);
+                    updateBaseValues();
+                }
+            );
+            
+            // Helper function to reverse-map blur rate to slider value
+            function blurRateToSlider(rate) {
+                // Map rate (0-5) to slider (0-100)
+                // rate = (slider / 100) * 5.0
+                // slider = (rate / 5.0) * 100
+                return Math.round((Math.max(0, Math.min(5, rate)) / 5.0) * 100 * 10) / 10; // Round to 0.1
+            }
+            
+            // Blur rate slider (0-100 slider maps to 0-5 rate, where 1.0 = every 2 seconds)
+            blurRateSlider.addEventListener('input', (e) => {
+                // Map slider value (0-100) to blur rate (0-5)
+                const sliderValue = parseFloat(e.target.value);
+                blurRate = (sliderValue / 100.0) * 5.0;
+                blurRateValue.textContent = blurRate.toFixed(2);
+                updateStatusIndicators();
+            });
+            
+            handleValueEdit(blurRateValue,
+                (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                (val) => val.toFixed(2),
+                (val) => {
+                    blurRate = val;
+                    // Update slider with clamping for slider display only
+                    const clampedForSlider = Math.max(0, Math.min(5, val));
+                    blurRateSlider.value = blurRateToSlider(clampedForSlider);
                     updateBaseValues();
                 }
             );
@@ -1712,6 +1977,10 @@
                     blendMode: blendMode,
                     blendOpacity: blendOpacity,
                     emanationRate: emanationRate,
+                    noiseAmount: noiseAmount,
+                    noiseRate: noiseRate,
+                    blurAmount: blurAmount,
+                    blurRate: blurRate,
                     autoRotationSpeed: autoRotationSpeed, // Store actual value (will reverse map to slider on load)
                     autoRotationSlider: parseFloat(autoRotationSlider.value) // Also store slider for easier restoration
                 };
@@ -1874,8 +2143,14 @@
                 const randomFadeSlider = Math.random() * 100;
                 fadeAmount = Math.pow(randomFadeSlider / 100.0, 1.0 / 3.0) * 5.0;
                 
-                // Emanation rate: 2-30
-                emanationRate = 2 + Math.random() * 28;
+                // Emanation rate: 2-200
+                emanationRate = 2 + Math.random() * 198;
+                
+                // Filter parameters
+                noiseAmount = Math.random(); // 0-1
+                noiseRate = Math.random() * 5.0; // 0-5 (time-based: interval = 2.0 / rate)
+                blurAmount = Math.random(); // 0-1
+                blurRate = Math.random() * 5.0; // 0-5 (time-based: interval = 2.0 / rate)
                 
                 // Auto rotation speed: -1 to 360 (use slider range 0-200, map to actual value)
                 const randomAutoRotationSlider = Math.random() * 200;
@@ -1913,6 +2188,16 @@
                 fadeValue.textContent = fadeAmount.toFixed(3);
                 emanationRateSlider.value = emanationRate.toFixed(1);
                 emanationRateValue.textContent = emanationRate.toFixed(1);
+                
+                // Update filter controls
+                noiseAmountSlider.value = noiseAmountToSlider(noiseAmount);
+                noiseAmountValue.textContent = noiseAmount.toFixed(2);
+                noiseRateSlider.value = noiseRateToSlider(noiseRate);
+                noiseRateValue.textContent = noiseRate.toFixed(2);
+                blurAmountSlider.value = blurAmountToSlider(blurAmount);
+                blurAmountValue.textContent = blurAmount.toFixed(2);
+                blurRateSlider.value = blurRateToSlider(blurRate);
+                blurRateValue.textContent = blurRate.toFixed(2);
                 
                 // Update auto rotation
                 autoRotationSlider.value = autoRotationSpeedToSlider(autoRotationSpeed);
@@ -2138,7 +2423,7 @@
                     u_scale: scale,
                     u_fillSize: fillSize,
                     u_fillOpacity: fillOpacity
-                }, effectiveDilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation);
+                }, effectiveDilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, emanationRate, noiseAmount, noiseRate, blurAmount, blurRate, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation);
             }
             
             // Use setInterval for fixed 60fps instead of requestAnimationFrame
