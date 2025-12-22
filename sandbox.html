@@ -514,6 +514,10 @@
             <span class="hotkey-key">↓</span>
             <span class="hotkey-desc">Decelerate</span>
         </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">S</span>
+            <span class="hotkey-desc">Snapshot (PNG)</span>
+        </div>
     </div>
     
     <div id="status-indicators">
@@ -1054,10 +1058,10 @@
             
             renderer.init(vertexSource, fragmentSource, dilationVertexSource, dilationFragmentSource);
             
-            return renderer;
+            return { renderer, canvas };
         }
         
-        const renderer = init();
+        const { renderer, canvas } = init();
         
         (() => {
             // Get slider elements
@@ -2146,6 +2150,24 @@
                 }
             }
             
+            function downloadSnapshot() {
+                try {
+                    if (!canvas) return;
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    const ts = new Date();
+                    const pad = (n) => String(n).padStart(2, '0');
+                    const timestamp = `${ts.getFullYear()}-${pad(ts.getMonth() + 1)}-${pad(ts.getDate())}_${pad(ts.getHours())}-${pad(ts.getMinutes())}-${pad(ts.getSeconds())}`;
+                    a.href = dataUrl;
+                    a.download = `coherence-sandbox-${timestamp}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                } catch (err) {
+                    console.error('Snapshot failed', err);
+                }
+            }
+            
             // Keyboard event listeners
             document.addEventListener('keydown', (e) => {
                 // Ignore hotkeys while typing in text inputs or editable fields
@@ -2165,7 +2187,8 @@
                 if (e.key === ' ' || e.key === 'r' || e.key === 'R' || 
                     e.key === 'j' || e.key === 'J' || e.key === 'Escape' ||
                     e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
-                    e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+                    e.key === 's' || e.key === 'S') {
                     e.preventDefault();
                 }
                 
@@ -2186,6 +2209,11 @@
                 // R: Randomize
                 if (e.key === 'r' || e.key === 'R') {
                     randomizeAll();
+                }
+                
+                // S: Snapshot PNG
+                if (e.key === 's' || e.key === 'S') {
+                    downloadSnapshot();
                 }
                 
                 // Left/Right arrows: Cycle presets (stub)
