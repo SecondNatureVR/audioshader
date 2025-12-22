@@ -100,6 +100,150 @@
 <body>
     <canvas id="canvas"></canvas>
     
+    <!-- Shader scripts (embedded to avoid CORS issues) -->
+    <script id="star-vertex-shader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        void main() {
+            gl_Position = vec4(a_position, 0.0, 1.0);
+        }
+    </script>
+    
+    <script id="star-fragment-shader" type="x-shader/x-fragment">
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+
+        uniform vec2 u_resolution;
+        uniform float u_time;
+        uniform float u_spikes;
+        uniform float u_hue;
+        uniform float u_scale;
+        uniform float u_rotation;
+
+        // Convert HSV to RGB
+        vec3 hsv2rgb(vec3 c) {
+            vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+        }
+
+        void main() {
+            // Normalize coordinates
+            vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+            vec2 center = vec2(0.5);
+            
+            // Convert to centered coordinates
+            vec2 p = (uv - center) * vec2(u_resolution.x / u_resolution.y, 1.0);
+            
+            // Rotate coordinates
+            float rotationRad = u_rotation * 3.14159 / 180.0;
+            float cosRot = cos(rotationRad);
+            float sinRot = sin(rotationRad);
+            vec2 rotatedP = vec2(
+                p.x * cosRot - p.y * sinRot,
+                p.x * sinRot + p.y * cosRot
+            );
+            
+            // Draw a star
+            float angle = atan(rotatedP.y, rotatedP.x);
+            float dist = length(rotatedP);
+            
+            // Star shape with configurable number of spikes
+            float numSpikes = floor(u_spikes);
+            
+            // Calculate star radius pattern (varies with angle to create spikes)
+            // Base radius scales with u_scale, then adds spikes
+            float baseRadius = u_scale * 0.4;
+            float spikeAmount = u_scale * 0.25;
+            float r = baseRadius + spikeAmount * cos(angle * numSpikes);
+            
+            // Draw the star - use a smooth falloff
+            float lineWidth = 0.012;
+            float star = smoothstep(lineWidth, 0.0, abs(dist - r));
+            
+            // Fill the star interior for better visibility
+            float innerRadius = r * 0.65;
+            if (dist < innerRadius) {
+                star = max(star, 0.6);
+            }
+            
+            // Make it brighter
+            star = min(star, 1.0);
+            
+            // Convert hue to RGB (hue in degrees, saturation=1.0, value=1.0)
+            vec3 hsv = vec3(u_hue / 360.0, 1.0, 1.0);
+            vec3 color = hsv2rgb(hsv) * star;
+            
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+    
+    <script id="dilation-vertex-shader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        varying vec2 v_uv;
+        void main() {
+            gl_Position = vec4(a_position, 0.0, 1.0);
+            v_uv = a_position * 0.5 + 0.5;
+            v_uv.y = 1.0 - v_uv.y; // Flip Y
+        }
+    </script>
+    
+    <script id="dilation-fragment-shader" type="x-shader/x-fragment">
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+
+        uniform sampler2D u_history;
+        uniform vec2 u_resolution;
+        uniform float u_expansionFactor;
+        uniform float u_fadeAmount;
+        uniform float u_hueShiftAmount;
+        varying vec2 v_uv;
+
+        // Convert HSV to RGB
+        vec3 hsv2rgb(vec3 c) {
+            vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+        }
+
+        // Convert RGB to HSV
+        vec3 rgb2hsv(vec3 c) {
+            vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+            vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+            vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+            float d = q.x - min(q.w, q.y);
+            float e = 1.0e-10;
+            return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+        }
+
+        void main() {
+            vec2 uv = v_uv;
+            vec2 center = vec2(0.5);
+            vec2 dir = uv - center;
+            vec2 scaledDir = dir / u_expansionFactor; // Scale inward to sample outward
+            vec2 sampleUV = scaledDir + center;
+            
+            vec4 history = texture2D(u_history, sampleUV);
+            
+            // Fade based on expansion (further from center = more faded)
+            float distFromCenter = length(dir);
+            float fadeAmount = smoothstep(0.0, 0.8, distFromCenter); // Fade as it expands
+            float fade = 1.0 - fadeAmount * u_fadeAmount; // Use parameterized fade amount
+            
+            // Hue shift based on expansion
+            float hueShift = distFromCenter * u_hueShiftAmount; // Use parameterized hue shift
+            
+            // Convert RGB to HSV, shift hue, convert back
+            vec3 hsv = rgb2hsv(history.rgb);
+            hsv.x = fract(hsv.x + hueShift); // Shift hue (wrap around)
+            hsv.z *= fade; // Apply fade to value
+            vec3 shiftedColor = hsv2rgb(hsv);
+            
+            gl_FragColor = vec4(shiftedColor, history.a * fade);
+        }
+    </script>
+    
     <div id="dev-toolbox">
         <h3>Dev Controls</h3>
         
@@ -125,6 +269,24 @@
             <label for="dilation-slider">Dilation Speed</label>
             <input type="range" id="dilation-slider" min="1.0" max="1.05" value="1.01" step="0.001">
             <div class="value" id="dilation-value">1.010</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="fade-slider">Fade Amount</label>
+            <input type="range" id="fade-slider" min="0.0" max="1.0" value="0.3" step="0.01">
+            <div class="value" id="fade-value">0.30</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="hue-shift-slider">Hue Shift</label>
+            <input type="range" id="hue-shift-slider" min="0.0" max="0.2" value="0.05" step="0.001">
+            <div class="value" id="hue-shift-value">0.050</div>
+        </div>
+        
+        <div class="control-group">
+            <label for="rotation-slider">Star Rotation</label>
+            <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
+            <div class="value" id="rotation-value">0°</div>
         </div>
     </div>
     
@@ -302,7 +464,7 @@
                 }
             }
             
-            render(uniforms, dilationFactor, shouldCaptureShape) {
+            render(uniforms, dilationFactor, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation) {
                 const gl = this.gl;
                 const dilationPositionLocation = gl.getAttribLocation(this.dilationProgram, 'a_position');
                 const shapePositionLocation = gl.getAttribLocation(this.program, 'a_position');
@@ -323,6 +485,8 @@
                 const dilationHistoryLocation = gl.getUniformLocation(this.dilationProgram, 'u_history');
                 gl.uniform1i(dilationHistoryLocation, 0);
                 this.setUniform('u_expansionFactor', dilationFactor, this.dilationProgram);
+                this.setUniform('u_fadeAmount', fadeAmount, this.dilationProgram);
+                this.setUniform('u_hueShiftAmount', hueShiftAmount, this.dilationProgram);
                 this.setUniform('u_resolution', [this.canvas.width, this.canvas.height], this.dilationProgram);
                 
                 gl.clearColor(0, 0, 0, 1);
@@ -379,6 +543,7 @@
                     this.setUniform(name, uniforms[name]);
                 });
                 this.setUniform('u_resolution', [this.canvas.width, this.canvas.height]);
+                this.setUniform('u_rotation', rotation);
                 
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
                 gl.disable(gl.BLEND);
@@ -405,206 +570,120 @@
             }
         }
         
-        // Vertex shader
-        const vertexSource = `
-            attribute vec2 a_position;
-            void main() {
-                gl_Position = vec4(a_position, 0.0, 1.0);
+        // Get shader from script tag
+        function getShader(id) {
+            const script = document.getElementById(id);
+            if (!script) {
+                throw new Error(`Shader script not found: ${id}`);
             }
-        `;
-        
-        // Fragment shader - draws a star
-        const fragmentSource = `
-            #ifdef GL_ES
-            precision mediump float;
-            #endif
-            
-            uniform vec2 u_resolution;
-            uniform float u_time;
-            uniform float u_spikes;
-            uniform float u_hue;
-            uniform float u_scale;
-            
-            // Convert HSV to RGB
-            vec3 hsv2rgb(vec3 c) {
-                vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-                vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-                return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-            }
-            
-            void main() {
-                // Normalize coordinates
-                vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-                vec2 center = vec2(0.5);
-                
-                // Convert to centered coordinates
-                vec2 p = (uv - center) * vec2(u_resolution.x / u_resolution.y, 1.0);
-                
-                // Draw a star
-                float angle = atan(p.y, p.x);
-                float dist = length(p);
-                
-                // Star shape with configurable number of spikes
-                float numSpikes = floor(u_spikes);
-                
-                // Calculate star radius pattern (varies with angle to create spikes)
-                // Base radius scales with u_scale, then adds spikes
-                float baseRadius = u_scale * 0.4;
-                float spikeAmount = u_scale * 0.25;
-                float r = baseRadius + spikeAmount * cos(angle * numSpikes);
-                
-                // Draw the star - use a smooth falloff
-                float lineWidth = 0.012;
-                float star = smoothstep(lineWidth, 0.0, abs(dist - r));
-                
-                // Fill the star interior for better visibility
-                float innerRadius = r * 0.65;
-                if (dist < innerRadius) {
-                    star = max(star, 0.6);
-                }
-                
-                // Make it brighter
-                star = min(star, 1.0);
-                
-                // Convert hue to RGB (hue in degrees, saturation=1.0, value=1.0)
-                vec3 hsv = vec3(u_hue / 360.0, 1.0, 1.0);
-                vec3 color = hsv2rgb(hsv) * star;
-                
-                gl_FragColor = vec4(color, 1.0);
-            }
-        `;
-        
-        // Dilation shader - expands history texture
-        const dilationVertexSource = `
-            attribute vec2 a_position;
-            varying vec2 v_uv;
-            void main() {
-                gl_Position = vec4(a_position, 0.0, 1.0);
-                v_uv = a_position * 0.5 + 0.5;
-                v_uv.y = 1.0 - v_uv.y; // Flip Y
-            }
-        `;
-        
-        const dilationFragmentSource = `
-            #ifdef GL_ES
-            precision mediump float;
-            #endif
-            
-            uniform sampler2D u_history;
-            uniform vec2 u_resolution;
-            uniform float u_expansionFactor;
-            varying vec2 v_uv;
-            
-            // Convert HSV to RGB
-            vec3 hsv2rgb(vec3 c) {
-                vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-                vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-                return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-            }
-            
-            // Convert RGB to HSV
-            vec3 rgb2hsv(vec3 c) {
-                vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-                vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-                vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
-                float d = q.x - min(q.w, q.y);
-                float e = 1.0e-10;
-                return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-            }
-            
-            void main() {
-                vec2 uv = v_uv;
-                vec2 center = vec2(0.5);
-                vec2 dir = uv - center;
-                vec2 scaledDir = dir / u_expansionFactor; // Scale inward to sample outward
-                vec2 sampleUV = scaledDir + center;
-                
-                vec4 history = texture2D(u_history, sampleUV);
-                
-                // Fade based on expansion (further from center = more faded)
-                float distFromCenter = length(dir);
-                float fadeAmount = smoothstep(0.0, 0.8, distFromCenter); // Fade as it expands
-                float fade = 1.0 - fadeAmount * 0.3; // Fade up to 30%
-                
-                // Hue shift based on expansion
-                float hueShift = distFromCenter * 0.05; // Shift hue as it expands (5% per unit distance)
-                
-                // Convert RGB to HSV, shift hue, convert back
-                vec3 hsv = rgb2hsv(history.rgb);
-                hsv.x = fract(hsv.x + hueShift); // Shift hue (wrap around)
-                hsv.z *= fade; // Apply fade to value
-                vec3 shiftedColor = hsv2rgb(hsv);
-                
-                gl_FragColor = vec4(shiftedColor, history.a * fade);
-            }
-        `;
-        
-        // Initialize
-        const canvas = document.getElementById('canvas');
-        const renderer = new SimpleRenderer(canvas);
-        renderer.init(vertexSource, fragmentSource, dilationVertexSource, dilationFragmentSource);
-        
-        // Get slider elements
-        const spikesSlider = document.getElementById('spikes-slider');
-        const hueSlider = document.getElementById('hue-slider');
-        const scaleSlider = document.getElementById('scale-slider');
-        const dilationSlider = document.getElementById('dilation-slider');
-        const spikesValue = document.getElementById('spikes-value');
-        const hueValue = document.getElementById('hue-value');
-        const scaleValue = document.getElementById('scale-value');
-        const dilationValue = document.getElementById('dilation-value');
-        
-        // Current values (initialize from sliders)
-        let spikes = parseFloat(spikesSlider.value);
-        let hue = parseFloat(hueSlider.value);
-        let scale = parseFloat(scaleSlider.value);
-        let dilationSpeed = parseFloat(dilationSlider.value);
-        
-        // Update sliders
-        spikesSlider.addEventListener('input', (e) => {
-            spikes = parseFloat(e.target.value);
-            spikesValue.textContent = spikes;
-        });
-        
-        hueSlider.addEventListener('input', (e) => {
-            hue = parseFloat(e.target.value);
-            hueValue.textContent = hue + '°';
-        });
-        
-        scaleSlider.addEventListener('input', (e) => {
-            scale = parseFloat(e.target.value);
-            scaleValue.textContent = scale.toFixed(2);
-        });
-        
-        dilationSlider.addEventListener('input', (e) => {
-            dilationSpeed = parseFloat(e.target.value);
-            dilationValue.textContent = dilationSpeed.toFixed(3);
-        });
-        
-        let startTime = Date.now();
-        let lastCaptureTime = 0;
-        const CAPTURE_INTERVAL = 0.5; // 2 per second
-        
-        function render() {
-            const currentTime = (Date.now() - startTime) / 1000.0;
-            
-            // Check if it's time to capture a new shape
-            const shouldCaptureShape = (currentTime - lastCaptureTime) >= CAPTURE_INTERVAL;
-            if (shouldCaptureShape) {
-                lastCaptureTime = currentTime;
-            }
-            
-            renderer.render({
-                u_time: currentTime,
-                u_spikes: spikes,
-                u_hue: hue,
-                u_scale: scale
-            }, dilationSpeed, shouldCaptureShape);
-            
-            requestAnimationFrame(render);
+            return script.textContent;
         }
         
-        render();
+        // Initialize
+        function init() {
+            const canvas = document.getElementById('canvas');
+            const renderer = new SimpleRenderer(canvas);
+            
+            // Get shaders from script tags
+            const vertexSource = getShader('star-vertex-shader');
+            const fragmentSource = getShader('star-fragment-shader');
+            const dilationVertexSource = getShader('dilation-vertex-shader');
+            const dilationFragmentSource = getShader('dilation-fragment-shader');
+            
+            renderer.init(vertexSource, fragmentSource, dilationVertexSource, dilationFragmentSource);
+            
+            return renderer;
+        }
+        
+        const renderer = init();
+        
+        (() => {
+            // Get slider elements
+            const spikesSlider = document.getElementById('spikes-slider');
+            const hueSlider = document.getElementById('hue-slider');
+            const scaleSlider = document.getElementById('scale-slider');
+            const dilationSlider = document.getElementById('dilation-slider');
+            const fadeSlider = document.getElementById('fade-slider');
+            const hueShiftSlider = document.getElementById('hue-shift-slider');
+            const rotationSlider = document.getElementById('rotation-slider');
+            const spikesValue = document.getElementById('spikes-value');
+            const hueValue = document.getElementById('hue-value');
+            const scaleValue = document.getElementById('scale-value');
+            const dilationValue = document.getElementById('dilation-value');
+            const fadeValue = document.getElementById('fade-value');
+            const hueShiftValue = document.getElementById('hue-shift-value');
+            const rotationValue = document.getElementById('rotation-value');
+            
+            // Current values (initialize from sliders)
+            let spikes = parseFloat(spikesSlider.value);
+            let hue = parseFloat(hueSlider.value);
+            let scale = parseFloat(scaleSlider.value);
+            let dilationSpeed = parseFloat(dilationSlider.value);
+            let fadeAmount = parseFloat(fadeSlider.value);
+            let hueShiftAmount = parseFloat(hueShiftSlider.value);
+            let rotation = parseFloat(rotationSlider.value);
+        
+            // Update sliders
+            spikesSlider.addEventListener('input', (e) => {
+                spikes = parseFloat(e.target.value);
+                spikesValue.textContent = spikes;
+            });
+            
+            hueSlider.addEventListener('input', (e) => {
+                hue = parseFloat(e.target.value);
+                hueValue.textContent = hue + '°';
+            });
+            
+            scaleSlider.addEventListener('input', (e) => {
+                scale = parseFloat(e.target.value);
+                scaleValue.textContent = scale.toFixed(2);
+            });
+            
+            dilationSlider.addEventListener('input', (e) => {
+                dilationSpeed = parseFloat(e.target.value);
+                dilationValue.textContent = dilationSpeed.toFixed(3);
+            });
+            
+            fadeSlider.addEventListener('input', (e) => {
+                fadeAmount = parseFloat(e.target.value);
+                fadeValue.textContent = fadeAmount.toFixed(2);
+            });
+            
+            hueShiftSlider.addEventListener('input', (e) => {
+                hueShiftAmount = parseFloat(e.target.value);
+                hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+            });
+            
+            rotationSlider.addEventListener('input', (e) => {
+                rotation = parseFloat(e.target.value);
+                rotationValue.textContent = rotation + '°';
+            });
+            
+            let startTime = Date.now();
+            let lastCaptureTime = 0;
+            const CAPTURE_INTERVAL = 0.5; // 2 per second
+            
+            function render() {
+                const currentTime = (Date.now() - startTime) / 1000.0;
+                
+                // Check if it's time to capture a new shape
+                const shouldCaptureShape = (currentTime - lastCaptureTime) >= CAPTURE_INTERVAL;
+                if (shouldCaptureShape) {
+                    lastCaptureTime = currentTime;
+                }
+                
+                renderer.render({
+                    u_time: currentTime,
+                    u_spikes: spikes,
+                    u_hue: hue,
+                    u_scale: scale
+                }, dilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, rotation);
+                
+                requestAnimationFrame(render);
+            }
+            
+            render();
+        })();
     </script>
 </body>
 </html>
