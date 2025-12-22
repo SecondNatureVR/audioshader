@@ -483,6 +483,7 @@
             gl_FragColor = vec4(shiftedColor, history.a * fade * decay);
         }
     </script>
+    <script src="vendor/gif.js"></script>
     
     <div id="hotkey-legend">
         <h4>Hotkeys</h4>
@@ -518,12 +519,17 @@
             <span class="hotkey-key">S</span>
             <span class="hotkey-desc">Snapshot (PNG)</span>
         </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">G</span>
+            <span class="hotkey-desc">Record GIF (max 10s)</span>
+        </div>
     </div>
     
     <div id="status-indicators">
         <span id="freeze-indicator" style="display: none; background: #0af; color: #fff;">FREEZE</span>
         <span id="jiggle-indicator" style="display: none; background: #a0a; color: #fff;">JIGGLE</span>
         <span id="unsaved-indicator" style="display: none; background: #fa0; color: #fff;">UNSAVED</span>
+        <span id="record-indicator" style="display: none; background: #e33; color: #fff;">RECORD</span>
     </div>
     
     <div id="dev-toolbox">
@@ -1101,6 +1107,19 @@
             const autoRotationSlider = document.getElementById('auto-rotation-slider');
             const autoRotationValue = document.getElementById('auto-rotation-value');
             
+            // GIF capture state
+            const captureCanvas = document.createElement('canvas');
+            const captureCtx = captureCanvas.getContext('2d');
+            let gifRecording = false;
+            let gifCaptureFrames = [];
+            let gifCaptureTimer = null;
+            let gifCountdownTimer = null;
+            let gifCaptureStart = 0;
+            let gifCaptureWidth = 0;
+            let gifCaptureHeight = 0;
+            const GIF_FPS = 15;
+            const GIF_MAX_MS = 10000; // 10s max
+            
             // Get preset management elements before defining functions
             const presetSelect = document.getElementById('preset-select');
             const presetNameInput = document.getElementById('preset-name-input');
@@ -1115,6 +1134,7 @@
             const unsavedIndicator = document.getElementById('unsaved-indicator');
             const statusIndicators = document.getElementById('status-indicators');
             const hotkeyLegend = document.getElementById('hotkey-legend');
+            const recordIndicator = document.getElementById('record-indicator');
             
             // Position status indicators below hotkey legend
             function positionStatusIndicators() {
@@ -1306,6 +1326,10 @@
             let jiggleAmount = parseFloat(jiggleAmountSlider.value) / 100.0; // Convert 0-100 to 0-1
             jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
             let jiggleEnabled = false;
+            
+            // Hotkey / playback state
+            let freezeEnabled = false;
+            let originalDilationSpeed = dilationSpeed;
             
             // Store base values for jiggle (when jiggle is off, these match current values)
             let baseSpikiness = spikiness;
@@ -2035,10 +2059,6 @@
                 }
             }
             
-            // Hotkey state variables (declared before render function)
-            let freezeEnabled = false;
-            let originalDilationSpeed = dilationSpeed;
-            
             let startTime = Date.now();
             let lastCaptureTime = 0;
             const TARGET_FPS = 60;
@@ -2168,6 +2188,118 @@
                 }
             }
             
+            // GIF capture helpers
+            function startGifCapture() {
+                if (gifRecording) return;
+                gifRecording = true;
+                gifCaptureFrames = [];
+                gifCaptureStart = Date.now();
+                
+                const maxWidth = 720;
+                gifCaptureWidth = Math.min(maxWidth, canvas.width);
+                gifCaptureHeight = Math.round(gifCaptureWidth * (canvas.height / canvas.width));
+                captureCanvas.width = gifCaptureWidth;
+                captureCanvas.height = gifCaptureHeight;
+                
+                if (recordIndicator) {
+                    recordIndicator.style.display = 'inline-block';
+                    recordIndicator.textContent = 'RECORD 10.0s';
+                    positionStatusIndicators();
+                }
+                
+                const captureFrame = () => {
+                    try {
+                        captureCtx.clearRect(0, 0, gifCaptureWidth, gifCaptureHeight);
+                        captureCtx.drawImage(canvas, 0, 0, gifCaptureWidth, gifCaptureHeight);
+                        const frame = captureCtx.getImageData(0, 0, gifCaptureWidth, gifCaptureHeight);
+                        gifCaptureFrames.push(frame);
+                    } catch (err) {
+                        console.error('GIF capture frame failed', err);
+                    }
+                };
+                
+                captureFrame();
+                
+                gifCaptureTimer = setInterval(() => {
+                    captureFrame();
+                    if (Date.now() - gifCaptureStart >= GIF_MAX_MS) {
+                        stopGifCapture(true);
+                    }
+                }, 1000 / GIF_FPS);
+                
+                gifCountdownTimer = setInterval(() => {
+                    if (!gifRecording) return;
+                    const elapsed = Date.now() - gifCaptureStart;
+                    const remaining = Math.max(0, GIF_MAX_MS - elapsed);
+                    const seconds = (remaining / 1000).toFixed(1);
+                    if (recordIndicator) {
+                        recordIndicator.textContent = `RECORD ${seconds}s`;
+                    }
+                }, 100);
+            }
+            
+            function stopGifCapture(autoStop = false) {
+                if (!gifRecording) return;
+                gifRecording = false;
+                if (gifCaptureTimer) {
+                    clearInterval(gifCaptureTimer);
+                    gifCaptureTimer = null;
+                }
+                if (gifCountdownTimer) {
+                    clearInterval(gifCountdownTimer);
+                    gifCountdownTimer = null;
+                }
+                if (recordIndicator) {
+                    recordIndicator.style.display = 'none';
+                    recordIndicator.textContent = 'RECORD';
+                }
+                
+                if (gifCaptureFrames.length < 2) {
+                    gifCaptureFrames = [];
+                    return;
+                }
+                
+                let gif;
+                try {
+                    gif = new GIF({
+                        workers: 2,
+                        quality: 10,
+                        workerScript: 'vendor/gif.worker.js',
+                        width: gifCaptureWidth,
+                        height: gifCaptureHeight
+                    });
+                } catch (err) {
+                    console.warn('GIF capture is not supported in this environment.', err);
+                    gifCaptureFrames = [];
+                    return;
+                }
+                
+                const combinedFrames = gifCaptureFrames.concat(
+                    gifCaptureFrames.length > 2 ? gifCaptureFrames.slice(1, -1).reverse() : []
+                );
+                
+                combinedFrames.forEach((frame) => {
+                    gif.addFrame(frame, { delay: 1000 / GIF_FPS });
+                });
+                
+                gif.on('finished', (blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const ts = new Date();
+                    const pad = (n) => String(n).padStart(2, '0');
+                    const timestamp = `${ts.getFullYear()}-${pad(ts.getMonth() + 1)}-${pad(ts.getDate())}_${pad(ts.getHours())}-${pad(ts.getMinutes())}-${pad(ts.getSeconds())}`;
+                    a.href = url;
+                    a.download = `coherence-loop-${timestamp}.gif`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+                
+                gif.render();
+                gifCaptureFrames = [];
+            }
+            
             // Keyboard event listeners
             document.addEventListener('keydown', (e) => {
                 // Ignore hotkeys while typing in text inputs or editable fields
@@ -2188,7 +2320,8 @@
                     e.key === 'j' || e.key === 'J' || e.key === 'Escape' ||
                     e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
                     e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
-                    e.key === 's' || e.key === 'S') {
+                    e.key === 's' || e.key === 'S' ||
+                    e.key === 'g' || e.key === 'G') {
                     e.preventDefault();
                 }
                 
@@ -2214,6 +2347,15 @@
                 // S: Snapshot PNG
                 if (e.key === 's' || e.key === 'S') {
                     downloadSnapshot();
+                }
+                
+                // G: Toggle GIF recording (max 10s, forward + reverse loop)
+                if (e.key === 'g' || e.key === 'G') {
+                    if (gifRecording) {
+                        stopGifCapture(false);
+                    } else {
+                        startGifCapture();
+                    }
                 }
                 
                 // Left/Right arrows: Cycle presets (stub)
