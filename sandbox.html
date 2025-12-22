@@ -1456,6 +1456,7 @@
                     // Update slider with clamping for slider display only
                     const clampedForSlider = Math.max(0.05, Math.min(1.0, val));
                     scaleSlider.value = clampedForSlider.toFixed(2);
+                    scaleValue.textContent = clampedForSlider.toFixed(2);
                     updateBaseValues();
                 }
             );
@@ -2187,7 +2188,7 @@
                     randomizeAll();
                 }
                 
-                // Left/Right arrows: Cycle presets (stub for future refinement)
+                // Left/Right arrows: Cycle presets (stub)
                 if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                     console.log('Preset cycling via arrow keys: TODO refine behavior');
                 }
