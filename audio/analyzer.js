@@ -22,6 +22,9 @@ class AudioAnalyzer {
         this.frequencyData = null;
         this.timeData = null;
         this.prevFrequencyData = null; // For spectral flux calculation
+        this.prevTimeData = null; // For transient detection
+        this.rhythmicEnergyHistory = []; // For tempo change detection
+        this.maxRhythmicHistory = 30; // Keep last 30 frames (~0.5s at 60fps)
         
         // Stereo analysis
         this.analyserLeft = null;
@@ -49,6 +52,7 @@ class AudioAnalyzer {
             lowImbalance: 0.0,
             emptiness: 0.0,
             coherence: 1.0,
+            rhythmicEnergy: 0.0, // 0 = ambient/calm, 1 = high-energy/jungle
             // Spatial metrics (v2)
             stereoWidth: [0.0, 0.0, 0.0],  // [low, mid, high]
             panPosition: [0.0, 0.0, 0.0],   // [low, mid, high] (-1 to 1)
@@ -338,6 +342,8 @@ class AudioAnalyzer {
         
         const lowImbalance = this.calculateLowImbalance(bandEnergy);
         const emptiness = this.calculateEmptiness();
+        const rhythmicEnergy = this.calculateRhythmicEnergy();
+        const tempoChange = this.detectTempoChange(rhythmicEnergy);
         
         // Initialize smoothed metrics to first calculated values for immediate response
         if (this._needsInitialization) {
@@ -349,8 +355,24 @@ class AudioAnalyzer {
             this.smoothedMetrics.collision = collision;
             this.smoothedMetrics.lowImbalance = lowImbalance;
             this.smoothedMetrics.emptiness = emptiness;
+            this.smoothedMetrics.rhythmicEnergy = rhythmicEnergy;
             this._needsInitialization = false;
             console.log('✓ Initialized smoothed metrics to first calculated values');
+        }
+        
+        // Store current data for next frame (for spectral flux and transient detection)
+        if (this.frequencyData) {
+            if (!this.prevFrequencyData) {
+                this.prevFrequencyData = new Uint8Array(this.frequencyData.length);
+            }
+            this.prevFrequencyData.set(this.frequencyData);
+        }
+        
+        if (this.timeData) {
+            if (!this.prevTimeData) {
+                this.prevTimeData = new Uint8Array(this.timeData.length);
+            }
+            this.prevTimeData.set(this.timeData);
         }
         
         // Calculate coherence as inverse of problems
@@ -385,6 +407,7 @@ class AudioAnalyzer {
         this.smoothedMetrics.collision = this.smooth(this.smoothedMetrics.collision, collision, smoothingFactor);
         this.smoothedMetrics.lowImbalance = this.smooth(this.smoothedMetrics.lowImbalance, lowImbalance, smoothingFactor);
         this.smoothedMetrics.emptiness = this.smooth(this.smoothedMetrics.emptiness, emptiness, smoothingFactor);
+        this.smoothedMetrics.rhythmicEnergy = this.smooth(this.smoothedMetrics.rhythmicEnergy || rhythmicEnergy, rhythmicEnergy, smoothingFactor);
         
         // Smooth spatial metrics if stereo
         if (this.isStereo) {
@@ -424,7 +447,9 @@ class AudioAnalyzer {
             u_collision: this.smoothedMetrics.collision,
             u_lowImbalance: this.smoothedMetrics.lowImbalance,
             u_emptiness: this.smoothedMetrics.emptiness,
-            u_coherence: smoothedCoherence
+            u_coherence: smoothedCoherence,
+            u_rhythmicEnergy: this.smoothedMetrics.rhythmicEnergy,
+            u_tempoChange: tempoChange
         };
         
         // Add spatial metrics if stereo
@@ -621,6 +646,147 @@ class AudioAnalyzer {
         }
         
         return emptyBins / this.frequencyData.length;
+    }
+    
+    /**
+     * Calculate rhythmic energy (0-1): combines spectral flux and transient density
+     * 0 = calm/ambient (slow, gradual changes)
+     * 1 = high-energy/jungle beats (fast, complex, rapid changes)
+     */
+    calculateRhythmicEnergy() {
+        let spectralFlux = 0.0;
+        let transientCount = 0;
+        let highFreqVariance = 0.0;
+        let ampVariance = 0.0;
+        
+        // 1. Spectral Flux: rate of change in frequency content
+        if (this.prevFrequencyData) {
+            let fluxSum = 0.0;
+            for (let i = 0; i < this.frequencyData.length; i++) {
+                const diff = this.frequencyData[i] - this.prevFrequencyData[i];
+                if (diff > 0) { // Only positive changes (energy increase)
+                    fluxSum += diff;
+                }
+            }
+            // Normalize by buffer size and max value (255)
+            spectralFlux = Math.min(1.0, fluxSum / (this.frequencyData.length * 255));
+        }
+        
+        // 2. Transient Detection: count sudden amplitude spikes
+        if (this.prevTimeData && this.timeData) {
+            const transientThreshold = 0.3; // Threshold for detecting transients
+            let prevAmp = 0.0;
+            let currentAmp = 0.0;
+            
+            // Calculate RMS of previous and current time domain
+            let prevRMS = 0.0;
+            let currentRMS = 0.0;
+            for (let i = 0; i < this.timeData.length; i++) {
+                const prevSample = (this.prevTimeData[i] - 128) / 128.0;
+                const currentSample = (this.timeData[i] - 128) / 128.0;
+                prevRMS += prevSample * prevSample;
+                currentRMS += currentSample * currentSample;
+            }
+            prevRMS = Math.sqrt(prevRMS / this.timeData.length);
+            currentRMS = Math.sqrt(currentRMS / this.timeData.length);
+            
+            // Detect sudden increase (transient)
+            const ampChange = currentRMS - prevRMS;
+            if (ampChange > transientThreshold) {
+                transientCount = 1.0; // Transient detected
+            }
+        }
+        
+        // 3. High-frequency variance (complexity in highs)
+        const highFreqStart = Math.floor(this.frequencyData.length * 0.7); // Top 30% of spectrum
+        let highFreqSum = 0.0;
+        let highFreqSqSum = 0.0;
+        let highFreqCount = 0;
+        
+        for (let i = highFreqStart; i < this.frequencyData.length; i++) {
+            const value = this.frequencyData[i];
+            highFreqSum += value;
+            highFreqSqSum += value * value;
+            highFreqCount++;
+        }
+        
+        if (highFreqCount > 0) {
+            const mean = highFreqSum / highFreqCount;
+            const variance = (highFreqSqSum / highFreqCount) - (mean * mean);
+            highFreqVariance = Math.min(1.0, variance / (255 * 255)); // Normalize
+        }
+        
+        // 4. Amplitude variance (dynamic range)
+        if (this.timeData) {
+            let ampSum = 0.0;
+            let ampSqSum = 0.0;
+            for (let i = 0; i < this.timeData.length; i++) {
+                const sample = Math.abs((this.timeData[i] - 128) / 128.0);
+                ampSum += sample;
+                ampSqSum += sample * sample;
+            }
+            const mean = ampSum / this.timeData.length;
+            const variance = (ampSqSum / this.timeData.length) - (mean * mean);
+            ampVariance = Math.min(1.0, variance * 4.0); // Scale up
+        }
+        
+        // Combine metrics (weighted)
+        const rhythmicEnergy = Math.min(1.0, 
+            spectralFlux * 0.4 +      // 40% weight on spectral flux
+            transientCount * 0.3 +    // 30% weight on transients
+            highFreqVariance * 0.2 +  // 20% weight on high-freq complexity
+            ampVariance * 0.1         // 10% weight on amplitude variance
+        );
+        
+        return rhythmicEnergy;
+    }
+    
+    /**
+     * Detect sudden tempo change (for dilation direction flip)
+     * Returns true if rhythmic energy changed significantly
+     */
+    detectTempoChange(currentRhythmicEnergy) {
+        if (this.rhythmicEnergyHistory.length === 0) {
+            this.rhythmicEnergyHistory.push(currentRhythmicEnergy);
+            return false;
+        }
+        
+        // Add current value to history
+        this.rhythmicEnergyHistory.push(currentRhythmicEnergy);
+        if (this.rhythmicEnergyHistory.length > this.maxRhythmicHistory) {
+            this.rhythmicEnergyHistory.shift();
+        }
+        
+        // Check for sudden change: compare recent average to older average
+        if (this.rhythmicEnergyHistory.length < 10) {
+            return false; // Need enough history
+        }
+        
+        const recentWindow = 5; // Last 5 frames
+        const olderWindow = 10; // Previous 10 frames before recent
+        
+        const recentStart = Math.max(0, this.rhythmicEnergyHistory.length - recentWindow);
+        const olderStart = Math.max(0, this.rhythmicEnergyHistory.length - olderWindow - recentWindow);
+        const olderEnd = this.rhythmicEnergyHistory.length - recentWindow;
+        
+        let recentAvg = 0.0;
+        let olderAvg = 0.0;
+        
+        for (let i = recentStart; i < this.rhythmicEnergyHistory.length; i++) {
+            recentAvg += this.rhythmicEnergyHistory[i];
+        }
+        recentAvg /= recentWindow;
+        
+        if (olderEnd > olderStart) {
+            for (let i = olderStart; i < olderEnd; i++) {
+                olderAvg += this.rhythmicEnergyHistory[i];
+            }
+            olderAvg /= (olderEnd - olderStart);
+        }
+        
+        // Detect change threshold: 0.3 difference
+        const change = Math.abs(recentAvg - olderAvg);
+        return change > 0.3;
     }
     
     /**
@@ -826,6 +992,8 @@ class AudioAnalyzer {
             u_lowImbalance: 0.0,                // Low-end imbalance
             u_emptiness: 0.0,                   // Spectral gaps
             u_coherence: 1.0,                   // Overall coherence (inverse of problems)
+            u_rhythmicEnergy: 0.5,              // 0 = ambient, 1 = high-energy
+            u_tempoChange: false,                // Sudden tempo change detected
             // Spatial metrics (v2) - placeholder values
             u_stereoWidth: [0.0, 0.0, 0.0],    // [low, mid, high] width
             u_panPosition: [0.0, 0.0, 0.0],     // [low, mid, high] pan (-1 to 1)
