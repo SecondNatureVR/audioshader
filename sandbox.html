@@ -183,6 +183,11 @@
             color: #fff;
         }
         
+        .resolution-btn.active {
+            background: #0af !important;
+            color: #000 !important;
+        }
+        
         .control-group input[type="range"] {
             width: 100%;
             margin-bottom: 2px;
@@ -822,6 +827,17 @@
             </div>
         </div>
         
+        <div class="section-header">Resolution</div>
+        <div class="control-group">
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <button id="res-4k-btn" class="resolution-btn" data-resolution="4k" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">4K UHD</button>
+                <button id="res-pc-btn" class="resolution-btn" data-resolution="pc" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Full HD</button>
+                <button id="res-mobile-btn" class="resolution-btn" data-resolution="mobile" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Mobile</button>
+                <button id="res-window-btn" class="resolution-btn" data-resolution="window" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Window</button>
+            </div>
+            <div id="current-resolution-display" style="margin-top: 4px; font-size: 9px; color: #aaa;">Current: Window Size</div>
+        </div>
+        
         <div class="section-header">Shape</div>
         <div class="control-group">
             <label for="spikiness-slider">Spikiness<span class="curve-btn" data-param="spikiness" title="Edit curve">~</span></label>
@@ -1008,6 +1024,26 @@
     </div>
     
     <script>
+        // Resolution configuration
+        const RESOLUTIONS = {
+            '4k': { width: 3840, height: 2160, name: '4K UHD' },
+            'pc': { width: 1920, height: 1080, name: 'Full HD' },
+            'mobile': { width: 1080, height: 1920, name: 'Mobile' },
+            'window': { width: null, height: null, name: 'Window Size' }
+        };
+        
+        // Parse URL parameters
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        
+        // Get current resolution setting
+        let currentResolution = getUrlParam('resolution') || 'window';
+        if (!RESOLUTIONS[currentResolution]) {
+            currentResolution = 'window';
+        }
+        
         // Simple WebGL renderer
         class SimpleRenderer {
             constructor(canvas) {
@@ -1024,8 +1060,16 @@
             }
             
             resize() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
+                const res = RESOLUTIONS[currentResolution];
+                if (res.width && res.height) {
+                    // Fixed resolution
+                    this.canvas.width = res.width;
+                    this.canvas.height = res.height;
+                } else {
+                    // Window size
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                }
                 this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
                 
                 // Resize textures if they exist
@@ -2880,6 +2924,50 @@
                 baseHueShiftAmount = hueShiftAmount;
             }
             
+            // Resolution controls
+            function updateResolution(resolutionKey) {
+                currentResolution = resolutionKey;
+                const res = RESOLUTIONS[resolutionKey];
+                
+                // Update URL without page reload
+                const url = new URL(window.location);
+                if (resolutionKey === 'window') {
+                    url.searchParams.delete('resolution');
+                } else {
+                    url.searchParams.set('resolution', resolutionKey);
+                }
+                window.history.replaceState({}, '', url);
+                
+                // Update UI
+                document.querySelectorAll('.resolution-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-resolution="${resolutionKey}"]`).classList.add('active');
+                
+                // Update display
+                const display = document.getElementById('current-resolution-display');
+                if (res.width && res.height) {
+                    display.textContent = `Current: ${res.name} (${res.width}×${res.height})`;
+                } else {
+                    display.textContent = `Current: ${res.name}`;
+                }
+                
+                // Resize canvas
+                renderer.resize();
+            }
+            
+            // Set initial active button
+            document.querySelector(`[data-resolution="${currentResolution}"]`).classList.add('active');
+            updateResolution(currentResolution); // Update display
+            
+            // Resolution button event listeners
+            document.querySelectorAll('.resolution-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const resolution = e.target.dataset.resolution;
+                    updateResolution(resolution);
+                });
+            });
+            
             randomizeBtn.addEventListener('click', randomizeAll);
             
             // Jiggle functionality
@@ -3138,6 +3226,14 @@
                     console.error('Snapshot failed', err);
                 }
             }
+
+	    function toggleFullScreen() {
+		let devtool = document.querySelector('#dev-toolbox');
+		let hotleg = document.querySelector('#hotkey-legend');
+
+		devtool.hidden = !devtool.hidden;
+		hotleg.hidden = !hotleg.hidden;
+	    }
             
             // GIF capture helpers
             function startGifCapture() {
@@ -3299,6 +3395,10 @@
                 if (e.key === 's' || e.key === 'S') {
                     downloadSnapshot();
                 }
+
+                if (e.key === 'h' || e.key === 'H') {
+		    toggleFullScreen();
+                }
                 
                 // G: Toggle GIF recording (max 10s, forward + reverse loop)
                 if (e.key === 'g' || e.key === 'G') {
@@ -3308,6 +3408,7 @@
                         startGifCapture();
                     }
                 }
+
                 
                 // Left/Right arrows: Cycle presets (stub)
                 if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
