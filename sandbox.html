@@ -1986,6 +1986,9 @@
                 }
                 autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
                 
+                // Update base values to match loaded preset
+                updateBaseValues();
+                
                 // Update dropdown to show the loaded preset
                 presetSelect.value = name;
             }
@@ -2112,6 +2115,25 @@
             let baseFillOpacity = fillOpacity;
             let baseRotation = rotation;
             let baseHueShiftAmount = hueShiftAmount;
+            let baseDilationSpeed = dilationSpeed;
+            let baseFadeAmount = fadeAmount;
+            let baseEmanationRate = emanationRate;
+            let baseNoiseAmount = noiseAmount;
+            let baseNoiseRate = noiseRate;
+            let baseBlurAmount = blurAmount;
+            let baseBlurRate = blurRate;
+            let baseBlendOpacity = blendOpacity;
+            
+            // Initialize auto rotation speed
+            const initialAutoRotationSlider = parseFloat(autoRotationSlider.value);
+            let autoRotationSpeed = mapParamValue('autoRotationSpeed', initialAutoRotationSlider, 200);
+            if (autoRotationSpeed === null) {
+                // Fallback to original exponential mapping
+                autoRotationSpeed = -1.0 + Math.pow(initialAutoRotationSlider / 200.0, 0.5) * 361.0;
+            }
+            
+            // Now initialize baseAutoRotationSpeed after autoRotationSpeed is declared
+            let baseAutoRotationSpeed = autoRotationSpeed;
             
             // Target origins for jiggle when user edits params during jiggle
             // Jiggle will smoothly ease its orbit center toward these targets
@@ -2124,13 +2146,15 @@
             let targetBaseFillOpacity = baseFillOpacity;
             let targetBaseRotation = baseRotation;
             let targetBaseHueShiftAmount = baseHueShiftAmount;
-            // Initialize auto rotation speed
-            const initialAutoRotationSlider = parseFloat(autoRotationSlider.value);
-            let autoRotationSpeed = mapParamValue('autoRotationSpeed', initialAutoRotationSlider, 200);
-            if (autoRotationSpeed === null) {
-                // Fallback to original exponential mapping
-                autoRotationSpeed = -1.0 + Math.pow(initialAutoRotationSlider / 200.0, 0.5) * 361.0;
-            }
+            let targetBaseDilationSpeed = baseDilationSpeed;
+            let targetBaseFadeAmount = baseFadeAmount;
+            let targetBaseEmanationRate = baseEmanationRate;
+            let targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+            let targetBaseNoiseAmount = baseNoiseAmount;
+            let targetBaseNoiseRate = baseNoiseRate;
+            let targetBaseBlurAmount = baseBlurAmount;
+            let targetBaseBlurRate = baseBlurRate;
+            let targetBaseBlendOpacity = baseBlendOpacity;
             
             // Now load the preset if one was found (this will override the default values)
             if (presetLoaded) {
@@ -2922,6 +2946,35 @@
                 baseFillOpacity = fillOpacity;
                 baseRotation = rotation;
                 baseHueShiftAmount = hueShiftAmount;
+                baseDilationSpeed = dilationSpeed;
+                baseFadeAmount = fadeAmount;
+                baseEmanationRate = emanationRate;
+                baseAutoRotationSpeed = autoRotationSpeed;
+                baseNoiseAmount = noiseAmount;
+                baseNoiseRate = noiseRate;
+                baseBlurAmount = blurAmount;
+                baseBlurRate = blurRate;
+                baseBlendOpacity = blendOpacity;
+                
+                // Update target bases to match
+                targetBaseSpikiness = baseSpikiness;
+                targetBaseSpikeFrequency = baseSpikeFrequency;
+                targetBaseSpikeSharpness = baseSpikeSharpness;
+                targetBaseHue = baseHue;
+                targetBaseScale = baseScale;
+                targetBaseFillSize = baseFillSize;
+                targetBaseFillOpacity = baseFillOpacity;
+                targetBaseRotation = baseRotation;
+                targetBaseHueShiftAmount = baseHueShiftAmount;
+                targetBaseDilationSpeed = baseDilationSpeed;
+                targetBaseFadeAmount = baseFadeAmount;
+                targetBaseEmanationRate = baseEmanationRate;
+                targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+                targetBaseNoiseAmount = baseNoiseAmount;
+                targetBaseNoiseRate = baseNoiseRate;
+                targetBaseBlurAmount = baseBlurAmount;
+                targetBaseBlurRate = baseBlurRate;
+                targetBaseBlendOpacity = baseBlendOpacity;
             }
             
             // Resolution controls
@@ -3005,6 +3058,15 @@
                     baseFillOpacity = fillOpacity;
                     baseRotation = rotation;
                     baseHueShiftAmount = hueShiftAmount;
+                    baseDilationSpeed = dilationSpeed;
+                    baseFadeAmount = fadeAmount;
+                    baseEmanationRate = emanationRate;
+                    baseAutoRotationSpeed = autoRotationSpeed;
+                    baseNoiseAmount = noiseAmount;
+                    baseNoiseRate = noiseRate;
+                    baseBlurAmount = blurAmount;
+                    baseBlurRate = blurRate;
+                    baseBlendOpacity = blendOpacity;
                     // Targets match new bases
                     targetBaseSpikiness = baseSpikiness;
                     targetBaseSpikeFrequency = baseSpikeFrequency;
@@ -3015,6 +3077,15 @@
                     targetBaseFillOpacity = baseFillOpacity;
                     targetBaseRotation = baseRotation;
                     targetBaseHueShiftAmount = baseHueShiftAmount;
+                    targetBaseDilationSpeed = baseDilationSpeed;
+                    targetBaseFadeAmount = baseFadeAmount;
+                    targetBaseEmanationRate = baseEmanationRate;
+                    targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+                    targetBaseNoiseAmount = baseNoiseAmount;
+                    targetBaseNoiseRate = baseNoiseRate;
+                    targetBaseBlurAmount = baseBlurAmount;
+                    targetBaseBlurRate = baseBlurRate;
+                    targetBaseBlendOpacity = baseBlendOpacity;
                     
                     // Update sliders to reflect current values (they should already match, but ensure sync)
                     spikinessSlider.value = Math.round(spikiness * 100);
@@ -3026,6 +3097,15 @@
                     fillOpacitySlider.value = Math.round(fillOpacity * 100);
                     rotationSlider.value = Math.round(rotation);
                     hueShiftSlider.value = hueShiftAmount.toFixed(3);
+                    dilationSlider.value = dilationSpeedToSlider(dilationSpeed);
+                    fadeSlider.value = fadeAmountToSlider(fadeAmount);
+                    emanationRateSlider.value = emanationRate.toFixed(1);
+                    autoRotationSlider.value = autoRotationSpeedToSlider(autoRotationSpeed);
+                    noiseAmountSlider.value = noiseAmountToSlider(noiseAmount);
+                    noiseRateSlider.value = noiseRateToSlider(noiseRate);
+                    blurAmountSlider.value = blurAmountToSlider(blurAmount);
+                    blurRateSlider.value = blurRateToSlider(blurRate);
+                    blendOpacitySlider.value = blendOpacity.toFixed(2);
                     
                     // Update status indicators (unsaved state may have changed)
                     updateStatusIndicators();
@@ -3040,6 +3120,15 @@
                     baseFillOpacity = fillOpacity;
                     baseRotation = rotation;
                     baseHueShiftAmount = hueShiftAmount;
+                    baseDilationSpeed = dilationSpeed;
+                    baseFadeAmount = fadeAmount;
+                    baseEmanationRate = emanationRate;
+                    baseAutoRotationSpeed = autoRotationSpeed;
+                    baseNoiseAmount = noiseAmount;
+                    baseNoiseRate = noiseRate;
+                    baseBlurAmount = blurAmount;
+                    baseBlurRate = blurRate;
+                    baseBlendOpacity = blendOpacity;
                     // Targets start at current bases
                     targetBaseSpikiness = baseSpikiness;
                     targetBaseSpikeFrequency = baseSpikeFrequency;
@@ -3050,6 +3139,15 @@
                     targetBaseFillOpacity = baseFillOpacity;
                     targetBaseRotation = baseRotation;
                     targetBaseHueShiftAmount = baseHueShiftAmount;
+                    targetBaseDilationSpeed = baseDilationSpeed;
+                    targetBaseFadeAmount = baseFadeAmount;
+                    targetBaseEmanationRate = baseEmanationRate;
+                    targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+                    targetBaseNoiseAmount = baseNoiseAmount;
+                    targetBaseNoiseRate = baseNoiseRate;
+                    targetBaseBlurAmount = baseBlurAmount;
+                    targetBaseBlurRate = baseBlurRate;
+                    targetBaseBlendOpacity = baseBlendOpacity;
                 }
                 
                 // Update jiggle indicator
@@ -3069,6 +3167,15 @@
                     baseFillOpacity = fillOpacity;
                     baseRotation = rotation;
                     baseHueShiftAmount = hueShiftAmount;
+                    baseDilationSpeed = dilationSpeed;
+                    baseFadeAmount = fadeAmount;
+                    baseEmanationRate = emanationRate;
+                    baseAutoRotationSpeed = autoRotationSpeed;
+                    baseNoiseAmount = noiseAmount;
+                    baseNoiseRate = noiseRate;
+                    baseBlurAmount = blurAmount;
+                    baseBlurRate = blurRate;
+                    baseBlendOpacity = blendOpacity;
                     
                     targetBaseSpikiness = baseSpikiness;
                     targetBaseSpikeFrequency = baseSpikeFrequency;
@@ -3079,6 +3186,15 @@
                     targetBaseFillOpacity = baseFillOpacity;
                     targetBaseRotation = baseRotation;
                     targetBaseHueShiftAmount = baseHueShiftAmount;
+                    targetBaseDilationSpeed = baseDilationSpeed;
+                    targetBaseFadeAmount = baseFadeAmount;
+                    targetBaseEmanationRate = baseEmanationRate;
+                    targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+                    targetBaseNoiseAmount = baseNoiseAmount;
+                    targetBaseNoiseRate = baseNoiseRate;
+                    targetBaseBlurAmount = baseBlurAmount;
+                    targetBaseBlurRate = baseBlurRate;
+                    targetBaseBlendOpacity = baseBlendOpacity;
                 } else {
                     // When jiggle is on, treat current values as new desired origins
                     // Jiggle will smoothly ease its orbit center toward these targets
@@ -3091,6 +3207,15 @@
                     targetBaseFillOpacity = fillOpacity;
                     targetBaseRotation = rotation;
                     targetBaseHueShiftAmount = hueShiftAmount;
+                    targetBaseDilationSpeed = dilationSpeed;
+                    targetBaseFadeAmount = fadeAmount;
+                    targetBaseEmanationRate = emanationRate;
+                    targetBaseAutoRotationSpeed = autoRotationSpeed;
+                    targetBaseNoiseAmount = noiseAmount;
+                    targetBaseNoiseRate = noiseRate;
+                    targetBaseBlurAmount = blurAmount;
+                    targetBaseBlurRate = blurRate;
+                    targetBaseBlendOpacity = blendOpacity;
                 }
                 // Update status indicators to check for unsaved changes
                 if (typeof updateStatusIndicators === 'function') {
@@ -3119,6 +3244,15 @@
                     baseFillOpacity += (targetBaseFillOpacity - baseFillOpacity) * originLerp;
                     baseRotation += (targetBaseRotation - baseRotation) * originLerp;
                     baseHueShiftAmount += (targetBaseHueShiftAmount - baseHueShiftAmount) * originLerp;
+                    baseDilationSpeed += (targetBaseDilationSpeed - baseDilationSpeed) * originLerp;
+                    baseFadeAmount += (targetBaseFadeAmount - baseFadeAmount) * originLerp;
+                    baseEmanationRate += (targetBaseEmanationRate - baseEmanationRate) * originLerp;
+                    baseAutoRotationSpeed += (targetBaseAutoRotationSpeed - baseAutoRotationSpeed) * originLerp;
+                    baseNoiseAmount += (targetBaseNoiseAmount - baseNoiseAmount) * originLerp;
+                    baseNoiseRate += (targetBaseNoiseRate - baseNoiseRate) * originLerp;
+                    baseBlurAmount += (targetBaseBlurAmount - baseBlurAmount) * originLerp;
+                    baseBlurRate += (targetBaseBlurRate - baseBlurRate) * originLerp;
+                    baseBlendOpacity += (targetBaseBlendOpacity - baseBlendOpacity) * originLerp;
                     
                     // Use time-based seed for smooth jiggle
                     const seed = currentTime * 2.0; // Speed of jiggle
@@ -3150,6 +3284,42 @@
                     
                     hueShiftAmount = baseHueShiftAmount + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1; // ±0.1 range
                     hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
+                    
+                    // Dilation speed: jiggle around base, range ~0.88-1.22, so use ±0.1 range
+                    dilationSpeed = baseDilationSpeed + (Math.sin(seed * 0.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1;
+                    dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed));
+                    
+                    // Fade amount: jiggle around base, range 0-5, so use ±1.0 range
+                    fadeAmount = baseFadeAmount + (Math.sin(seed * 1.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 1.0;
+                    fadeAmount = Math.max(0, Math.min(5.0, fadeAmount));
+                    
+                    // Emanation rate: jiggle around base, range 2-200, so use ±20 range
+                    emanationRate = baseEmanationRate + (Math.sin(seed * 1.0) * 0.5 + 0.5 - 0.5) * jiggleAmount * 20.0;
+                    emanationRate = Math.max(2, Math.min(200, emanationRate));
+                    
+                    // Auto rotation speed: jiggle around base, range -1 to 360, so use ±30 range
+                    autoRotationSpeed = baseAutoRotationSpeed + (Math.sin(seed * 0.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 30.0;
+                    autoRotationSpeed = Math.max(-1, Math.min(360, autoRotationSpeed));
+                    
+                    // Noise amount: jiggle around base, range 0-1, so use ±0.2 range
+                    noiseAmount = baseNoiseAmount + (Math.sin(seed * 1.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.2;
+                    noiseAmount = Math.max(0, Math.min(1, noiseAmount));
+                    
+                    // Noise rate: jiggle around base, range 0-10, so use ±2.0 range
+                    noiseRate = baseNoiseRate + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount * 2.0;
+                    noiseRate = Math.max(0, Math.min(10, noiseRate));
+                    
+                    // Blur amount: jiggle around base, range 0-1, so use ±0.2 range
+                    blurAmount = baseBlurAmount + (Math.sin(seed * 2.0) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.2;
+                    blurAmount = Math.max(0, Math.min(1, blurAmount));
+                    
+                    // Blur rate: jiggle around base, range 0-10, so use ±2.0 range
+                    blurRate = baseBlurRate + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount * 2.0;
+                    blurRate = Math.max(0, Math.min(10, blurRate));
+                    
+                    // Blend opacity: jiggle around base, range 0-1, so use ±0.1 range
+                    blendOpacity = baseBlendOpacity + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1;
+                    blendOpacity = Math.max(0, Math.min(1, blendOpacity));
                 }
                 
                 // Calculate capture interval from emanation rate (emanations per second)

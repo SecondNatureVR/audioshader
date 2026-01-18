@@ -141,3 +141,4 @@ float calculateRipple(vec2 uv, vec2 center, float age, float expansionSpeed) {
 - Edges: Oldest ripples, faded, pushed to edges
 - Overall: Like dropping stones in water, each representing a moment in the audio
 
+

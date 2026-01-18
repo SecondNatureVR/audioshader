@@ -147,3 +147,4 @@ function render() {
 - **Window resize**: Recreate textures at new resolution
 - **Performance**: If too slow, reduce expansion factor or use lower resolution textures
 
+
