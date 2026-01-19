@@ -1020,6 +1020,97 @@
                 <input type="range" id="jiggle-amount-slider" min="0" max="100" value="10" step="1">
                 <div class="value" contenteditable="true" id="jiggle-amount-value">10%</div>
             </div>
+            
+            <div class="section-header collapsed" id="jiggle-settings-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
+                <span>Jiggle Settings</span>
+            </div>
+            <div id="jiggle-settings-content" style="display: none; padding-left: 8px;">
+                <div style="display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap;">
+                    <button id="jiggle-all-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">All</button>
+                    <button id="jiggle-none-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">None</button>
+                    <button id="jiggle-shape-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Shape</button>
+                    <button id="jiggle-appearance-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Appearance</button>
+                </div>
+                <div style="font-size: 9px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Shape</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-spikiness" checked>
+                    <span>Spikiness</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-spikeFrequency" checked>
+                    <span>Frequency</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-spikeSharpness" checked>
+                    <span>Sharpness</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Appearance</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-hue" checked>
+                    <span>Hue</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-scale" checked>
+                    <span>Scale</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-fillSize" checked>
+                    <span>Fill Size</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-fillOpacity" checked>
+                    <span>Fill Opacity</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Emanation</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-dilationSpeed" checked>
+                    <span>Dilation Speed</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-fadeAmount" checked>
+                    <span>Fade Amount</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-emanationRate" checked>
+                    <span>Rate</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Filters</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-noiseAmount" checked>
+                    <span>Noise Amount</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-noiseRate" checked>
+                    <span>Noise Rate</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-blurAmount" checked>
+                    <span>Blur Amount</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-blurRate" checked>
+                    <span>Blur Rate</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Rotation</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-autoRotationSpeed" checked>
+                    <span>Auto Rotation</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Effects</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-hueShiftAmount" checked>
+                    <span>Hue Shift</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-blendOpacity" checked>
+                    <span>Blend Opacity</span>
+                </label>
+            </div>
         </div>
     </div>
     
@@ -1768,6 +1859,123 @@
             const jiggleAmountSlider = document.getElementById('jiggle-amount-slider');
             const jiggleAmountValue = document.getElementById('jiggle-amount-value');
             
+            // Jiggle settings drawer
+            const jiggleSettingsHeader = document.getElementById('jiggle-settings-header');
+            const jiggleSettingsContent = document.getElementById('jiggle-settings-content');
+            
+            // Initialize jiggle enabled params (all enabled by default)
+            const jiggleParamNames = [
+                'spikiness', 'spikeFrequency', 'spikeSharpness',
+                'hue', 'scale', 'fillSize', 'fillOpacity',
+                'dilationSpeed', 'fadeAmount', 'emanationRate',
+                'noiseAmount', 'noiseRate', 'blurAmount', 'blurRate',
+                'autoRotationSpeed', 'hueShiftAmount', 'blendOpacity'
+            ];
+            
+            // Initialize jiggleEnabledParams object - all enabled by default
+            let jiggleEnabledParams = {};
+            jiggleParamNames.forEach(param => {
+                jiggleEnabledParams[param] = true;
+            });
+            
+            // Toggle jiggle settings drawer - set up handler
+            // Note: This header is excluded from the generic section-header handler below
+            function setupJiggleDrawerHandler() {
+                const header = document.getElementById('jiggle-settings-header');
+                const content = document.getElementById('jiggle-settings-content');
+                if (header && content) {
+                    header.style.userSelect = 'none'; // Prevent text selection
+                    header.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const isCollapsed = this.classList.contains('collapsed');
+                        console.log('Jiggle drawer clicked, isCollapsed:', isCollapsed); // Debug log
+                        if (isCollapsed) {
+                            this.classList.remove('collapsed');
+                            content.style.display = 'block';
+                        } else {
+                            this.classList.add('collapsed');
+                            content.style.display = 'none';
+                        }
+                    });
+                    console.log('Jiggle drawer handler attached successfully'); // Debug log
+                    return true;
+                } else {
+                    console.warn('Jiggle drawer elements not found:', { header: !!header, content: !!content }); // Debug log
+                }
+                return false;
+            }
+            
+            // Set up the handler
+            if (!setupJiggleDrawerHandler()) {
+                // Fallback: try again after a short delay in case DOM isn't ready
+                setTimeout(() => {
+                    console.log('Retrying jiggle drawer handler setup...'); // Debug log
+                    setupJiggleDrawerHandler();
+                }, 100);
+            }
+            
+            // Initialize checkboxes and add event listeners
+            jiggleParamNames.forEach(param => {
+                const checkbox = document.getElementById(`jiggle-param-${param}`);
+                if (checkbox) {
+                    checkbox.checked = jiggleEnabledParams[param];
+                    checkbox.addEventListener('change', (e) => {
+                        jiggleEnabledParams[param] = e.target.checked;
+                    });
+                }
+            });
+            
+            // Quick action buttons
+            const jiggleAllBtn = document.getElementById('jiggle-all-btn');
+            const jiggleNoneBtn = document.getElementById('jiggle-none-btn');
+            const jiggleShapeBtn = document.getElementById('jiggle-shape-btn');
+            const jiggleAppearanceBtn = document.getElementById('jiggle-appearance-btn');
+            
+            if (jiggleAllBtn) {
+                jiggleAllBtn.addEventListener('click', () => {
+                    jiggleParamNames.forEach(param => {
+                        jiggleEnabledParams[param] = true;
+                        const checkbox = document.getElementById(`jiggle-param-${param}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                });
+            }
+            
+            if (jiggleNoneBtn) {
+                jiggleNoneBtn.addEventListener('click', () => {
+                    jiggleParamNames.forEach(param => {
+                        jiggleEnabledParams[param] = false;
+                        const checkbox = document.getElementById(`jiggle-param-${param}`);
+                        if (checkbox) checkbox.checked = false;
+                    });
+                });
+            }
+            
+            if (jiggleShapeBtn) {
+                jiggleShapeBtn.addEventListener('click', () => {
+                    const shapeParams = ['spikiness', 'spikeFrequency', 'spikeSharpness'];
+                    jiggleParamNames.forEach(param => {
+                        const enabled = shapeParams.includes(param);
+                        jiggleEnabledParams[param] = enabled;
+                        const checkbox = document.getElementById(`jiggle-param-${param}`);
+                        if (checkbox) checkbox.checked = enabled;
+                    });
+                });
+            }
+            
+            if (jiggleAppearanceBtn) {
+                jiggleAppearanceBtn.addEventListener('click', () => {
+                    const appearanceParams = ['hue', 'scale', 'fillSize', 'fillOpacity'];
+                    jiggleParamNames.forEach(param => {
+                        const enabled = appearanceParams.includes(param);
+                        jiggleEnabledParams[param] = enabled;
+                        const checkbox = document.getElementById(`jiggle-param-${param}`);
+                        if (checkbox) checkbox.checked = enabled;
+                    });
+                });
+            }
+            
             // Get emanation rate slider before initializing values
             const emanationRateSlider = document.getElementById('emanation-rate-slider');
             const emanationRateValue = document.getElementById('emanation-rate-value');
@@ -1866,6 +2074,10 @@
             // Collapsible dev-tool sections
             const sectionHeaders = Array.from(document.querySelectorAll('#dev-toolbox .section-header'));
             sectionHeaders.forEach((header) => {
+                // Skip jiggle-settings-header as it has its own custom handler
+                if (header.id === 'jiggle-settings-header') {
+                    return;
+                }
                 header.addEventListener('click', () => {
                     const collapsed = header.classList.toggle('collapsed');
                     let el = header.nextElementSibling;
@@ -1985,6 +2197,24 @@
                     autoRotationSlider.value = sliderValue;
                 }
                 autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                
+                // Restore jiggle settings if present
+                if (preset.jiggleAmount !== undefined) {
+                    jiggleAmount = preset.jiggleAmount;
+                    jiggleAmountSlider.value = Math.round(jiggleAmount * 100);
+                    jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
+                }
+                
+                if (preset.jiggleEnabledParams) {
+                    // Restore enabled params from preset
+                    jiggleParamNames.forEach(param => {
+                        if (preset.jiggleEnabledParams[param] !== undefined) {
+                            jiggleEnabledParams[param] = preset.jiggleEnabledParams[param];
+                            const checkbox = document.getElementById(`jiggle-param-${param}`);
+                            if (checkbox) checkbox.checked = jiggleEnabledParams[param];
+                        }
+                    });
+                }
                 
                 // Update base values to match loaded preset
                 updateBaseValues();
@@ -2715,7 +2945,9 @@
                     blurAmount: blurAmount,
                     blurRate: blurRate,
                     autoRotationSpeed: autoRotationSpeed, // Store actual value (will reverse map to slider on load)
-                    autoRotationSlider: parseFloat(autoRotationSlider.value) // Also store slider for easier restoration
+                    autoRotationSlider: parseFloat(autoRotationSlider.value), // Also store slider for easier restoration
+                    jiggleAmount: jiggleAmount, // Store jiggle amount
+                    jiggleEnabledParams: { ...jiggleEnabledParams } // Store jiggle enabled params (copy object)
                 };
                 
                 const presets = loadPresets();
@@ -3259,67 +3491,103 @@
                     
                     // Apply random offsets to each parameter based on jiggle amount
                     // Using sin/cos with different frequencies for each parameter for smooth variation
-                    spikiness = baseSpikiness + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount;
-                    spikiness = Math.max(0, Math.min(1, spikiness));
+                    // Only apply jiggle if the parameter is enabled in jiggleEnabledParams
                     
-                    spikeFrequency = baseSpikeFrequency + (Math.sin(seed * 1.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 9.0; // ±9 range
-                    spikeFrequency = Math.max(2, Math.min(20, spikeFrequency));
+                    if (jiggleEnabledParams.spikiness) {
+                        spikiness = baseSpikiness + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                        spikiness = Math.max(0, Math.min(1, spikiness));
+                    }
                     
-                    spikeSharpness = baseSpikeSharpness + (Math.sin(seed * 1.1) * 0.5 + 0.5 - 0.5) * jiggleAmount;
-                    spikeSharpness = Math.max(0, Math.min(1, spikeSharpness));
+                    if (jiggleEnabledParams.spikeFrequency) {
+                        spikeFrequency = baseSpikeFrequency + (Math.sin(seed * 1.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 9.0; // ±9 range
+                        spikeFrequency = Math.max(2, Math.min(20, spikeFrequency));
+                    }
                     
-                    hue = baseHue + (Math.sin(seed * 0.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 180.0; // ±180 range
-                    hue = ((hue % 360) + 360) % 360; // Wrap around
+                    if (jiggleEnabledParams.spikeSharpness) {
+                        spikeSharpness = baseSpikeSharpness + (Math.sin(seed * 1.1) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                        spikeSharpness = Math.max(0, Math.min(1, spikeSharpness));
+                    }
                     
-                    scale = baseScale + (Math.sin(seed * 1.5) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.3; // ±0.3 range
-                    scale = Math.max(0.05, Math.min(1.0, scale));
+                    if (jiggleEnabledParams.hue) {
+                        hue = baseHue + (Math.sin(seed * 0.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 180.0; // ±180 range
+                        hue = ((hue % 360) + 360) % 360; // Wrap around
+                    }
                     
-                    fillSize = baseFillSize + (Math.sin(seed * 1.2) * 0.5 + 0.5 - 0.5) * jiggleAmount;
-                    fillSize = Math.max(0, Math.min(1, fillSize));
+                    if (jiggleEnabledParams.scale) {
+                        scale = baseScale + (Math.sin(seed * 1.5) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.3; // ±0.3 range
+                        scale = Math.max(0.05, Math.min(1.0, scale));
+                    }
                     
-                    fillOpacity = baseFillOpacity + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount;
-                    fillOpacity = Math.max(0, Math.min(1, fillOpacity));
+                    if (jiggleEnabledParams.fillSize) {
+                        fillSize = baseFillSize + (Math.sin(seed * 1.2) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                        fillSize = Math.max(0, Math.min(1, fillSize));
+                    }
+                    
+                    if (jiggleEnabledParams.fillOpacity) {
+                        fillOpacity = baseFillOpacity + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                        fillOpacity = Math.max(0, Math.min(1, fillOpacity));
+                    }
                     
                     // Manual rotation does not jiggle; keep rotation from user / auto-rotation
                     
-                    hueShiftAmount = baseHueShiftAmount + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1; // ±0.1 range
-                    hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
+                    if (jiggleEnabledParams.hueShiftAmount) {
+                        hueShiftAmount = baseHueShiftAmount + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1; // ±0.1 range
+                        hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
+                    }
                     
-                    // Dilation speed: jiggle around base, range ~0.88-1.22, so use ±0.1 range
-                    dilationSpeed = baseDilationSpeed + (Math.sin(seed * 0.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1;
-                    dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed));
+                    if (jiggleEnabledParams.dilationSpeed) {
+                        // Dilation speed: jiggle around base, range ~0.88-1.22, so use ±0.1 range
+                        dilationSpeed = baseDilationSpeed + (Math.sin(seed * 0.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1;
+                        dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed));
+                    }
                     
-                    // Fade amount: jiggle around base, range 0-5, so use ±1.0 range
-                    fadeAmount = baseFadeAmount + (Math.sin(seed * 1.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 1.0;
-                    fadeAmount = Math.max(0, Math.min(5.0, fadeAmount));
+                    if (jiggleEnabledParams.fadeAmount) {
+                        // Fade amount: jiggle around base, range 0-5, so use ±1.0 range
+                        fadeAmount = baseFadeAmount + (Math.sin(seed * 1.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 1.0;
+                        fadeAmount = Math.max(0, Math.min(5.0, fadeAmount));
+                    }
                     
-                    // Emanation rate: jiggle around base, range 2-200, so use ±20 range
-                    emanationRate = baseEmanationRate + (Math.sin(seed * 1.0) * 0.5 + 0.5 - 0.5) * jiggleAmount * 20.0;
-                    emanationRate = Math.max(2, Math.min(200, emanationRate));
+                    if (jiggleEnabledParams.emanationRate) {
+                        // Emanation rate: jiggle around base, range 2-200, so use ±20 range
+                        emanationRate = baseEmanationRate + (Math.sin(seed * 1.0) * 0.5 + 0.5 - 0.5) * jiggleAmount * 20.0;
+                        emanationRate = Math.max(2, Math.min(200, emanationRate));
+                    }
                     
-                    // Auto rotation speed: jiggle around base, range -1 to 360, so use ±30 range
-                    autoRotationSpeed = baseAutoRotationSpeed + (Math.sin(seed * 0.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 30.0;
-                    autoRotationSpeed = Math.max(-1, Math.min(360, autoRotationSpeed));
+                    if (jiggleEnabledParams.autoRotationSpeed) {
+                        // Auto rotation speed: jiggle around base, range -1 to 360, so use ±30 range
+                        autoRotationSpeed = baseAutoRotationSpeed + (Math.sin(seed * 0.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 30.0;
+                        autoRotationSpeed = Math.max(-1, Math.min(360, autoRotationSpeed));
+                    }
                     
-                    // Noise amount: jiggle around base, range 0-1, so use ±0.2 range
-                    noiseAmount = baseNoiseAmount + (Math.sin(seed * 1.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.2;
-                    noiseAmount = Math.max(0, Math.min(1, noiseAmount));
+                    if (jiggleEnabledParams.noiseAmount) {
+                        // Noise amount: jiggle around base, range 0-1, so use ±0.2 range
+                        noiseAmount = baseNoiseAmount + (Math.sin(seed * 1.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.2;
+                        noiseAmount = Math.max(0, Math.min(1, noiseAmount));
+                    }
                     
-                    // Noise rate: jiggle around base, range 0-10, so use ±2.0 range
-                    noiseRate = baseNoiseRate + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount * 2.0;
-                    noiseRate = Math.max(0, Math.min(10, noiseRate));
+                    if (jiggleEnabledParams.noiseRate) {
+                        // Noise rate: jiggle around base, range 0-10, so use ±2.0 range
+                        noiseRate = baseNoiseRate + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount * 2.0;
+                        noiseRate = Math.max(0, Math.min(10, noiseRate));
+                    }
                     
-                    // Blur amount: jiggle around base, range 0-1, so use ±0.2 range
-                    blurAmount = baseBlurAmount + (Math.sin(seed * 2.0) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.2;
-                    blurAmount = Math.max(0, Math.min(1, blurAmount));
+                    if (jiggleEnabledParams.blurAmount) {
+                        // Blur amount: jiggle around base, range 0-1, so use ±0.2 range
+                        blurAmount = baseBlurAmount + (Math.sin(seed * 2.0) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.2;
+                        blurAmount = Math.max(0, Math.min(1, blurAmount));
+                    }
                     
-                    // Blur rate: jiggle around base, range 0-10, so use ±2.0 range
-                    blurRate = baseBlurRate + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount * 2.0;
-                    blurRate = Math.max(0, Math.min(10, blurRate));
+                    if (jiggleEnabledParams.blurRate) {
+                        // Blur rate: jiggle around base, range 0-10, so use ±2.0 range
+                        blurRate = baseBlurRate + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount * 2.0;
+                        blurRate = Math.max(0, Math.min(10, blurRate));
+                    }
                     
-                    // Blend opacity: jiggle around base, range 0-1, so use ±0.1 range
-                    blendOpacity = baseBlendOpacity + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1;
-                    blendOpacity = Math.max(0, Math.min(1, blendOpacity));
+                    if (jiggleEnabledParams.blendOpacity) {
+                        // Blend opacity: jiggle around base, range 0-1, so use ±0.1 range
+                        blendOpacity = baseBlendOpacity + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1;
+                        blendOpacity = Math.max(0, Math.min(1, blendOpacity));
+                    }
                 }
                 
                 // Calculate capture interval from emanation rate (emanations per second)
