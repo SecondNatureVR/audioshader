@@ -114,20 +114,34 @@ describe('CurveMapping', () => {
   });
 
   describe('DilationMapping', () => {
-    it('should convert factor 1.0 to speed 0', () => {
-      expect(DilationMapping.factorToSpeed(1.0)).toBe(0);
+    // DilationMapping uses slider range 0-200
+    // MIN: 0.88, MAX: 1.22, POWER: 0.125
+    // slider=0 → 0.88 (contracts)
+    // slider=100 → ~1.0 (neutral, midpoint)
+    // slider=200 → 1.22 (expands)
+
+    it('should convert factor MIN (0.88) to slider 0', () => {
+      expect(DilationMapping.factorToSlider(0.88)).toBe(0);
     });
 
-    it('should convert factor 1.02 to speed 100', () => {
-      expect(DilationMapping.factorToSpeed(1.02)).toBeCloseTo(100);
+    it('should convert factor MAX (1.22) to slider 200', () => {
+      expect(DilationMapping.factorToSlider(1.22)).toBe(200);
     });
 
-    it('should round-trip factor to speed and back', () => {
-      const factor = 1.01;
-      const speed = DilationMapping.factorToSpeed(factor);
-      const backToFactor = DilationMapping.speedToFactor(speed);
+    it('should convert slider 0 to factor MIN (0.88)', () => {
+      expect(DilationMapping.sliderToFactor(0)).toBeCloseTo(0.88);
+    });
 
-      expect(backToFactor).toBeCloseTo(factor);
+    it('should convert slider 200 to factor MAX (1.22)', () => {
+      expect(DilationMapping.sliderToFactor(200)).toBeCloseTo(1.22);
+    });
+
+    it('should round-trip factor to slider and back', () => {
+      const factor = 1.05;
+      const slider = DilationMapping.factorToSlider(factor);
+      const backToFactor = DilationMapping.sliderToFactor(slider);
+
+      expect(backToFactor).toBeCloseTo(factor, 2);
     });
   });
 

@@ -140,9 +140,56 @@ src/
    - Add missing TypeScript types
    - Improve error handling
 
-8. **Testing**
+8. **Testing - Editable Value Displays**
+   - Ensure ALL UI displays of parameter/mapping values allow direct input on the number itself
+   - Add unit tests for `setupEditableValue()` in UIController
+   - Add E2E tests for direct value input (clicking on value, typing, blur to apply)
+   - Test edge cases: invalid input, out-of-range values, special characters
+   - Verify value updates propagate correctly to underlying parameter
+
+9. **Testing - General**
    - Add more unit tests for CurveMapping edge cases
    - Add integration tests for preset loading
+   - Add E2E tests for curve editor modal
+
+## Testing Requirements
+
+**CRITICAL: Every feature must have associated automated tests.**
+
+### Acceptance Criteria
+1. All new features MUST have unit tests covering their core functionality
+2. All tests MUST pass before a feature is considered complete
+3. When modifying existing features, verify tests exist and pass
+4. UI interactions should have corresponding E2E tests where feasible
+
+### Test Commands
+```bash
+# Run all unit tests
+npm run test:run
+
+# Run tests in watch mode
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run E2E tests (requires dev server)
+npm run test:e2e
+
+# Full check (typecheck + lint + test)
+npm run check
+```
+
+### Test Organization
+- **Unit tests:** `tests/unit/*.test.ts` - Test individual functions and classes
+- **E2E tests:** `tests/e2e/*.spec.ts` - Test full user flows with Playwright
+
+### Agent Workflow
+When working on any feature:
+1. **Before starting:** Check if tests exist for the feature
+2. **During development:** Write tests alongside code
+3. **Before completing:** Run `npm run test:run` to verify all tests pass
+4. **On failure:** Fix the failing tests before proceeding
 
 ## Development Commands
 
@@ -156,14 +203,20 @@ npm run dev
 # Build for production
 npm run build
 
-# Run tests
+# Run tests (watch mode)
 npm test
+
+# Run tests (single run)
+npm run test:run
 
 # Type checking
 npx tsc --noEmit
 
 # Linting
 npm run lint
+
+# Full check (typecheck + lint + test)
+npm run check
 ```
 
 ## Debugging Tips
