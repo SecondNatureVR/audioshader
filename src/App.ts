@@ -226,15 +226,19 @@ export class App {
 
   /**
    * Set all parameters at once
+   * @param params - Parameters to set
+   * @param immediate - If true, snap to values immediately (no interpolation)
    */
-  setParams(params: Partial<VisualParams>): void {
+  setParams(params: Partial<VisualParams>, immediate: boolean = true): void {
     Object.assign(this.params, params);
     Object.assign(this.baseParams, params);
     Object.assign(this.targetParams, params);
 
-    // Update interpolator targets
+    // Update interpolator - snap or set targets based on immediate flag
     for (const [name, value] of Object.entries(params)) {
-      if (name === 'rotation') {
+      if (immediate) {
+        this.interpolator.snapTo(name, value as number);
+      } else if (name === 'rotation') {
         this.interpolator.setTargetRotation(name, value as number);
       } else {
         this.interpolator.setTarget(name, value as number);
