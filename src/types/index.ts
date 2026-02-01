@@ -76,6 +76,7 @@ export type AudioMappings = Partial<Record<keyof VisualParams, AudioMappingConfi
 export interface Preset {
   name: string;
   params: VisualParams;
+  emanationRate?: number | undefined;
   audioMappings?: AudioMappings | undefined;
   createdAt?: string | undefined;
   updatedAt?: string | undefined;

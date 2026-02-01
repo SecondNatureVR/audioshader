@@ -82,6 +82,7 @@ function createPreset(name: string, raw: RawPreset): Preset {
   return {
     name,
     params: convertRawPreset(raw),
+    emanationRate: raw.emanationRate,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

@@ -393,6 +393,13 @@ export class App {
   }
 
   /**
+   * Get emanation rate
+   */
+  getEmanationRate(): number {
+    return this.emanationRate;
+  }
+
+  /**
    * Set emanation rate
    */
   setEmanationRate(rate: number): void {
@@ -476,6 +483,9 @@ export class App {
     if (preset === null) return false;
 
     this.setParams(preset.params);
+    if (preset.emanationRate !== undefined) {
+      this.emanationRate = preset.emanationRate;
+    }
     if (preset.audioMappings !== undefined) {
       this.audioMapper.setMappings(preset.audioMappings);
     }

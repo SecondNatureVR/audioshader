@@ -22,6 +22,7 @@ import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateExpandedRange } from './valueUtils';
+import { getParamLabel } from '../config/paramLabels';
 import type { ParamChangeEventDetail, CurveEditRequestEventDetail } from '../components/types';
 import type { ParamSlider } from '../components/param-slider/ParamSlider';
 
@@ -583,8 +584,25 @@ export class UIController {
     if (success) {
       this.currentPresetName = name;
       this.updateAllSliders();
+      this.updateEmanationRateSlider();
       this.updateStatusIndicators();
       this.config.onPresetLoad?.(name);
+    }
+  }
+
+  /**
+   * Update emanation rate slider from app state
+   */
+  private updateEmanationRateSlider(): void {
+    const rate = this.app.getEmanationRate();
+    const slider = document.getElementById('emanation-rate-slider') as HTMLInputElement | null;
+    const valueDisplay = document.getElementById('emanation-rate-value');
+
+    if (slider !== null) {
+      slider.value = String(rate);
+    }
+    if (valueDisplay !== null) {
+      valueDisplay.textContent = rate.toFixed(1);
     }
   }
 
@@ -1057,7 +1075,7 @@ export class UIController {
       return `
       <div class="mapping-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 3px;">
         <input type="checkbox" id="mapping-${param}-enabled" data-param="${param}" ${currentEnabled ? 'checked' : ''} style="cursor: pointer;">
-        <label for="mapping-${param}-enabled" style="font-size: 9px; color: #bbb; width: 100px; cursor: pointer;">${param}</label>
+        <label for="mapping-${param}-enabled" style="font-size: 9px; color: #bbb; width: 100px; cursor: pointer;">${getParamLabel(param)}</label>
         <select id="mapping-${param}-source" data-param="${param}" style="font-size: 8px; padding: 2px; background: #333; color: #eee; border: 1px solid #555; border-radius: 2px;">
           ${audioSources.map((src) => `<option value="${src}" ${src === currentSource ? 'selected' : ''}>${src}</option>`).join('')}
         </select>
@@ -1186,7 +1204,7 @@ export class UIController {
     const powerSlider = document.getElementById('curve-power') as HTMLInputElement | null;
     const powerValue = document.getElementById('curve-power-value');
 
-    if (title !== null) title.textContent = `Curve Editor: ${paramName}`;
+    if (title !== null) title.textContent = `Curve Editor: ${getParamLabel(paramName)}`;
     if (minInput !== null) minInput.value = String(settings.min);
     if (maxInput !== null) maxInput.value = String(settings.max);
     if (powerSlider !== null) powerSlider.value = String(settings.power);
