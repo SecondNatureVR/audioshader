@@ -35,7 +35,7 @@ export class App {
   private jiggleAmount: number = 0;
 
   private blendMode: BlendMode = 'additive';
-  private emanationRate: number = 1.0;
+  private emanationRate: number = 2.0;  // Match lucas.html default
   private lastCaptureTime: number = 0;
   private totalRotation: number = 0;
 
@@ -140,9 +140,9 @@ export class App {
       Object.assign(this.params, audioModifications);
     }
 
-    // Update total rotation for captured shapes
-    this.totalRotation += this.params.autoRotationSpeed * deltaTime;
-    this.totalRotation = ((this.totalRotation % 360) + 360) % 360;
+    // Calculate total rotation for captured shapes (matches lucas.html approach)
+    // Use absolute time * speed rather than accumulating, prevents drift
+    this.totalRotation = this.params.rotation + (this.renderState.time * this.params.autoRotationSpeed);
   }
 
   /**
