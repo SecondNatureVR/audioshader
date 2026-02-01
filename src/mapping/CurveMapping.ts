@@ -51,7 +51,7 @@ export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilation
   emanationRate: { min: 2, max: 200, power: 1.0 },
   noiseRate: { min: 0, max: 10, power: 0.333 },
   blurRate: { min: 0, max: 10, power: 0.333 },
-  autoRotationSpeed: { min: -1, max: 360, power: 0.5 },
+  autoRotationSpeed: { min: -360, max: 360, power: 1.0 },
 
   // Amount parameters (exponential for subtle control at low values)
   noiseAmount: { min: 0, max: 1, power: 0.25 },
@@ -204,64 +204,42 @@ export class CurveMapper {
 
 /**
  * Special mapping functions for dilation speed
- * This parameter has a complex exponential mapping centered around 1.0
+ * This parameter uses a power curve mapping with 1/8 power for fine control
  * NOTE: The dilation slider uses 0-200 range (not 0-100)
  *
- * Formula from lucas.html ensures:
- * - slider=100 → dilationSpeed = 1.0 (no expansion)
- * - The curve uses power 1/8 for fine control near the center
+ * Uses lucas.html CurveEditor defaults:
+ * - min: 0.88, max: 1.22, power: 0.125 (1/8)
+ * - slider=0 → 0.88 (contracts)
+ * - slider=200 → 1.22 (expands)
  */
 export const DilationMapping = {
-  /**
-   * Convert expansion factor (1.001 - 1.02) to speed percentage (0-100)
-   */
-  factorToSpeed(factor: number): number {
-    // Linear mapping: 1.0 -> 0, 1.02 -> 100
-    return ((factor - 1.0) / 0.02) * 100;
-  },
+  // Curve settings matching lucas.html defaults
+  MIN: 0.88,
+  MAX: 1.22,
+  POWER: 0.125,
 
   /**
-   * Convert speed percentage (0-100) to expansion factor
-   */
-  speedToFactor(speed: number): number {
-    return 1.0 + (speed / 100) * 0.02;
-  },
-
-  /**
-   * Convert expansion factor to slider value (0-200) with exponential curve
-   * This is the inverse of sliderToFactor
+   * Convert expansion factor to slider value (0-200)
    */
   factorToSlider(factor: number): number {
-    // Match lucas.html formula exactly
-    const midPower = Math.pow(0.5, 0.125);  // ~0.917
-    const range = 0.34 / (1.0 - midPower);
-    const min = 1.0 - midPower * range;
+    const range = DilationMapping.MAX - DilationMapping.MIN;
+    const normalized = (factor - DilationMapping.MIN) / range;
+    if (normalized <= 0) return 0;
+    if (normalized >= 1) return 200;
 
-    // Solve: factor = min + curved * range
-    // curved = (factor - min) / range
-    const curved = (factor - min) / range;
-    if (curved <= 0) return 0;
-    if (curved >= 1) return 200;
-
-    // Inverse of curved = Math.pow(normalized, 0.125)
-    // normalized = Math.pow(curved, 8)
-    const normalized = Math.pow(curved, 8);
-    return normalized * 200;
+    // Inverse of power curve: normalized = curved^(1/power)
+    const curved = Math.pow(normalized, 1.0 / DilationMapping.POWER);
+    return curved * 200;
   },
 
   /**
    * Convert slider value (0-200) to expansion factor
-   * Matches lucas.html formula exactly
+   * Uses simple power curve formula matching lucas.html CurveEditor
    */
   sliderToFactor(sliderValue: number): number {
-    // Match lucas.html formula exactly for visual parity
-    const midPower = Math.pow(0.5, 0.125);  // ~0.917
-    const range = 0.34 / (1.0 - midPower);
-    const min = 1.0 - midPower * range;
-
     const normalized = sliderValue / 200;
-    const curved = Math.pow(normalized, 0.125);
-    return min + curved * range;
+    const curved = Math.pow(normalized, DilationMapping.POWER);
+    return DilationMapping.MIN + curved * (DilationMapping.MAX - DilationMapping.MIN);
   },
 };
 

@@ -34,6 +34,9 @@ export class App {
   private jiggleEnabled: boolean = false;
   private jiggleAmount: number = 0;
 
+  // Dilation freeze - when true, expansionFactor is set to 1.0 (no dilation)
+  private dilationFrozen: boolean = false;
+
   private blendMode: BlendMode = 'additive';
   private emanationRate: number = 2.0;  // Match lucas.html default
   private lastCaptureTime: number = 0;
@@ -208,7 +211,7 @@ export class App {
         u_fillSize: this.params.fillSize,
         u_fillOpacity: this.params.fillOpacity,
       },
-      dilationFactor: this.params.expansionFactor,
+      dilationFactor: this.dilationFrozen ? 1.0 : this.params.expansionFactor,
       shouldCaptureShape,
       fadeAmount: this.params.fadeAmount,
       hueShiftAmount: this.params.hueShiftAmount,
@@ -327,10 +330,33 @@ export class App {
   }
 
   /**
-   * Check if frozen
+   * Check if paused (render loop stopped)
    */
   isFrozen(): boolean {
     return this.renderState.frozen;
+  }
+
+  /**
+   * Toggle dilation freeze (sets dilation to 1.0 = no expansion)
+   * This is different from pause - the shape still updates, only dilation stops
+   */
+  toggleDilationFreeze(): boolean {
+    this.dilationFrozen = !this.dilationFrozen;
+    return this.dilationFrozen;
+  }
+
+  /**
+   * Set dilation freeze state
+   */
+  setDilationFrozen(frozen: boolean): void {
+    this.dilationFrozen = frozen;
+  }
+
+  /**
+   * Check if dilation is frozen
+   */
+  isDilationFrozen(): boolean {
+    return this.dilationFrozen;
   }
 
   /**

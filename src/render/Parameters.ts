@@ -50,7 +50,7 @@ export const PARAM_RANGES: Record<keyof VisualParams, ParamRange> = {
   spikeSharpness: { min: 0, max: 1, step: 0.01, default: 0.5 },
   scale: { min: 0.1, max: 2, step: 0.01, default: 0.5 },
   rotation: { min: 0, max: 360, step: 1, default: 0 },
-  autoRotationSpeed: { min: -180, max: 180, step: 1, default: 0 },
+  autoRotationSpeed: { min: -360, max: 360, step: 1, default: 0 },
   hue: { min: 0, max: 360, step: 1, default: 180 },
   blendOpacity: { min: 0, max: 1, step: 0.01, default: 1.0 },
   fillSize: { min: 0, max: 1, step: 0.01, default: 0 },
@@ -59,9 +59,9 @@ export const PARAM_RANGES: Record<keyof VisualParams, ParamRange> = {
   fadeAmount: { min: 0, max: 5, step: 0.1, default: 2.0 },
   hueShiftAmount: { min: 0, max: 0.5, step: 0.01, default: 0.1 },
   noiseAmount: { min: 0, max: 1, step: 0.01, default: 0 },
-  noiseRate: { min: 0, max: 2, step: 0.1, default: 0 },
+  noiseRate: { min: 0, max: 10000, step: 0.1, default: 0 },
   blurAmount: { min: 0, max: 1, step: 0.01, default: 0 },
-  blurRate: { min: 0, max: 2, step: 0.1, default: 0 },
+  blurRate: { min: 0, max: 10000, step: 0.1, default: 0 },
   jiggleAmount: { min: 0, max: 1, step: 0.01, default: 0 },
 };
 

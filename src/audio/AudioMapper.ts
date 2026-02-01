@@ -24,18 +24,23 @@ export function createDefaultMappingConfig(source: keyof AudioMetrics = 'rms'): 
 }
 
 /**
- * Suggested audio source for each visual parameter
+ * Default audio source for each visual parameter
+ * Based on lucas.html defaults (with closest equivalents where needed)
  */
-export const SUGGESTED_SOURCES: Partial<Record<keyof VisualParams, keyof AudioMetrics>> = {
-  spikiness: 'rms',
-  spikeFrequency: 'mid',
-  spikeSharpness: 'high',
-  scale: 'bass',
-  hue: 'coherence',
-  fillSize: 'bass',
-  fillOpacity: 'rms',
+export const DEFAULT_AUDIO_SOURCES: Partial<Record<keyof VisualParams, keyof AudioMetrics>> = {
+  spikiness: 'collision',        // lucas.html: collision
+  spikeFrequency: 'rms',         // lucas.html: audioAmp → closest is rms
+  spikeSharpness: 'harshness',   // lucas.html: harshness
+  hue: 'presence',               // lucas.html: bandEnergy → closest is presence
+  scale: 'compression',          // lucas.html: compression
+  expansionFactor: 'bass',       // lucas.html: emptiness → use bass as alternative
+  fadeAmount: 'mud',             // lucas.html: mud
+  hueShiftAmount: 'phaseRisk',   // lucas.html: phaseRisk
+  rotation: 'stereoWidth',       // lucas.html: lowImbalance → use stereoWidth
+  fillSize: 'rms',               // lucas.html: audioAmp → closest is rms
+  fillOpacity: 'coherence',      // lucas.html: coherence
+  blendOpacity: 'mud',           // lucas.html: mud
   autoRotationSpeed: 'presence',
-  hueShiftAmount: 'harshness',
   noiseAmount: 'harshness',
 };
 
@@ -85,8 +90,8 @@ export class AudioMapper {
     ];
 
     for (const param of paramNames) {
-      const suggestedSource = SUGGESTED_SOURCES[param] ?? 'rms';
-      const config = createDefaultMappingConfig(suggestedSource);
+      const defaultSource = DEFAULT_AUDIO_SOURCES[param] ?? 'rms';
+      const config = createDefaultMappingConfig(defaultSource);
 
       // Enable some mappings by default
       if (enabledByDefault.includes(param)) {

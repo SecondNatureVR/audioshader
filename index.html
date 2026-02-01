@@ -49,7 +49,11 @@
         <h4>Hotkeys</h4>
         <div class="hotkey-item">
             <span class="hotkey-key">Space</span>
-            <span class="hotkey-desc">Toggle Freeze</span>
+            <span class="hotkey-desc">Pause (stop render)</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">F</span>
+            <span class="hotkey-desc">Freeze Dilation</span>
         </div>
         <div class="hotkey-item">
             <span class="hotkey-key">R</span>
@@ -99,6 +103,7 @@
 
     <!-- Status Indicators -->
     <div id="status-indicators">
+        <span id="pause-indicator" style="display: none; background: #f80; color: #fff;">PAUSE</span>
         <span id="freeze-indicator" style="display: none; background: #0af; color: #fff;">FREEZE</span>
         <span id="jiggle-indicator" style="display: none; background: #a0a; color: #fff;">JIGGLE</span>
         <span id="unsaved-indicator" style="display: none; background: #fa0; color: #fff;">UNSAVED</span>

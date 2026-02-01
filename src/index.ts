@@ -35,7 +35,7 @@ export type { ShaderSources } from './render/shaders';
 
 // Audio
 export { AudioAnalyzer } from './audio/AudioAnalyzer';
-export { AudioMapper, createDefaultMappingConfig, SUGGESTED_SOURCES } from './audio/AudioMapper';
+export { AudioMapper, createDefaultMappingConfig, DEFAULT_AUDIO_SOURCES } from './audio/AudioMapper';
 
 // Presets
 export { PresetManager } from './presets/PresetManager';

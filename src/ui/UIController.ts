@@ -855,18 +855,32 @@ export class UIController {
       'autoRotationSpeed', 'hueShiftAmount', 'blendOpacity',
     ];
 
-    const audioSources = ['rms', 'bass', 'mid', 'high', 'harshness', 'mud', 'coherence', 'presence'];
+    // All available audio sources matching lucas.html
+    const audioSources = [
+      'rms', 'bass', 'mid', 'high', 'presence', 'harshness',
+      'mud', 'compression', 'collision', 'coherence', 'stereoWidth', 'phaseRisk',
+    ];
 
-    container.innerHTML = mappableParams.map((param) => `
+    // Get current mappings from AudioMapper
+    const audioMapper = this.app.getAudioMapper();
+
+    container.innerHTML = mappableParams.map((param) => {
+      const mapping = audioMapper.getMapping(param);
+      const currentSource = mapping?.source ?? 'rms';
+      const currentEnabled = mapping?.enabled ?? false;
+      const currentSensitivity = (mapping?.sensitivity ?? 1.0) * 100;
+
+      return `
       <div class="mapping-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 3px;">
-        <input type="checkbox" id="mapping-${param}-enabled" data-param="${param}" style="cursor: pointer;">
+        <input type="checkbox" id="mapping-${param}-enabled" data-param="${param}" ${currentEnabled ? 'checked' : ''} style="cursor: pointer;">
         <label for="mapping-${param}-enabled" style="font-size: 9px; color: #bbb; width: 100px; cursor: pointer;">${param}</label>
         <select id="mapping-${param}-source" data-param="${param}" style="font-size: 8px; padding: 2px; background: #333; color: #eee; border: 1px solid #555; border-radius: 2px;">
-          ${audioSources.map((src) => `<option value="${src}">${src}</option>`).join('')}
+          ${audioSources.map((src) => `<option value="${src}" ${src === currentSource ? 'selected' : ''}>${src}</option>`).join('')}
         </select>
-        <input type="range" id="mapping-${param}-sensitivity" data-param="${param}" min="0" max="200" value="100" style="width: 60px;">
+        <input type="range" id="mapping-${param}-sensitivity" data-param="${param}" min="0" max="200" value="${currentSensitivity}" style="width: 60px;">
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     // Add event listeners for mapping controls
     mappableParams.forEach((param) => {
@@ -1151,6 +1165,12 @@ export class UIController {
         document.getElementById('jiggle-btn')?.click();
         break;
 
+      case 'KeyF':
+        if (!e.ctrlKey && !e.metaKey) {
+          this.toggleDilationFreeze();
+        }
+        break;
+
       case 'KeyM':
         if (!e.ctrlKey && !e.metaKey) {
           this.toggleAudioMappingPanel();
@@ -1205,10 +1225,18 @@ export class UIController {
   }
 
   /**
-   * Toggle freeze state
+   * Toggle pause state (stops entire render loop)
    */
   private toggleFreeze(): void {
     this.app.toggleFreeze();
+    this.updateStatusIndicators();
+  }
+
+  /**
+   * Toggle dilation freeze (sets dilation to 1.0, shape still updates)
+   */
+  private toggleDilationFreeze(): void {
+    this.app.toggleDilationFreeze();
     this.updateStatusIndicators();
   }
 
@@ -1319,12 +1347,19 @@ export class UIController {
    * Update status indicators
    */
   updateStatusIndicators(): void {
-    const frozen = document.getElementById('freeze-indicator') ?? document.getElementById('frozen-indicator');
+    const pause = document.getElementById('pause-indicator');
+    const freeze = document.getElementById('freeze-indicator');
     const jiggle = document.getElementById('jiggle-indicator');
     const unsaved = document.getElementById('unsaved-indicator');
 
-    if (frozen !== null) {
-      frozen.style.display = this.app.isFrozen() ? 'inline-block' : 'none';
+    // PAUSE = render loop stopped (spacebar)
+    if (pause !== null) {
+      pause.style.display = this.app.isFrozen() ? 'inline-block' : 'none';
+    }
+
+    // FREEZE = dilation frozen to 1.0 (F key)
+    if (freeze !== null) {
+      freeze.style.display = this.app.isDilationFrozen() ? 'inline-block' : 'none';
     }
 
     // Note: jiggle state would be tracked separately
