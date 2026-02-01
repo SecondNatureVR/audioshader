@@ -53,6 +53,7 @@ export class AudioMapper {
 
   /**
    * Initialize default mappings for all visual parameters
+   * Some mappings are enabled by default for immediate audio reactivity
    */
   private initializeDefaultMappings(): void {
     const paramNames: Array<keyof VisualParams> = [
@@ -76,9 +77,24 @@ export class AudioMapper {
       'jiggleAmount',
     ];
 
+    // Parameters to enable by default for immediate audio reactivity
+    const enabledByDefault: Array<keyof VisualParams> = [
+      'scale',      // React to bass
+      'spikiness',  // React to RMS
+      'fillSize',   // React to bass
+    ];
+
     for (const param of paramNames) {
       const suggestedSource = SUGGESTED_SOURCES[param] ?? 'rms';
-      this.mappings[param] = createDefaultMappingConfig(suggestedSource);
+      const config = createDefaultMappingConfig(suggestedSource);
+
+      // Enable some mappings by default
+      if (enabledByDefault.includes(param)) {
+        config.enabled = true;
+        config.sensitivity = 0.5;  // Start with moderate sensitivity
+      }
+
+      this.mappings[param] = config;
     }
   }
 

@@ -48,7 +48,10 @@ async function init(): Promise<void> {
   setInterval(() => {
     if (audioAnalyzer.isEnabled) {
       const metrics = audioAnalyzer.getMetrics();
-      app.setAudioMetrics(metrics);
+      if (metrics !== null) {
+        app.setAudioMetrics(metrics);
+        ui.updateAudioMetrics(metrics);
+      }
     }
   }, 1000 / 60); // 60fps audio updates
 
