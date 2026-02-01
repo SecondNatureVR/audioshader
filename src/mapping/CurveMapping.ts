@@ -59,8 +59,10 @@ export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilation
   fadeAmount: { min: 0, max: 5, power: 0.333 },
   hueShiftAmount: { min: 0, max: 0.2, power: 1.0 },
 
-  // Dilation speed (very slow exponential for precise control)
-  dilationSpeed: { min: 0.88, max: 1.22, power: 0.125 },
+  // Dilation/expansion factor (very slow exponential for precise control)
+  // Note: expansionFactor is the actual param name, dilationSpeed is legacy
+  expansionFactor: { min: 0.88, max: 1.22, power: 0.125 },
+  dilationSpeed: { min: 0.88, max: 1.22, power: 0.125 }, // legacy alias
 };
 
 /**
