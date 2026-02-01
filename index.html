@@ -3,230 +3,544 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coherence Canvas - Test</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            overflow: hidden;
-            background: #000;
-        }
-        
-        #canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-        }
-        
-        #controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-family: monospace;
-            font-size: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 8px;
-            border-radius: 4px;
-            z-index: 100;
-            max-width: 280px;
-        }
-        
-        #controls h3 {
-            font-size: 12px;
-            margin-bottom: 6px;
-        }
-        
-        #controls h4 {
-            font-size: 10px;
-            margin: 8px 0 4px 0;
-            color: #aaa;
-        }
-        
-        .meter-container {
-            margin: 6px 0;
-            font-size: 9px;
-        }
-        
-        .meter-label {
-            display: flex;
-            align-items: center;
-            margin-bottom: 2px;
-            font-size: 9px;
-        }
-        
-        .meter-label .legend-swatch {
-            margin-right: 4px;
-        }
-        
-        .meter-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 2px;
-        }
-        
-        .meter-bar {
-            flex: 1;
-            height: 12px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .meter-fill {
-            height: 100%;
-            background: #0f0;
-            transition: width 0.1s linear, background-color 0.2s;
-            min-width: 0;
-        }
-        
-        .meter-value {
-            min-width: 32px;
-            font-size: 8px;
-            color: #aaa;
-            text-align: right;
-            font-family: monospace;
-        }
-        
-        .stability-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-top: 2px;
-        }
-        
-        .stability-label {
-            font-size: 7px;
-            color: #888;
-            min-width: 50px;
-            text-transform: capitalize;
-        }
-        
-        .stability-visualizer {
-            flex: 1;
-            height: 12px;
-            display: flex;
-            align-items: center;
-            transition: opacity 0.2s;
-        }
-        
-        .stability-visualizer:hover {
-            opacity: 0.8;
-        }
-        
-        .stability-indicators {
-            display: flex;
-            gap: 2px;
-            height: 3px;
-            width: 100%;
-            align-items: center;
-        }
-        
-        .stability-bar {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 1px;
-            transition: width 0.2s, background-color 0.2s;
-            min-width: 0;
-            height: 3px;
-        }
-        
-        .stability-waveform-container,
-        .stability-histogram-container {
-            display: flex;
-            gap: 2px;
-            width: 100%;
-            height: 12px;
-            align-items: center;
-        }
-        
-        .stability-waveform,
-        .stability-histogram {
-            flex: 1;
-            image-rendering: pixelated;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 1px;
-            height: 8px;
-        }
-        
-        .stability-rings-container {
-            display: flex;
-            gap: 4px;
-            width: 100%;
-            height: 12px;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .stability-ring {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 12px;
-        }
-        
-        .stability-ring svg {
-            display: block;
-            width: 12px;
-            height: 12px;
-        }
-        
-        .stability-dots-container {
-            display: flex;
-            gap: 2px;
-            width: 100%;
-            height: 12px;
-            align-items: center;
-        }
-        
-        .stability-dots {
-            flex: 1;
-            position: relative;
-            height: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .legend-swatch {
-            display: inline-block;
-            vertical-align: middle;
-            flex-shrink: 0;
-        }
-    </style>
+    <title>AudioShader - Audio Reactive Visualizer</title>
+    <link rel="stylesheet" href="/styles/main.css">
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <div id="controls">
-        <h3>Coherence Canvas</h3>
-        <div style="margin-bottom: 6px;">
-            <select id="audio-device-select" style="width: 100%; font-size: 9px; padding: 2px; margin-bottom: 4px; background: #222; color: #fff; border: 1px solid #444;">
-                <option value="">Loading devices...</option>
-            </select>
-            <button id="enable-audio-btn" style="width: 100%; padding: 4px 8px; cursor: pointer; font-size: 9px;">Enable Audio</button>
+
+    <!-- Curve Editor Overlay -->
+    <div id="curve-editor-overlay" class="curve-editor-overlay">
+        <div class="curve-editor">
+            <div class="curve-editor-header">
+                <div class="curve-editor-title" id="curve-editor-title">Parameter Curve Editor</div>
+                <button class="curve-editor-close" id="curve-editor-close">&times;</button>
+            </div>
+            <div class="curve-canvas-container">
+                <canvas id="curve-canvas" class="curve-canvas"></canvas>
+            </div>
+            <div class="curve-controls">
+                <div class="curve-control-group">
+                    <label>Min Value</label>
+                    <input type="number" id="curve-min" step="any" value="0">
+                </div>
+                <div class="curve-control-group">
+                    <label>Max Value</label>
+                    <input type="number" id="curve-max" step="any" value="1">
+                </div>
+            </div>
+            <div class="curve-power-slider">
+                <label>Curve Power (exponent): <span id="curve-power-value">1.0</span></label>
+                <input type="range" id="curve-power" min="0.1" max="5" step="0.1" value="1.0">
+            </div>
+            <div class="curve-actions">
+                <button class="curve-btn-action" id="curve-reset">Reset</button>
+                <button class="curve-btn-action" id="curve-apply">Apply</button>
+                <button class="curve-btn-action curve-btn-primary" id="curve-close">Done</button>
+            </div>
         </div>
-        <div id="audio-status" style="margin-bottom: 6px; font-size: 9px; color: #888;">Audio: Disabled</div>
-        <div id="stereo-info" style="margin-bottom: 6px; font-size: 8px; color: #666; display: none;">
-            <div>For stereo analysis, route system audio through:</div>
-            <div>• Windows: Virtual Audio Cable</div>
-            <div>• macOS: BlackHole</div>
-        </div>
-        <h4>Diagnostic Metrics</h4>
-        <div id="meters-container"></div>
     </div>
-    
-    <script src="audio/analyzer.js"></script>
-    <script src="gl/renderer.js"></script>
-    <script src="ui/legend.js"></script>
-    <script src="ui/meters.js"></script>
-    <script src="main.js"></script>
+
+    <!-- Load GIF.js library -->
+    <script src="vendor/gif.js"></script>
+
+    <!-- Hotkey Legend -->
+    <div id="hotkey-legend">
+        <h4>Hotkeys</h4>
+        <div class="hotkey-item">
+            <span class="hotkey-key">Space</span>
+            <span class="hotkey-desc">Toggle Freeze</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">R</span>
+            <span class="hotkey-desc">Randomize</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">&larr; &rarr;</span>
+            <span class="hotkey-desc">Cycle Presets</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">J</span>
+            <span class="hotkey-desc">Toggle Jiggle</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">Esc</span>
+            <span class="hotkey-desc">Clear Screen</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">&uarr;</span>
+            <span class="hotkey-desc">Accelerate</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">&darr;</span>
+            <span class="hotkey-desc">Decelerate</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">S</span>
+            <span class="hotkey-desc">Snapshot (PNG)</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">G</span>
+            <span class="hotkey-desc">Record GIF (max 10s)</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">1</span>
+            <span class="hotkey-desc">Toggle Interpolation</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">H</span>
+            <span class="hotkey-desc">Toggle UI</span>
+        </div>
+    </div>
+
+    <!-- Status Indicators -->
+    <div id="status-indicators">
+        <span id="freeze-indicator" style="display: none; background: #0af; color: #fff;">FREEZE</span>
+        <span id="jiggle-indicator" style="display: none; background: #a0a; color: #fff;">JIGGLE</span>
+        <span id="unsaved-indicator" style="display: none; background: #fa0; color: #fff;">UNSAVED</span>
+        <span id="record-indicator" style="display: none; background: #e33; color: #fff;">RECORD</span>
+    </div>
+
+    <!-- Dev Toolbox (Main Controls Panel) -->
+    <div id="dev-toolbox">
+        <h3>AudioShader Controls</h3>
+
+        <!-- Interpolation Settings -->
+        <div class="section-header collapsed" id="interpolation-settings-header">
+            <span>Interpolation Settings</span>
+        </div>
+        <div id="interpolation-settings-content" style="display: none; padding-left: 8px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 6px; cursor: pointer;">
+                <input type="checkbox" id="interpolation-enabled" checked>
+                <span>Enable Interpolation</span>
+            </label>
+            <div class="control-group">
+                <label>Duration (s)</label>
+                <div class="control-row">
+                    <input type="range" id="interpolation-duration-slider" min="0.1" max="2" step="0.05" value="0.5">
+                    <span class="value" id="interpolation-duration-value">0.50</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Easing</label>
+                <select id="interpolation-easing-select" style="width: 100%;">
+                    <option value="linear">Linear</option>
+                    <option value="easeIn">Ease In</option>
+                    <option value="easeOut">Ease Out</option>
+                    <option value="easeInOut" selected>Ease In Out</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Spring Constant</label>
+                <div class="control-row">
+                    <input type="range" id="interpolation-spring-slider" min="0.01" max="0.5" step="0.01" value="0.1">
+                    <span class="value" id="interpolation-spring-value">0.10</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Spring Damping</label>
+                <div class="control-row">
+                    <input type="range" id="interpolation-damping-slider" min="0.5" max="0.99" step="0.01" value="0.8">
+                    <span class="value" id="interpolation-damping-value">0.80</span>
+                </div>
+            </div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-top: 6px; cursor: pointer;">
+                <input type="checkbox" id="interpolation-rotation-spring" checked>
+                <span>Use Spring for Rotation</span>
+            </label>
+        </div>
+
+        <!-- Audio Controls -->
+        <div class="section-header collapsed" id="audio-controls-header">
+            <span>Audio Controls</span>
+        </div>
+        <div id="audio-controls-content" style="display: none; padding-left: 8px;">
+            <div class="control-group">
+                <label>Audio Device</label>
+                <select id="audio-device-select" style="width: 100%;">
+                    <option value="">Default Device</option>
+                </select>
+            </div>
+            <button id="audio-enable-btn" style="width: 100%; padding: 6px; margin-top: 6px; background: #0a0; border: none; color: #fff; cursor: pointer; border-radius: 3px;">
+                Enable Audio
+            </button>
+            <button id="audio-tab-btn" style="width: 100%; padding: 6px; margin-top: 6px; background: #a0a; border: none; color: #fff; cursor: pointer; border-radius: 3px;">
+                Capture Tab Audio
+            </button>
+        </div>
+
+        <!-- Preset Management -->
+        <div class="section-header" style="margin-top: 8px;">
+            <span>Presets</span>
+        </div>
+        <div class="control-group">
+            <select id="preset-select" style="width: 100%; margin-bottom: 6px;">
+                <option value="">-- Select Preset --</option>
+            </select>
+            <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                <input type="text" id="preset-name-input" placeholder="New preset name" style="flex: 1; padding: 4px;">
+                <button id="save-preset-btn" style="padding: 4px 8px; background: #0af; border: none; color: #000; cursor: pointer; border-radius: 3px;">Save</button>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button id="delete-preset-btn" style="flex: 1; padding: 4px; background: #a00; border: none; color: #fff; cursor: pointer; border-radius: 3px;">Delete</button>
+                <button id="export-presets-btn" style="flex: 1; padding: 4px; background: #555; border: none; color: #fff; cursor: pointer; border-radius: 3px;">Export</button>
+                <label style="flex: 1; padding: 4px; background: #555; color: #fff; text-align: center; cursor: pointer; border-radius: 3px; font-size: 10px;">
+                    Import
+                    <input type="file" id="import-presets-input" accept=".json" style="display: none;">
+                </label>
+            </div>
+        </div>
+
+        <!-- Resolution -->
+        <div class="section-header">
+            <span>Resolution</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+            <button class="resolution-btn" data-resolution="4k" style="padding: 4px 8px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 3px; font-size: 9px;">4K</button>
+            <button class="resolution-btn" data-resolution="1440p" style="padding: 4px 8px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 3px; font-size: 9px;">1440p</button>
+            <button class="resolution-btn" data-resolution="pc" style="padding: 4px 8px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 3px; font-size: 9px;">1080p</button>
+            <button class="resolution-btn" data-resolution="720p" style="padding: 4px 8px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 3px; font-size: 9px;">720p</button>
+            <button class="resolution-btn active" data-resolution="window" style="padding: 4px 8px; background: #333; border: 1px solid #555; color: #fff; cursor: pointer; border-radius: 3px; font-size: 9px;">Window</button>
+        </div>
+        <div id="current-resolution-display" style="font-size: 8px; color: #888; margin-bottom: 8px;">Current: Window Size</div>
+
+        <!-- Shape Parameters -->
+        <div class="section-header">
+            <span>Shape</span>
+        </div>
+        <div class="control-group">
+            <label>Spikiness <span class="curve-btn" data-param="spikiness" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="spikiness-slider" min="0" max="100" value="50">
+                <span class="value" id="spikiness-value" contenteditable="true">0.50</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Spike Frequency <span class="curve-btn" data-param="spikeFrequency" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="spike-frequency-slider" min="2" max="20" step="0.1" value="5">
+                <span class="value" id="spike-frequency-value" contenteditable="true">5.0</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Spike Sharpness <span class="curve-btn" data-param="spikeSharpness" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="spike-sharpness-slider" min="0" max="100" value="0">
+                <span class="value" id="spike-sharpness-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+
+        <!-- Appearance Parameters -->
+        <div class="section-header">
+            <span>Appearance</span>
+        </div>
+        <div class="control-group">
+            <label>Hue <span class="curve-btn" data-param="hue" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="hue-slider" min="0" max="360" value="180">
+                <span class="value" id="hue-value" contenteditable="true">180&deg;</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Scale <span class="curve-btn" data-param="scale" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="scale-slider" min="0.05" max="1" step="0.01" value="0.5">
+                <span class="value" id="scale-value" contenteditable="true">0.50</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Fill Size <span class="curve-btn" data-param="fillSize" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="fill-size-slider" min="0" max="100" value="0">
+                <span class="value" id="fill-size-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Fill Opacity <span class="curve-btn" data-param="fillOpacity" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="fill-opacity-slider" min="0" max="100" value="60">
+                <span class="value" id="fill-opacity-value" contenteditable="true">0.60</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Blend Mode</label>
+            <select id="blend-mode-select" style="width: 100%;">
+                <option value="additive" selected>Additive</option>
+                <option value="alpha">Alpha</option>
+                <option value="multiply">Multiply</option>
+                <option value="screen">Screen</option>
+                <option value="overlay">Overlay</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Blend Opacity <span class="curve-btn" data-param="blendOpacity" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="blend-opacity-slider" min="0" max="100" value="100">
+                <span class="value" id="blend-opacity-value" contenteditable="true">1.00</span>
+            </div>
+        </div>
+
+        <!-- Emanation Parameters -->
+        <div class="section-header">
+            <span>Emanation</span>
+        </div>
+        <div class="control-group">
+            <label>Dilation Speed <span class="curve-btn" data-param="expansionFactor" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="expansion-factor-slider" min="0" max="200" value="100">
+                <span class="value" id="expansion-factor-value" contenteditable="true">1.0100</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Fade Amount <span class="curve-btn" data-param="fadeAmount" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="fade-amount-slider" min="0" max="100" value="30">
+                <span class="value" id="fade-amount-value" contenteditable="true">0.300</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Emanation Rate <span class="curve-btn" data-param="emanationRate" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="emanation-rate-slider" min="2" max="200" value="2">
+                <span class="value" id="emanation-rate-value" contenteditable="true">2.0</span>
+            </div>
+        </div>
+
+        <!-- Filter Parameters -->
+        <div class="section-header">
+            <span>Filters</span>
+        </div>
+        <div class="control-group">
+            <label>Noise Amount <span class="curve-btn" data-param="noiseAmount" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="noise-amount-slider" min="0" max="100" value="0">
+                <span class="value" id="noise-amount-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Noise Rate <span class="curve-btn" data-param="noiseRate" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="noise-rate-slider" min="0" max="100" value="0">
+                <span class="value" id="noise-rate-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Blur Amount <span class="curve-btn" data-param="blurAmount" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="blur-amount-slider" min="0" max="100" value="0">
+                <span class="value" id="blur-amount-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Blur Rate <span class="curve-btn" data-param="blurRate" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="blur-rate-slider" min="0" max="100" value="0">
+                <span class="value" id="blur-rate-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+
+        <!-- Rotation Parameters -->
+        <div class="section-header">
+            <span>Rotation</span>
+        </div>
+        <div class="control-group">
+            <label>Manual Rotation <span class="curve-btn" data-param="rotation" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="rotation-slider" min="0" max="360" value="0">
+                <span class="value" id="rotation-value" contenteditable="true">0&deg;</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Auto Rotation Speed <span class="curve-btn" data-param="autoRotationSpeed" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="auto-rotation-speed-slider" min="0" max="200" value="50">
+                <span class="value" id="auto-rotation-speed-value" contenteditable="true">15.0&deg;</span>
+            </div>
+        </div>
+
+        <!-- Effects Parameters -->
+        <div class="section-header">
+            <span>Effects</span>
+        </div>
+        <div class="control-group">
+            <label>Hue Shift Amount <span class="curve-btn" data-param="hueShiftAmount" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="hue-shift-amount-slider" min="0" max="100" value="0">
+                <span class="value" id="hue-shift-amount-value" contenteditable="true">0.000</span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="section-header">
+            <span>Actions</span>
+        </div>
+        <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+            <button id="randomize-btn" style="flex: 1; padding: 6px; background: #fa0; border: none; color: #000; cursor: pointer; border-radius: 3px;">Randomize</button>
+            <button id="jiggle-btn" style="flex: 1; padding: 6px; background: #a0a; border: none; color: #fff; cursor: pointer; border-radius: 3px;">Jiggle</button>
+        </div>
+        <div class="control-group">
+            <label>Jiggle Amount</label>
+            <div class="control-row">
+                <input type="range" id="jiggle-amount-slider" min="0" max="100" value="30">
+                <span class="value" id="jiggle-amount-value">30%</span>
+            </div>
+        </div>
+
+        <!-- Jiggle Settings (Collapsed by default) -->
+        <div class="section-header collapsed" id="jiggle-settings-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
+            <span>Jiggle Parameter Settings</span>
+        </div>
+        <div id="jiggle-settings-content" style="display: none; padding-left: 8px;">
+            <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                <button id="jiggle-all-btn" style="flex: 1; padding: 4px; background: #0a0; border: none; color: #fff; cursor: pointer; border-radius: 3px; font-size: 8px;">All</button>
+                <button id="jiggle-none-btn" style="flex: 1; padding: 4px; background: #a00; border: none; color: #fff; cursor: pointer; border-radius: 3px; font-size: 8px;">None</button>
+                <button id="jiggle-shape-btn" style="flex: 1; padding: 4px; background: #555; border: none; color: #fff; cursor: pointer; border-radius: 3px; font-size: 8px;">Shape</button>
+                <button id="jiggle-appearance-btn" style="flex: 1; padding: 4px; background: #555; border: none; color: #fff; cursor: pointer; border-radius: 3px; font-size: 8px;">Appear</button>
+            </div>
+
+            <div style="font-size: 9px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Shape</div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-spikiness" checked>
+                <span>Spikiness</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-spikeFrequency" checked>
+                <span>Spike Frequency</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-spikeSharpness" checked>
+                <span>Spike Sharpness</span>
+            </label>
+
+            <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Appearance</div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-hue" checked>
+                <span>Hue</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-scale" checked>
+                <span>Scale</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-fillSize" checked>
+                <span>Fill Size</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-fillOpacity" checked>
+                <span>Fill Opacity</span>
+            </label>
+
+            <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Emanation</div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-expansionFactor" checked>
+                <span>Dilation Speed</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-fadeAmount" checked>
+                <span>Fade Amount</span>
+            </label>
+
+            <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Filters</div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-noiseAmount" checked>
+                <span>Noise Amount</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-noiseRate" checked>
+                <span>Noise Rate</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-blurAmount" checked>
+                <span>Blur Amount</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-blurRate" checked>
+                <span>Blur Rate</span>
+            </label>
+
+            <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Rotation</div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-autoRotationSpeed" checked>
+                <span>Auto Rotation</span>
+            </label>
+
+            <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Effects</div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-hueShiftAmount" checked>
+                <span>Hue Shift</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-blendOpacity" checked>
+                <span>Blend Opacity</span>
+            </label>
+        </div>
+
+        <!-- Debug Values (Collapsed by default) -->
+        <div class="section-header collapsed" id="debug-values-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
+            <span>Debug Values</span>
+        </div>
+        <div id="debug-values-content" style="display: none; padding-left: 8px;">
+            <div id="debug-output" style="font-size: 8px; font-family: monospace; color: #aaa; line-height: 1.4; max-height: 400px; overflow-y: auto; background: #1a1a1a; padding: 6px; border-radius: 3px; border: 1px solid #333; white-space: pre-wrap;">
+                <!-- Debug values will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Mapping Panel (Hidden by default, toggle with M key) -->
+    <div id="audio-mapping-panel">
+        <h4>Audio Mapping</h4>
+        <div id="audio-metrics-visualization">
+            <h5>Audio Metrics</h5>
+            <table class="metrics-table" id="audio-metrics-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                        <th>Bar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr data-metric="rms">
+                        <td class="metric-name">RMS</td>
+                        <td class="metric-value">0.000</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="bass">
+                        <td class="metric-name">Bass</td>
+                        <td class="metric-value">0.000</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="mid">
+                        <td class="metric-name">Mid</td>
+                        <td class="metric-value">0.000</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="high">
+                        <td class="metric-name">High</td>
+                        <td class="metric-value">0.000</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="harshness">
+                        <td class="metric-name">Harshness</td>
+                        <td class="metric-value">0.000</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="mud">
+                        <td class="metric-name">Mud</td>
+                        <td class="metric-value">0.000</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="coherence">
+                        <td class="metric-name">Coherence</td>
+                        <td class="metric-value">0.000</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Load TypeScript modules via Vite -->
+    <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

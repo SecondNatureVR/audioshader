@@ -1,27 +1,70 @@
-# Coherence Canvas
+# AudioShader
 
-Visual diagnostic instrument for music mixing and arrangement.
+Audio-reactive WebGL visualizer with real-time parameter control and preset management.
 
 ## Quick Start
 
-1. Start a local server:
-   ```bash
-   python -m http.server 8000
-   ```
+```bash
+# Install dependencies
+npm install
 
-2. Open `http://localhost:8000` in your browser
+# Start development server
+npm run dev
 
-3. Click "Enable Audio" and grant microphone permissions
+# Open http://localhost:5173 in your browser
+```
 
-4. The canvas will render a real-time visual coherence field based on audio input
+## Features
+
+- **WebGL Rendering**: Persistent visual trails using framebuffer ping-pong
+- **Audio Analysis**: Real-time FFT with stereo processing and derived metrics
+- **Parameter Interpolation**: Spring physics and easing for smooth transitions
+- **Preset System**: Save, load, and share visual configurations
+- **Recording**: PNG snapshots and GIF/WebM video capture
+- **Curve Mapping**: Exponential response curves for fine control
+
+## Development
+
+```bash
+npm run dev         # Start Vite dev server with HMR
+npm run build       # Production build to dist/
+npm run typecheck   # TypeScript type checking
+npm run lint        # ESLint with TypeScript rules
+npm run test        # Vitest unit tests
+npm run check       # All checks (typecheck + lint + test)
+```
 
 ## Project Structure
 
-- `index.html` - Entry point and page structure
-- `main.js` - Application boot and render loop coordination
-- `audio/analyzer.js` - Web Audio API analysis and metric extraction
-- `gl/renderer.js` - WebGL context and shader management
-- `shaders/vertex.glsl` - Vertex shader for full-screen quad
-- `shaders/fragment.glsl` - Fragment shader implementing visual coherence field
-- `ui/debug.js` - Debug overlay for live metric values
+```
+src/
+├── render/          # WebGL renderer, parameters, interpolation
+├── audio/           # Audio analysis and visual mapping
+├── presets/         # Preset save/load/export
+├── mapping/         # Slider-to-value curve mapping
+├── capture/         # PNG/GIF/WebM recording
+├── config/          # Resolution management
+└── types/           # TypeScript type definitions
+```
 
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed documentation.
+
+## Tech Stack
+
+- **TypeScript** with strict mode
+- **Vite** for development and bundling
+- **Vitest** for unit testing
+- **ESLint** with TypeScript rules
+- **Web Audio API** for audio analysis
+- **WebGL 1.0** for rendering
+
+## Browser Support
+
+Modern browsers with WebGL and Web Audio API support:
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+
+## License
+
+MIT
