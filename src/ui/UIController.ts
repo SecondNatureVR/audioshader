@@ -280,6 +280,49 @@ export class UIController {
   }
 
   /**
+   * Setup generic editable value display (for non-param controls like interpolation settings)
+   * @param element The value display element
+   * @param slider The associated slider element
+   * @param onValue Callback when a valid value is entered
+   * @param formatValue Optional formatter for display (default: 2 decimal places)
+   */
+  private setupGenericEditableValue(
+    element: HTMLElement,
+    slider: HTMLInputElement,
+    onValue: (value: number) => void,
+    formatValue: (value: number) => string = (v) => v.toFixed(2)
+  ): void {
+    element.addEventListener('blur', () => {
+      const text = element.textContent?.trim() ?? '';
+      const numValue = parseFloat(text.replace(/[^0-9.-]/g, ''));
+
+      if (!isNaN(numValue)) {
+        // Expand slider range if needed
+        const min = parseFloat(slider.min);
+        const max = parseFloat(slider.max);
+
+        if (numValue < min) {
+          slider.min = String(numValue - Math.abs(numValue) * 0.1);
+        }
+        if (numValue > max) {
+          slider.max = String(numValue + Math.abs(numValue) * 0.1);
+        }
+
+        slider.value = String(numValue);
+        onValue(numValue);
+        element.textContent = formatValue(numValue);
+      }
+    });
+
+    element.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        element.blur();
+      }
+    });
+  }
+
+  /**
    * Expand slider range if the given value exceeds current min/max
    * Also updates curve settings to match
    */
@@ -645,6 +688,12 @@ export class UIController {
           valueDisplay.textContent = value.toFixed(2);
         }
       });
+      // Enable direct value editing
+      if (valueDisplay !== null) {
+        this.setupGenericEditableValue(valueDisplay, durationSlider, (value) => {
+          interpolator.defaultDuration = value;
+        });
+      }
     }
 
     if (springSlider !== null) {
@@ -656,6 +705,12 @@ export class UIController {
           valueDisplay.textContent = value.toFixed(2);
         }
       });
+      // Enable direct value editing
+      if (valueDisplay !== null) {
+        this.setupGenericEditableValue(valueDisplay, springSlider, (value) => {
+          interpolator.springConstant = value;
+        });
+      }
     }
 
     if (dampingSlider !== null) {
@@ -667,6 +722,12 @@ export class UIController {
           valueDisplay.textContent = value.toFixed(2);
         }
       });
+      // Enable direct value editing
+      if (valueDisplay !== null) {
+        this.setupGenericEditableValue(valueDisplay, dampingSlider, (value) => {
+          interpolator.springDamping = value;
+        });
+      }
     }
 
     if (rotationSpring !== null) {
@@ -722,6 +783,21 @@ export class UIController {
           amountValue.textContent = `${Math.round(value * 100)}%`;
         }
       });
+
+      // Enable direct value editing for jiggle amount
+      if (amountValue !== null) {
+        this.setupGenericEditableValue(
+          amountValue,
+          amountSlider,
+          (value) => {
+            // Input is in percentage (0-100), convert to 0-1
+            const normalizedValue = value / 100;
+            this.jiggleSettings.amount = normalizedValue;
+            this.app.setJiggleAmount(normalizedValue);
+          },
+          (v) => `${Math.round(v)}%`
+        );
+      }
     }
 
     // Setup per-parameter checkboxes
