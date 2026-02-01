@@ -5,12 +5,14 @@
 
 import { App } from './App';
 import { UIController } from './ui/UIController';
+import { AudioAnalyzer } from './audio/AudioAnalyzer';
 
 // Global app instance for debugging and console access
 declare global {
   interface Window {
     app: App;
     ui: UIController;
+    audioAnalyzer: AudioAnalyzer;
   }
 }
 
@@ -27,16 +29,28 @@ async function init(): Promise<void> {
   const app = new App({ canvas });
   await app.init();
 
+  // Create audio analyzer
+  const audioAnalyzer = new AudioAnalyzer();
+
   // Create and initialize the UI controller
-  const ui = new UIController({ app });
+  const ui = new UIController({ app, audioAnalyzer });
   ui.init();
 
   // Expose for debugging
   window.app = app;
   window.ui = ui;
+  window.audioAnalyzer = audioAnalyzer;
 
   // Start the render loop
   app.start();
+
+  // Audio metrics update loop (runs alongside render loop)
+  setInterval(() => {
+    if (audioAnalyzer.isEnabled) {
+      const metrics = audioAnalyzer.getMetrics();
+      app.setAudioMetrics(metrics);
+    }
+  }, 1000 / 60); // 60fps audio updates
 
   // Note: We don't register onParamsChange to call updateAllSliders here
   // as it would cause severe lag - every slider input would update ALL sliders.

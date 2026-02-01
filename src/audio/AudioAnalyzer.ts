@@ -197,6 +197,13 @@ export class AudioAnalyzer {
   }
 
   /**
+   * Check if audio is in stereo mode
+   */
+  get isStereoMode(): boolean {
+    return this.isStereo;
+  }
+
+  /**
    * Get normalized metrics
    */
   get normalizedMetrics(): NormalizedMetrics | null {

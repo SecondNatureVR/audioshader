@@ -18,6 +18,7 @@ import {
 } from '../mapping/CurveMapping';
 import type { BlendMode } from '../render/Renderer';
 import type { App } from '../App';
+import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 
@@ -28,6 +29,7 @@ export interface JiggleSettings {
 
 export interface UIControllerConfig {
   app: App;
+  audioAnalyzer?: AudioAnalyzer;
   onParamChange?: (name: keyof VisualParams, value: number) => void;
   onBlendModeChange?: (mode: BlendMode) => void;
   onEmanationRateChange?: (rate: number) => void;
@@ -47,6 +49,7 @@ const JIGGLE_PARAMS: (keyof VisualParams)[] = [
 
 export class UIController {
   private app: App;
+  private audioAnalyzer: AudioAnalyzer | null;
   private config: UIControllerConfig;
 
   // DOM element references
@@ -81,6 +84,7 @@ export class UIController {
   constructor(config: UIControllerConfig) {
     this.config = config;
     this.app = config.app;
+    this.audioAnalyzer = config.audioAnalyzer ?? null;
     this.curveMapper = new CurveMapper();
 
     // Initialize jiggle settings - all enabled by default
@@ -734,8 +738,96 @@ export class UIController {
    * Setup audio controls
    */
   private setupAudioControls(): void {
-    // Audio enable button and device selection would go here
-    // This integrates with AudioAnalyzer
+    if (this.audioAnalyzer === null) return;
+
+    const enableBtn = document.getElementById('enable-audio-btn');
+    const tabBtn = document.getElementById('capture-tab-btn');
+    const status = document.getElementById('audio-status');
+    const audioAnalyzer = this.audioAnalyzer;
+
+    // Helper to reset UI state
+    const resetAudioUI = (): void => {
+      if (enableBtn !== null) {
+        enableBtn.textContent = 'Enable Mic/Device';
+        enableBtn.style.background = '#0af';
+      }
+      if (tabBtn !== null) {
+        tabBtn.textContent = 'Capture Tab Audio';
+        tabBtn.style.background = '#a0f';
+      }
+      if (status !== null) {
+        status.textContent = 'Audio: Disabled';
+        status.style.color = '#888';
+      }
+    };
+
+    // Helper to set active state
+    const setActiveUI = (mode: string, isTab: boolean): void => {
+      if (isTab) {
+        if (tabBtn !== null) {
+          tabBtn.textContent = 'Stop Tab Capture';
+          tabBtn.style.background = '#f44';
+        }
+        if (enableBtn !== null) {
+          enableBtn.style.background = '#555';
+        }
+      } else {
+        if (enableBtn !== null) {
+          enableBtn.textContent = 'Disable Audio';
+          enableBtn.style.background = '#f44';
+        }
+        if (tabBtn !== null) {
+          tabBtn.style.background = '#555';
+        }
+      }
+      if (status !== null) {
+        status.textContent = `Audio: ${mode}${isTab ? ' (Tab)' : ''}`;
+        status.style.color = audioAnalyzer.isStereoMode ? '#0f0' : '#ff0';
+      }
+    };
+
+    // Listen for tab audio ending (user stopped sharing)
+    window.addEventListener('tabAudioEnded', () => {
+      resetAudioUI();
+    });
+
+    // Mic/Device button handler
+    if (enableBtn !== null) {
+      enableBtn.addEventListener('click', async () => {
+        if (audioAnalyzer.isEnabled) {
+          audioAnalyzer.disableAudio();
+          resetAudioUI();
+        } else {
+          try {
+            await audioAnalyzer.enableAudio();
+            const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
+            setActiveUI(mode, false);
+          } catch (err) {
+            console.error('Failed to enable audio:', err);
+            alert('Failed to enable audio: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        }
+      });
+    }
+
+    // Tab capture button handler
+    if (tabBtn !== null) {
+      tabBtn.addEventListener('click', async () => {
+        if (audioAnalyzer.isEnabled) {
+          audioAnalyzer.disableAudio();
+          resetAudioUI();
+        } else {
+          try {
+            await audioAnalyzer.enableTabAudio();
+            const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
+            setActiveUI(mode, true);
+          } catch (err) {
+            console.error('Failed to capture tab audio:', err);
+            alert('Failed to capture tab audio: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        }
+      });
+    }
   }
 
   /**
@@ -995,6 +1087,12 @@ export class UIController {
         document.getElementById('jiggle-btn')?.click();
         break;
 
+      case 'KeyM':
+        if (!e.ctrlKey && !e.metaKey) {
+          this.toggleAudioMappingPanel();
+        }
+        break;
+
       case 'KeyS':
         if (!e.ctrlKey && !e.metaKey) {
           e.preventDefault();
@@ -1061,6 +1159,17 @@ export class UIController {
     }
     if (this.hotkeyLegend !== null) {
       this.hotkeyLegend.hidden = !this.uiVisible;
+    }
+  }
+
+  /**
+   * Toggle audio mapping panel visibility
+   */
+  private toggleAudioMappingPanel(): void {
+    const panel = document.getElementById('audio-mapping-panel');
+    if (panel !== null) {
+      const isHidden = panel.style.display === 'none' || panel.style.display === '';
+      panel.style.display = isHidden ? 'block' : 'none';
     }
   }
 
