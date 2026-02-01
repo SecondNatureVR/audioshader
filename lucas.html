@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Droplet Visual Sandbox</title>
+    <title>Lucas - Audio Reactive Visualizer</title>
     <style>
         * {
             margin: 0;
@@ -159,7 +159,7 @@
             padding: 12px;
             color: #fff;
             min-width: 400px;
-            max-width: 500px;
+            max-width: 600px;
             max-height: calc(100vh - 20px);
             overflow-y: auto;
             z-index: 1004;
@@ -182,24 +182,148 @@
             padding-bottom: 6px;
         }
         
-        .mapping-param-group {
-            margin-bottom: 12px;
+        #audio-metrics-visualization {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+            border-radius: 4px;
             padding: 8px;
+            margin-bottom: 12px;
+            font-size: 9px;
+        }
+        
+        #audio-metrics-visualization h5 {
+            margin: 0 0 8px 0;
+            font-size: 9px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4px;
+        }
+        
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+        }
+        
+        .metrics-table th {
+            text-align: left;
+            padding: 4px 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid #333;
+            font-weight: 600;
+            color: #aaa;
+            font-size: 8px;
+        }
+        
+        .metrics-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-family: monospace;
+        }
+        
+        .metrics-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .metric-name {
+            color: #fff;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            color: #0af;
+        }
+        
+        .metric-min {
+            color: #888;
+        }
+        
+        .metric-max {
+            color: #888;
+        }
+        
+        .metric-avg {
+            color: #888;
+        }
+        
+        .metric-normalized {
+            color: #0f0;
+        }
+        
+        .metric-bar-container {
+            width: 100px;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-bar-range {
+            position: absolute;
+            height: 100%;
+            background: rgba(0, 170, 255, 0.2);
+            top: 0;
+        }
+        
+        .metric-bar-current {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: #0af;
+            top: 0;
+        }
+        
+        .metric-bar-normalized {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: #0f0;
+            top: 0;
+        }
+        
+        .mapping-targets {
+            font-size: 7px;
+            color: #888;
+            font-style: italic;
+        }
+        
+        .mapping-param-group {
+            margin-bottom: 6px;
+            padding: 0;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid #333;
             border-radius: 4px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        .mapping-param-group.collapsed {
+            padding: 0;
         }
         
         .mapping-param-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 8px;
+            padding: 8px;
             cursor: pointer;
+            user-select: none;
+            background: rgba(0, 0, 0, 0.2);
+            transition: background 0.2s ease;
+        }
+        
+        .mapping-param-header:hover {
+            background: rgba(0, 0, 0, 0.4);
         }
         
         .mapping-param-header input[type="checkbox"] {
             cursor: pointer;
+            pointer-events: auto;
         }
         
         .mapping-param-name {
@@ -212,6 +336,76 @@
             font-size: 8px;
             color: #888;
             margin-left: auto;
+        }
+        
+        .mapping-collapse-indicator {
+            font-size: 10px;
+            color: #888;
+            margin-left: 4px;
+            transition: transform 0.2s ease;
+        }
+        
+        .mapping-param-group.collapsed .mapping-collapse-indicator {
+            transform: rotate(-90deg);
+        }
+        
+        .mapping-param-content {
+            padding: 8px;
+            transition: max-height 0.3s ease, opacity 0.2s ease;
+            max-height: 2000px;
+            opacity: 1;
+        }
+        
+        .mapping-param-group.collapsed .mapping-param-content {
+            max-height: 0;
+            padding: 0 8px;
+            opacity: 0;
+            overflow: hidden;
+        }
+        
+        .mapping-compact-view {
+            display: none;
+            padding: 6px 8px;
+            font-size: 8px;
+            color: #aaa;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid #222;
+        }
+        
+        .mapping-param-group.collapsed .mapping-compact-view {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        
+        .mapping-compact-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+        
+        .mapping-compact-value {
+            font-weight: 600;
+            color: #0af;
+            min-width: 50px;
+            text-align: right;
+        }
+        
+        .mapping-compact-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .mapping-compact-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0af, #0ff);
+            transition: width 0.1s ease;
         }
         
         .mapping-diagnostic {
@@ -1063,7 +1257,56 @@
     
     <div id="audio-mapping-panel">
         <h4>Audio Mapping</h4>
+        
+        <!-- Audio Input Controls -->
+        <div id="audio-controls" style="background: rgba(20, 20, 20, 0.5); border: 1px solid #444; border-radius: 4px; padding: 8px; margin-bottom: 10px;">
+            <h4 style="margin: 0 0 6px 0; font-size: 9px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; border-bottom: 1px solid #333; padding-bottom: 4px;">Audio Input</h4>
+            <select id="audio-device-select" style="width: 100%; font-size: 9px; padding: 3px; margin-bottom: 4px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
+                <option value="">Loading devices...</option>
+            </select>
+            <button id="enable-audio-btn" style="width: 100%; font-size: 9px; padding: 4px; margin-bottom: 4px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Enable Audio</button>
+            <div id="audio-status" style="font-size: 8px; color: #888; margin-bottom: 4px;">Audio: Disabled</div>
+            <div class="audio-reactive-toggle" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                <input type="checkbox" id="audio-reactive-enabled" checked style="cursor: pointer;">
+                <label for="audio-reactive-enabled" style="font-size: 9px; color: #bbb; cursor: pointer; margin: 0;">Audio Reactive Mode</label>
+            </div>
+        </div>
+        
+        <!-- Audio Metrics Visualization -->
+        <div id="audio-metrics-visualization">
+            <h5>Audio Metrics Analysis</h5>
+            <table class="metrics-table" id="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Current</th>
+                        <th>Normalized</th>
+                        <th>Min</th>
+                        <th>Max</th>
+                        <th>Avg</th>
+                        <th>Range</th>
+                        <th>Mapped To</th>
+                    </tr>
+                </thead>
+                <tbody id="metrics-table-body">
+                    <!-- Will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+        
         <div id="audio-mapping-content">
+            <!-- Search and Controls -->
+            <div style="margin-bottom: 10px; padding: 8px; background: rgba(0, 0, 0, 0.3); border-radius: 4px;">
+                <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                    <input type="text" id="mapping-search" placeholder="Search parameters..." 
+                           style="flex: 1; font-size: 9px; padding: 4px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
+                    <button id="mapping-collapse-all" style="font-size: 9px; padding: 4px 8px; background: #444; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Collapse All</button>
+                    <button id="mapping-expand-all" style="font-size: 9px; padding: 4px 8px; background: #444; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Expand All</button>
+                </div>
+                <div style="font-size: 8px; color: #888; margin-top: 6px; padding-top: 6px; border-top: 1px solid #333;">
+                    <strong>Unmapped Audio Metrics:</strong> lowImbalance, stereoWidth (low/mid/high), panPosition (low/mid/high), spatialDepth (low/mid/high)
+                </div>
+            </div>
             <!-- Audio mapping controls will be generated dynamically -->
         </div>
     </div>
@@ -1384,7 +1627,7 @@
         </div>
     </div>
     
-    <script src="audio/analyzer.js"></script>
+    <script src="audio/analyzer.js" id="analyzer-script"></script>
     <script>
         // Resolution configuration
         const RESOLUTIONS = {
@@ -3019,6 +3262,21 @@
                     });
                 }
                 
+                // Restore audio mapping config if present
+                if (preset.audioMappingConfig && window.setAudioMappingConfig) {
+                    // Deep copy to avoid reference issues
+                    const restoredConfig = JSON.parse(JSON.stringify(preset.audioMappingConfig));
+                    window.setAudioMappingConfig(restoredConfig);
+                }
+                
+                // Restore dilation polarity flip if present
+                if (preset.dilationPolarityFlip !== undefined) {
+                    const dilationPolarityFlip = document.getElementById('dilation-polarity-flip');
+                    if (dilationPolarityFlip) {
+                        dilationPolarityFlip.checked = preset.dilationPolarityFlip;
+                    }
+                }
+                
                 // Update base values to match loaded preset
                 updateBaseValues();
                 
@@ -3769,6 +4027,13 @@
                     return;
                 }
                 
+                // Get audio mapping config if available
+                const audioMappingConfig = window.getAudioMappingConfig ? window.getAudioMappingConfig() : {};
+                
+                // Get dilation polarity flip setting
+                const dilationPolarityFlip = document.getElementById('dilation-polarity-flip');
+                const dilationPolarityFlipValue = dilationPolarityFlip ? dilationPolarityFlip.checked : false;
+                
                 const preset = {
                     spikiness: spikiness,
                     spikeFrequency: spikeFrequency,
@@ -3791,7 +4056,9 @@
                     autoRotationSpeed: autoRotationSpeed, // Store actual value (will reverse map to slider on load)
                     autoRotationSlider: parseFloat(autoRotationSlider.value), // Also store slider for easier restoration
                     jiggleAmount: jiggleAmount, // Store jiggle amount
-                    jiggleEnabledParams: { ...jiggleEnabledParams } // Store jiggle enabled params (copy object)
+                    jiggleEnabledParams: { ...jiggleEnabledParams }, // Store jiggle enabled params (copy object)
+                    audioMappingConfig: JSON.parse(JSON.stringify(audioMappingConfig)), // Deep copy audio mapping config
+                    dilationPolarityFlip: dilationPolarityFlipValue // Store dilation polarity flip setting
                 };
                 
                 const presets = loadPresets();
@@ -4366,6 +4633,27 @@
                     interpolatedFillOpacity = interpolator.getCurrent('fillOpacity') ?? fillOpacity;
                     interpolatedFadeAmount = interpolator.getCurrent('fadeAmount') ?? fadeAmount;
                     interpolatedBlendOpacity = interpolator.getCurrent('blendOpacity') ?? blendOpacity;
+                    
+                    // When interpolation is active, use interpolated values as the base for audio offsets
+                    // Copy interpolated values to direct values so audio offsets can modify them
+                    rotation = interpolatedRotation;
+                    autoRotationSpeed = interpolatedAutoRotationSpeed;
+                    hueShiftAmount = interpolatedHueShiftAmount;
+                    dilationSpeed = interpolatedDilationSpeed;
+                    emanationRate = interpolatedEmanationRate;
+                    noiseAmount = interpolatedNoiseAmount;
+                    noiseRate = interpolatedNoiseRate;
+                    blurAmount = interpolatedBlurAmount;
+                    blurRate = interpolatedBlurRate;
+                    spikiness = interpolatedSpikiness;
+                    spikeFrequency = interpolatedSpikeFrequency;
+                    spikeSharpness = interpolatedSpikeSharpness;
+                    hue = interpolatedHue;
+                    scale = interpolatedScale;
+                    fillSize = interpolatedFillSize;
+                    fillOpacity = interpolatedFillOpacity;
+                    fadeAmount = interpolatedFadeAmount;
+                    blendOpacity = interpolatedBlendOpacity;
                 } else {
                     // Use direct values when jiggle is active OR interpolation is disabled
                     interpolatedRotation = rotation;
@@ -4516,6 +4804,7 @@
                 }
                 
                 // Apply audio-driven offsets if enabled (after jiggle so audio modulates jiggle values)
+                // IMPORTANT: Apply audio offsets AFTER interpolation values are retrieved, so they affect the final rendered values
                 if (window.getAudioOffset && window.audioReactiveEnabled) {
                     const audioOffsetSpikiness = window.getAudioOffset('spikiness') || 0;
                     const audioOffsetSpikeFrequency = window.getAudioOffset('spikeFrequency') || 0;
@@ -4530,72 +4819,98 @@
                     const audioOffsetFillOpacity = window.getAudioOffset('fillOpacity') || 0;
                     const audioOffsetBlendOpacity = window.getAudioOffset('blendOpacity') || 0;
                     
-                    // Get jiggle ranges for each parameter (used to scale audio offsets)
-                    const jiggleRanges = {
-                        spikiness: jiggleAmount || 0.1,
-                        spikeFrequency: (jiggleAmount || 0.1) * 9.0,
-                        spikeSharpness: jiggleAmount || 0.1,
-                        hue: (jiggleAmount || 0.1) * 180.0,
-                        scale: (jiggleAmount || 0.1) * 0.3,
-                        dilationSpeed: (jiggleAmount || 0.1) * 0.1,
-                        fadeAmount: (jiggleAmount || 0.1) * 5.0,
-                        hueShiftAmount: (jiggleAmount || 0.1) * 0.1,
-                        rotation: (jiggleAmount || 0.1) * 180.0,
-                        fillSize: jiggleAmount || 0.1,
-                        fillOpacity: jiggleAmount || 0.1,
-                        blendOpacity: (jiggleAmount || 0.1) * 0.1
+                    // Get parameter ranges - use jiggle ranges if jiggle is enabled, otherwise use reasonable defaults
+                    // This ensures audio reactivity works even when jiggle is disabled
+                    const useJiggleRanges = jiggleEnabled && jiggleAmount > 0;
+                    const paramRanges = {
+                        spikiness: useJiggleRanges ? jiggleAmount : 0.2,  // ±20% of full range
+                        spikeFrequency: useJiggleRanges ? jiggleAmount * 9.0 : 3.0,  // ±3 units
+                        spikeSharpness: useJiggleRanges ? jiggleAmount : 0.2,
+                        hue: useJiggleRanges ? jiggleAmount * 180.0 : 60.0,  // ±60 degrees
+                        scale: useJiggleRanges ? jiggleAmount * 0.3 : 0.15,  // ±15% of scale
+                        dilationSpeed: useJiggleRanges ? jiggleAmount * 0.1 : 0.05,  // ±0.05
+                        fadeAmount: useJiggleRanges ? jiggleAmount * 5.0 : 1.0,  // ±1.0
+                        hueShiftAmount: useJiggleRanges ? jiggleAmount * 0.1 : 0.05,  // ±0.05
+                        rotation: useJiggleRanges ? jiggleAmount * 180.0 : 60.0,  // ±60 degrees
+                        fillSize: useJiggleRanges ? jiggleAmount : 0.2,
+                        fillOpacity: useJiggleRanges ? jiggleAmount : 0.2,
+                        blendOpacity: useJiggleRanges ? jiggleAmount * 0.1 : 0.1
                     };
                     
-                    // Apply audio offsets scaled to jiggle range (modulates current values)
+                    // Apply audio offsets - modulate current values (which may have jiggle applied)
+                    // When interpolation is enabled, apply to interpolated values; otherwise apply to direct values
                     const config = window.getAudioMappingConfig ? window.getAudioMappingConfig() : {};
                     
+                    // Apply audio offsets - modulate current values (which may have jiggle or interpolation applied)
                     if (config.spikiness?.enabled) {
-                        spikiness += audioOffsetSpikiness * jiggleRanges.spikiness;
+                        spikiness += audioOffsetSpikiness * paramRanges.spikiness;
                         spikiness = Math.max(0, Math.min(1, spikiness));
                     }
                     if (config.spikeFrequency?.enabled) {
-                        spikeFrequency += audioOffsetSpikeFrequency * jiggleRanges.spikeFrequency;
+                        spikeFrequency += audioOffsetSpikeFrequency * paramRanges.spikeFrequency;
                         spikeFrequency = Math.max(2, Math.min(20, spikeFrequency));
                     }
                     if (config.spikeSharpness?.enabled) {
-                        spikeSharpness += audioOffsetSpikeSharpness * jiggleRanges.spikeSharpness;
+                        spikeSharpness += audioOffsetSpikeSharpness * paramRanges.spikeSharpness;
                         spikeSharpness = Math.max(0, Math.min(1, spikeSharpness));
                     }
                     if (config.hue?.enabled) {
-                        hue += audioOffsetHue * jiggleRanges.hue;
+                        hue += audioOffsetHue * paramRanges.hue;
                         hue = ((hue % 360) + 360) % 360;
                     }
                     if (config.scale?.enabled) {
-                        scale += audioOffsetScale * jiggleRanges.scale;
+                        scale += audioOffsetScale * paramRanges.scale;
                         scale = Math.max(0.05, Math.min(1.0, scale));
                     }
                     if (config.dilationSpeed?.enabled) {
-                        dilationSpeed += audioOffsetDilationSpeed * jiggleRanges.dilationSpeed;
+                        dilationSpeed += audioOffsetDilationSpeed * paramRanges.dilationSpeed;
                         dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed));
                     }
                     if (config.fadeAmount?.enabled) {
-                        fadeAmount += audioOffsetFadeAmount * jiggleRanges.fadeAmount;
+                        fadeAmount += audioOffsetFadeAmount * paramRanges.fadeAmount;
                         fadeAmount = Math.max(0, Math.min(5, fadeAmount));
                     }
                     if (config.hueShiftAmount?.enabled) {
-                        hueShiftAmount += audioOffsetHueShiftAmount * jiggleRanges.hueShiftAmount;
+                        hueShiftAmount += audioOffsetHueShiftAmount * paramRanges.hueShiftAmount;
                         hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
                     }
                     if (config.rotation?.enabled) {
-                        rotation += audioOffsetRotation * jiggleRanges.rotation;
+                        rotation += audioOffsetRotation * paramRanges.rotation;
                         rotation = ((rotation % 360) + 360) % 360;
                     }
                     if (config.fillSize?.enabled) {
-                        fillSize += audioOffsetFillSize * jiggleRanges.fillSize;
+                        fillSize += audioOffsetFillSize * paramRanges.fillSize;
                         fillSize = Math.max(0, Math.min(1, fillSize));
                     }
                     if (config.fillOpacity?.enabled) {
-                        fillOpacity += audioOffsetFillOpacity * jiggleRanges.fillOpacity;
+                        fillOpacity += audioOffsetFillOpacity * paramRanges.fillOpacity;
                         fillOpacity = Math.max(0, Math.min(1, fillOpacity));
                     }
                     if (config.blendOpacity?.enabled) {
-                        blendOpacity += audioOffsetBlendOpacity * jiggleRanges.blendOpacity;
+                        blendOpacity += audioOffsetBlendOpacity * paramRanges.blendOpacity;
                         blendOpacity = Math.max(0, Math.min(1, blendOpacity));
+                    }
+                    
+                    // When interpolation is active, sync interpolated values to modified direct values
+                    if (interpolationActive) {
+                        interpolatedRotation = rotation;
+                        interpolatedAutoRotationSpeed = autoRotationSpeed;
+                        interpolatedHueShiftAmount = hueShiftAmount;
+                        interpolatedDilationSpeed = dilationSpeed;
+                        interpolatedEmanationRate = emanationRate;
+                        interpolatedNoiseAmount = noiseAmount;
+                        interpolatedNoiseRate = noiseRate;
+                        interpolatedBlurAmount = blurAmount;
+                        interpolatedBlurRate = blurRate;
+                        interpolatedSpikiness = spikiness;
+                        interpolatedSpikeFrequency = spikeFrequency;
+                        interpolatedSpikeSharpness = spikeSharpness;
+                        interpolatedHue = hue;
+                        interpolatedScale = scale;
+                        interpolatedFillSize = fillSize;
+                        interpolatedFillOpacity = fillOpacity;
+                        interpolatedFadeAmount = fadeAmount;
+                        interpolatedBlendOpacity = blendOpacity;
                     }
                 }
                 
@@ -5013,20 +5328,29 @@
             let lastSelectedMenu = null;
             
             // Audio parameter mappings: visualParam -> audioMetric
+            // Each visual parameter has a unique mapping (no duplicate visual parameters)
             const audioMappings = {
                 spikiness: 'collision',
                 spikeFrequency: 'audioAmp',
                 spikeSharpness: 'harshness',
                 hue: 'bandEnergy',
-                scale: 'audioAmp',
-                dilationSpeed: 'compression',
-                fadeAmount: 'emptiness',
-                hueShiftAmount: 'bandEnergy',
-                rotation: 'phaseRisk',
-                fillSize: 'audioAmp',
+                scale: 'compression',
+                dilationSpeed: 'emptiness',  // Changed to avoid duplicate with scale
+                fadeAmount: 'mud',  // Changed to avoid duplicate
+                hueShiftAmount: 'phaseRisk',
+                rotation: 'lowImbalance',  // Changed to avoid duplicate with hueShiftAmount
+                fillSize: 'audioAmp',  // Same as spikeFrequency - both can use audioAmp
                 fillOpacity: 'coherence',
-                blendOpacity: 'coherence'
+                blendOpacity: 'mud'  // Same as fadeAmount - both can use mud
             };
+            
+            // Available audio metrics that are not yet mapped to visual parameters:
+            // - lowImbalance (now mapped to rotation)
+            // - stereoWidth (array: [low, mid, high]) - unmapped
+            // - panPosition (array: [low, mid, high]) - unmapped
+            // - spatialDepth (array: [low, mid, high]) - unmapped
+            // Note: Some audio metrics are used by multiple visual parameters (audioAmp, mud)
+            // This is intentional - multiple parameters can react to the same audio feature
             
             // Initialize audio analyzer
             async function initAudioAnalyzer() {
@@ -5034,7 +5358,96 @@
                     console.warn('AudioAnalyzer not loaded');
                     return;
                 }
+                
                 audioAnalyzer = new AudioAnalyzer();
+                
+                // Load audio devices
+                await loadAudioDevices();
+                
+                // Setup audio enable button
+                setupAudioButton();
+            }
+            
+            // Load audio devices
+            async function loadAudioDevices() {
+                const deviceSelect = document.getElementById('audio-device-select');
+                if (!deviceSelect || !audioAnalyzer) return;
+                
+                try {
+                    const devices = await audioAnalyzer.getAudioDevices();
+                    deviceSelect.innerHTML = '<option value="">Default Device</option>';
+                    
+                    devices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.textContent = device.label;
+                        deviceSelect.appendChild(option);
+                    });
+                    
+                    // Restore last selected device
+                    const lastDeviceId = localStorage.getItem('audioLastDeviceId');
+                    if (lastDeviceId) {
+                        deviceSelect.value = lastDeviceId;
+                    }
+                } catch (err) {
+                    console.error('Failed to load audio devices:', err);
+                    deviceSelect.innerHTML = '<option value="">Error loading devices</option>';
+                }
+            }
+            
+            // Setup audio enable button
+            function setupAudioButton() {
+                const btn = document.getElementById('enable-audio-btn');
+                const status = document.getElementById('audio-status');
+                const deviceSelect = document.getElementById('audio-device-select');
+                
+                if (!btn || !status || !audioAnalyzer) return;
+                
+                btn.addEventListener('click', async () => {
+                    if (audioAnalyzer.isEnabled) {
+                        // Disable audio
+                        audioAnalyzer.disableAudio();
+                        btn.textContent = 'Enable Audio';
+                        status.textContent = 'Audio: Disabled';
+                        status.style.color = '#888';
+                        if (deviceSelect) deviceSelect.disabled = false;
+                    } else {
+                        // Enable audio
+                        try {
+                            const selectedDeviceId = deviceSelect?.value || null;
+                            
+                            // Cache the selected device
+                            if (selectedDeviceId) {
+                                localStorage.setItem('audioLastDeviceId', selectedDeviceId);
+                            } else {
+                                localStorage.removeItem('audioLastDeviceId');
+                            }
+                            
+                            await audioAnalyzer.enableAudio(selectedDeviceId, true);
+                            const mode = audioAnalyzer.isStereo ? 'STEREO' : 'MONO';
+                            btn.textContent = 'Disable Audio';
+                            status.textContent = `Audio: ${mode}`;
+                            status.style.color = audioAnalyzer.isStereo ? '#0f0' : '#ff0';
+                            if (deviceSelect) deviceSelect.disabled = true;
+                        } catch (err) {
+                            console.error('Failed to enable audio:', err);
+                            alert('Failed to enable audio: ' + err.message);
+                        }
+                    }
+                });
+            }
+            
+            // Setup audio reactive toggle
+            function setupAudioReactiveToggle() {
+                const toggle = document.getElementById('audio-reactive-enabled');
+                if (!toggle) return;
+                
+                // Set initial state
+                window.setAudioReactiveEnabled(toggle.checked);
+                
+                toggle.addEventListener('change', (e) => {
+                    window.setAudioReactiveEnabled(e.target.checked);
+                });
             }
             
             // Initialize audio mapping UI
@@ -5042,6 +5455,45 @@
                 const panel = document.getElementById('audio-mapping-panel');
                 const content = document.getElementById('audio-mapping-content');
                 if (!panel || !content) return;
+                
+                // Setup search filter
+                const searchInput = document.getElementById('mapping-search');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        const searchTerm = e.target.value.toLowerCase();
+                        document.querySelectorAll('.mapping-param-group').forEach(group => {
+                            const paramName = group.querySelector('.mapping-param-name')?.textContent?.toLowerCase() || '';
+                            const source = group.querySelector('.mapping-source')?.textContent?.toLowerCase() || '';
+                            if (paramName.includes(searchTerm) || source.includes(searchTerm) || searchTerm === '') {
+                                group.style.display = '';
+                            } else {
+                                group.style.display = 'none';
+                            }
+                        });
+                    });
+                }
+                
+                // Setup collapse/expand all buttons
+                const collapseAllBtn = document.getElementById('mapping-collapse-all');
+                const expandAllBtn = document.getElementById('mapping-expand-all');
+                
+                if (collapseAllBtn) {
+                    collapseAllBtn.addEventListener('click', () => {
+                        document.querySelectorAll('.mapping-param-group').forEach(group => {
+                            if (group.style.display !== 'none') {
+                                group.classList.add('collapsed');
+                            }
+                        });
+                    });
+                }
+                
+                if (expandAllBtn) {
+                    expandAllBtn.addEventListener('click', () => {
+                        document.querySelectorAll('.mapping-param-group').forEach(group => {
+                            group.classList.remove('collapsed');
+                        });
+                    });
+                }
                 
                 // Create mapping controls for each parameter
                 Object.keys(audioMappings).forEach(paramName => {
@@ -5071,43 +5523,79 @@
                             <input type="checkbox" id="${mappingId}-enabled" ${config.enabled ? 'checked' : ''}>
                             <span class="mapping-param-name">${paramName}</span>
                             <span class="mapping-source">from ${audioMetric}</span>
+                            <span class="mapping-collapse-indicator">▼</span>
                         </div>
-                        <div class="mapping-diagnostic">
-                            <canvas class="mapping-range-display" id="${mappingId}-range" width="200" height="60"></canvas>
-                            <div class="mapping-minmax-display">
-                                <span id="${mappingId}-minmax">Min: 0.000 | Max: 1.000</span>
-                                <span id="${mappingId}-current" class="mapping-current-value">Current: 0.000</span>
+                        <div class="mapping-compact-view">
+                            <div class="mapping-compact-info">
+                                <span>Current:</span>
+                                <span id="${mappingId}-compact-current" class="mapping-compact-value">0.000</span>
+                                <div class="mapping-compact-bar">
+                                    <div id="${mappingId}-compact-bar" class="mapping-compact-bar-fill" style="width: 50%;"></div>
+                                </div>
                             </div>
                         </div>
-                        <div class="mapping-control">
-                            <label>Sensitivity</label>
-                            <div class="mapping-control-row">
-                                <input type="range" id="${mappingId}-sensitivity" min="0" max="3" value="${config.sensitivity}" step="0.1">
-                                <input type="number" id="${mappingId}-sensitivity-num" value="${config.sensitivity}" step="0.1" min="0" max="10">
+                        <div class="mapping-param-content">
+                            <div class="mapping-diagnostic">
+                                <canvas class="mapping-range-display" id="${mappingId}-range" width="200" height="60"></canvas>
+                                <div class="mapping-minmax-display">
+                                    <span id="${mappingId}-minmax">Min: 0.000 | Max: 1.000</span>
+                                    <span id="${mappingId}-current" class="mapping-current-value">Current: 0.000</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="mapping-control">
-                            <label>Smoothing</label>
-                            <div class="mapping-control-row">
-                                <input type="range" id="${mappingId}-smoothing" min="0.5" max="0.99" value="${config.smoothing}" step="0.01">
-                                <input type="number" id="${mappingId}-smoothing-num" value="${config.smoothing}" step="0.01" min="0.5" max="0.99">
+                            <div class="mapping-control">
+                                <label>Sensitivity</label>
+                                <div class="mapping-control-row">
+                                    <input type="range" id="${mappingId}-sensitivity" min="0" max="3" value="${config.sensitivity}" step="0.1">
+                                    <input type="number" id="${mappingId}-sensitivity-num" value="${config.sensitivity}" step="0.1" min="0" max="10">
+                                </div>
                             </div>
-                        </div>
-                        <div class="mapping-control">
-                            <label>Multiplier</label>
-                            <div class="mapping-control-row">
-                                <input type="range" id="${mappingId}-multiplier" min="-5" max="5" value="${config.multiplier}" step="0.1">
-                                <input type="number" id="${mappingId}-multiplier-num" value="${config.multiplier}" step="0.1">
+                            <div class="mapping-control">
+                                <label>Smoothing</label>
+                                <div class="mapping-control-row">
+                                    <input type="range" id="${mappingId}-smoothing" min="0.5" max="0.99" value="${config.smoothing}" step="0.01">
+                                    <input type="number" id="${mappingId}-smoothing-num" value="${config.smoothing}" step="0.01" min="0.5" max="0.99">
+                                </div>
                             </div>
-                        </div>
-                        <div class="mapping-control">
-                            <label>Offset</label>
-                            <div class="mapping-control-row">
-                                <input type="range" id="${mappingId}-offset" min="-1" max="1" value="${config.offset}" step="0.01">
-                                <input type="number" id="${mappingId}-offset-num" value="${config.offset}" step="0.01">
+                            <div class="mapping-control">
+                                <label>Multiplier</label>
+                                <div class="mapping-control-row">
+                                    <input type="range" id="${mappingId}-multiplier" min="-5" max="5" value="${config.multiplier}" step="0.1">
+                                    <input type="number" id="${mappingId}-multiplier-num" value="${config.multiplier}" step="0.1">
+                                </div>
+                            </div>
+                            <div class="mapping-control">
+                                <label>Offset</label>
+                                <div class="mapping-control-row">
+                                    <input type="range" id="${mappingId}-offset" min="-1" max="1" value="${config.offset}" step="0.01">
+                                    <input type="number" id="${mappingId}-offset-num" value="${config.offset}" step="0.01">
+                                </div>
                             </div>
                         </div>
                     `;
+                    
+                    // Add collapse toggle functionality
+                    const header = group.querySelector('.mapping-param-header');
+                    const collapseIndicator = group.querySelector('.mapping-collapse-indicator');
+                    let isCollapsed = false;
+                    
+                    // Prevent checkbox from triggering collapse
+                    const headerCheckbox = group.querySelector(`#${mappingId}-enabled`);
+                    headerCheckbox.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                    
+                    header.addEventListener('click', (e) => {
+                        // Don't collapse if clicking the checkbox
+                        if (e.target === headerCheckbox || e.target.closest('input[type="checkbox"]')) {
+                            return;
+                        }
+                        isCollapsed = !isCollapsed;
+                        if (isCollapsed) {
+                            group.classList.add('collapsed');
+                        } else {
+                            group.classList.remove('collapsed');
+                        }
+                    });
                     
                     content.appendChild(group);
                     
@@ -5153,15 +5641,35 @@
             });
             
             // Update audio-driven parameter offsets
+            // Always calculates offsets for display purposes, but only applies them when enabled
             function updateAudioOffsets() {
-                if (!audioAnalyzer || !audioReactiveEnabled) return;
+                if (!audioAnalyzer) {
+                    Object.keys(audioMappings).forEach(param => {
+                        audioOffsets[param] = 0.0;
+                    });
+                    return;
+                }
                 
-                const metrics = audioAnalyzer.getMetrics();
-                const normalizedMetrics = audioAnalyzer.normalizedMetrics || {};
+                if (!audioAnalyzer.isEnabled) {
+                    // Reset all offsets if audio is not enabled
+                    Object.keys(audioMappings).forEach(param => {
+                        audioOffsets[param] = 0.0;
+                    });
+                    return;
+                }
+                
+                let metrics, normalizedMetrics;
+                try {
+                    metrics = audioAnalyzer.getMetrics();
+                    normalizedMetrics = audioAnalyzer.normalizedMetrics || {};
+                } catch (e) {
+                    console.warn('Error getting metrics in updateAudioOffsets:', e);
+                    return;
+                }
                 
                 Object.keys(audioMappings).forEach(paramName => {
                     const config = audioMappingConfig[paramName];
-                    if (!config || !config.enabled) {
+                    if (!config) {
                         audioOffsets[paramName] = 0.0;
                         return;
                     }
@@ -5169,30 +5677,295 @@
                     const audioMetric = audioMappings[paramName];
                     let rawValue = 0.5;
                     
-                    // Get normalized metric value
+                    // Get normalized metric value - prefer normalizedMetrics if available
+                    // normalizedMetrics uses property names without 'u_' prefix
                     if (audioMetric === 'bandEnergy') {
                         // Use mid band for bandEnergy mappings
-                        rawValue = normalizedMetrics.bandEnergy ? normalizedMetrics.bandEnergy[1] : 0.5;
-                    } else if (normalizedMetrics[audioMetric] !== undefined) {
-                        rawValue = normalizedMetrics[audioMetric];
-                    } else if (metrics[`u_${audioMetric}`] !== undefined) {
-                        // Fallback to raw metric
-                        rawValue = Array.isArray(metrics[`u_${audioMetric}`]) 
-                            ? metrics[`u_${audioMetric}`][1] || 0.5
-                            : metrics[`u_${audioMetric}`];
+                        if (normalizedMetrics.bandEnergy && Array.isArray(normalizedMetrics.bandEnergy) && normalizedMetrics.bandEnergy[1] !== undefined) {
+                            rawValue = normalizedMetrics.bandEnergy[1];
+                        } else if (metrics.u_bandEnergy && Array.isArray(metrics.u_bandEnergy) && metrics.u_bandEnergy[1] !== undefined) {
+                            rawValue = metrics.u_bandEnergy[1];
+                        }
+                    } else {
+                        // Try normalizedMetrics first (property name matches audioMetric)
+                        if (normalizedMetrics[audioMetric] !== undefined && normalizedMetrics[audioMetric] !== null) {
+                            rawValue = normalizedMetrics[audioMetric];
+                        } else if (metrics[`u_${audioMetric}`] !== undefined) {
+                            // Fallback to raw metric (with 'u_' prefix)
+                            const metricValue = metrics[`u_${audioMetric}`];
+                            rawValue = Array.isArray(metricValue) ? (metricValue[1] !== undefined ? metricValue[1] : metricValue[0] || 0.5) : metricValue;
+                        }
                     }
                     
                     // Apply multiplier and offset
                     let mappedValue = (rawValue - 0.5) * config.sensitivity * config.multiplier + config.offset;
                     
-                    // Smooth the offset
+                    // Always calculate and smooth the offset (for display purposes)
+                    // The enable checkbox only controls whether it's applied in the render loop
                     audioOffsets[paramName] = audioOffsets[paramName] * config.smoothing + mappedValue * (1 - config.smoothing);
                 });
             }
             
+            // Update metrics visualization table
+            function updateMetricsVisualization() {
+                if (!audioAnalyzer || !audioAnalyzer.isEnabled) {
+                    const tbody = document.getElementById('metrics-table-body');
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #888; padding: 20px;">Audio not enabled</td></tr>';
+                    return;
+                }
+                
+                // Check if methods exist
+                if (!('getMinMax' in audioAnalyzer) || 
+                    !('getNormalizedMetric' in audioAnalyzer) ||
+                    !('getMetrics' in audioAnalyzer)) {
+                    return;
+                }
+                
+                const metrics = audioAnalyzer.getMetrics();
+                const normalizedMetrics = audioAnalyzer.normalizedMetrics || {};
+                const tbody = document.getElementById('metrics-table-body');
+                if (!tbody) return;
+                
+                // Define all available metrics
+                const allMetrics = [
+                    { name: 'audioAmp', label: 'Audio Amp', isArray: false },
+                    { name: 'bandEnergy', label: 'Band Energy', isArray: true, indices: ['Low', 'Mid', 'High'] },
+                    { name: 'harshness', label: 'Harshness', isArray: false },
+                    { name: 'mud', label: 'Mud', isArray: false },
+                    { name: 'compression', label: 'Compression', isArray: false },
+                    { name: 'collision', label: 'Collision', isArray: false },
+                    { name: 'lowImbalance', label: 'Low Imbalance', isArray: false },
+                    { name: 'emptiness', label: 'Emptiness', isArray: false },
+                    { name: 'coherence', label: 'Coherence', isArray: false },
+                    { name: 'phaseRisk', label: 'Phase Risk', isArray: false },
+                    { name: 'stereoWidth', label: 'Stereo Width', isArray: true, indices: ['Low', 'Mid', 'High'] },
+                    { name: 'panPosition', label: 'Pan Position', isArray: true, indices: ['Low', 'Mid', 'High'] },
+                    { name: 'spatialDepth', label: 'Spatial Depth', isArray: true, indices: ['Low', 'Mid', 'High'] }
+                ];
+                
+                let html = '';
+                
+                allMetrics.forEach(metricDef => {
+                    if (metricDef.isArray) {
+                        // Handle array metrics
+                        for (let i = 0; i < 3; i++) {
+                            const metricName = metricDef.name;
+                            const label = `${metricDef.label} ${metricDef.indices[i]}`;
+                            
+                            // Get values
+                            let currentRaw = 0.5;
+                            let currentNorm = 0.5;
+                            let minMax = { min: 0, max: 1 };
+                            let avg = 0.5;
+                            
+                            try {
+                                minMax = audioAnalyzer.getMinMax(metricName, i);
+                                currentNorm = audioAnalyzer.getNormalizedMetric(metricName, i);
+                                
+                                // Get raw current value
+                                const rawMetric = metrics[`u_${metricName}`];
+                                if (rawMetric && Array.isArray(rawMetric)) {
+                                    currentRaw = rawMetric[i];
+                                }
+                                
+                                // Calculate average from history
+                                try {
+                                    const history = audioAnalyzer.metricHistory && audioAnalyzer.metricHistory[metricName];
+                                    if (history && Array.isArray(history) && history[i] && Array.isArray(history[i]) && history[i].length > 0) {
+                                        const sum = history[i].reduce((a, b) => a + b, 0);
+                                        avg = sum / history[i].length;
+                                    }
+                                } catch (e) {
+                                    // Ignore history errors
+                                }
+                            } catch (e) {
+                                // Use defaults
+                            }
+                            
+                            // Find which visual parameters map to this metric
+                            const mappedParams = Object.keys(audioMappings)
+                                .filter(param => {
+                                    const mappedMetric = audioMappings[param];
+                                    if (mappedMetric === metricName && metricDef.name === 'bandEnergy') {
+                                        // For bandEnergy, check if it uses this index (we use mid band [1] by default)
+                                        return i === 1;
+                                    }
+                                    return mappedMetric === metricName;
+                                })
+                                .filter(param => audioMappingConfig[param]?.enabled);
+                            
+                            const mappedTo = mappedParams.length > 0 
+                                ? mappedParams.join(', ') 
+                                : '<span style="color: #555;">none</span>';
+                            
+                            // Calculate range bar positions
+                            const rangeStart = (minMax.min / 1.0) * 100;
+                            const rangeWidth = ((minMax.max - minMax.min) / 1.0) * 100;
+                            const currentX = (currentRaw / 1.0) * 100;
+                            const normalizedX = (currentNorm / 1.0) * 100;
+                            
+                            html += `
+                                <tr>
+                                    <td class="metric-name">${label}</td>
+                                    <td class="metric-value">${currentRaw.toFixed(3)}</td>
+                                    <td class="metric-normalized">${currentNorm.toFixed(3)}</td>
+                                    <td class="metric-min">${minMax.min.toFixed(3)}</td>
+                                    <td class="metric-max">${minMax.max.toFixed(3)}</td>
+                                    <td class="metric-avg">${avg.toFixed(3)}</td>
+                                    <td>
+                                        <div class="metric-bar-container">
+                                            <div class="metric-bar-range" style="left: ${rangeStart}%; width: ${rangeWidth}%;"></div>
+                                            <div class="metric-bar-current" style="left: ${currentX}%;"></div>
+                                            <div class="metric-bar-normalized" style="left: ${normalizedX}%;"></div>
+                                        </div>
+                                    </td>
+                                    <td class="mapping-targets">${mappedTo}</td>
+                                </tr>
+                            `;
+                        }
+                    } else {
+                        // Handle scalar metrics
+                        const metricName = metricDef.name;
+                        const label = metricDef.label;
+                        
+                        // Skip if metric doesn't exist (e.g., phaseRisk when not stereo)
+                        if (metricName === 'phaseRisk' && !audioAnalyzer.isStereo) return;
+                        if (metricName.startsWith('stereo') || metricName.startsWith('pan') || metricName.startsWith('spatial')) {
+                            if (!audioAnalyzer.isStereo) return;
+                        }
+                        
+                        // Get values
+                        let currentRaw = 0.5;
+                        let currentNorm = 0.5;
+                        let minMax = { min: 0, max: 1 };
+                        let avg = 0.5;
+                        
+                        try {
+                            minMax = audioAnalyzer.getMinMax(metricName);
+                            currentNorm = audioAnalyzer.getNormalizedMetric(metricName);
+                            
+                            // Get raw current value
+                            const rawMetric = metrics[`u_${metricName}`];
+                            if (rawMetric !== undefined) {
+                                currentRaw = Array.isArray(rawMetric) ? rawMetric[0] : rawMetric;
+                            }
+                            
+                                // Calculate average from history
+                                try {
+                                    const history = audioAnalyzer.metricHistory && audioAnalyzer.metricHistory[metricName];
+                                    if (history && Array.isArray(history) && history.length > 0) {
+                                        const sum = history.reduce((a, b) => a + b, 0);
+                                        avg = sum / history.length;
+                                    }
+                                } catch (e) {
+                                    // Ignore history errors
+                                }
+                        } catch (e) {
+                            // Use defaults
+                        }
+                        
+                        // Find which visual parameters map to this metric
+                        const mappedParams = Object.keys(audioMappings)
+                            .filter(param => audioMappings[param] === metricName)
+                            .filter(param => audioMappingConfig[param]?.enabled);
+                        
+                        const mappedTo = mappedParams.length > 0 
+                            ? mappedParams.join(', ') 
+                            : '<span style="color: #555;">none</span>';
+                        
+                        // Calculate range bar positions
+                        const rangeStart = (minMax.min / 1.0) * 100;
+                        const rangeWidth = ((minMax.max - minMax.min) / 1.0) * 100;
+                        const currentX = (currentRaw / 1.0) * 100;
+                        const normalizedX = (currentNorm / 1.0) * 100;
+                        
+                        html += `
+                            <tr>
+                                <td class="metric-name">${label}</td>
+                                <td class="metric-value">${currentRaw.toFixed(3)}</td>
+                                <td class="metric-normalized">${currentNorm.toFixed(3)}</td>
+                                <td class="metric-min">${minMax.min.toFixed(3)}</td>
+                                <td class="metric-max">${minMax.max.toFixed(3)}</td>
+                                <td class="metric-avg">${avg.toFixed(3)}</td>
+                                <td>
+                                    <div class="metric-bar-container">
+                                        <div class="metric-bar-range" style="left: ${rangeStart}%; width: ${rangeWidth}%;"></div>
+                                        <div class="metric-bar-current" style="left: ${currentX}%;"></div>
+                                        <div class="metric-bar-normalized" style="left: ${normalizedX}%;"></div>
+                                    </div>
+                                </td>
+                                <td class="mapping-targets">${mappedTo}</td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                tbody.innerHTML = html || '<tr><td colspan="8" style="text-align: center; color: #888; padding: 20px;">No metrics available</td></tr>';
+            }
+            
             // Update diagnostic displays
+            // Always shows values regardless of mapping enabled state
             function updateDiagnostics() {
-                if (!audioAnalyzer) return;
+                if (!audioAnalyzer) {
+                    return;
+                }
+                
+                if (!audioAnalyzer.isEnabled) {
+                    // Show placeholder values when audio is disabled
+                    Object.keys(audioMappings).forEach(paramName => {
+                        const mappingId = `mapping-${paramName}`;
+                        const minmaxDisplay = document.getElementById(`${mappingId}-minmax`);
+                        const currentDisplay = document.getElementById(`${mappingId}-current`);
+                        const rangeDisplay = document.getElementById(`${mappingId}-range`);
+                        const compactCurrent = document.getElementById(`${mappingId}-compact-current`);
+                        const compactBar = document.getElementById(`${mappingId}-compact-bar`);
+                        
+                        if (minmaxDisplay) minmaxDisplay.textContent = 'Min: 0.000 | Max: 1.000';
+                        if (currentDisplay) currentDisplay.textContent = 'Current: 0.000';
+                        if (compactCurrent) {
+                            compactCurrent.textContent = '0.000';
+                            compactCurrent.style.color = '#888';
+                        }
+                        if (compactBar) compactBar.style.width = '50%';
+                        if (rangeDisplay && rangeDisplay instanceof HTMLCanvasElement) {
+                            const ctx = rangeDisplay.getContext('2d');
+                            const width = rangeDisplay.width = rangeDisplay.offsetWidth || 200;
+                            const height = rangeDisplay.height = rangeDisplay.offsetHeight || 60;
+                            ctx.clearRect(0, 0, width, height);
+                        }
+                    });
+                    return;
+                }
+                
+                // Check if methods exist
+                if (!('getMinMax' in audioAnalyzer) || 
+                    !('getNormalizedMetric' in audioAnalyzer) ||
+                    !('getMetrics' in audioAnalyzer) ||
+                    typeof audioAnalyzer.getMinMax !== 'function' || 
+                    typeof audioAnalyzer.getNormalizedMetric !== 'function' ||
+                    typeof audioAnalyzer.getMetrics !== 'function') {
+                    return;
+                }
+                
+                // Get metrics once for all parameters
+                let metrics, normalizedMetrics;
+                try {
+                    metrics = audioAnalyzer.getMetrics();
+                    normalizedMetrics = audioAnalyzer.normalizedMetrics || {};
+                    
+                    // Debug: log occasionally to verify metrics are updating
+                    if (Math.random() < 0.01) {
+                        console.log('updateDiagnostics - metrics:', {
+                            audioAmp: metrics.u_audioAmp?.toFixed(3),
+                            collision: metrics.u_collision?.toFixed(3),
+                            hasNormalized: !!normalizedMetrics.audioAmp,
+                            normalizedAmp: normalizedMetrics.audioAmp?.toFixed(3)
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Error getting metrics in updateDiagnostics:', e);
+                    return;
+                }
                 
                 Object.keys(audioMappings).forEach(paramName => {
                     const audioMetric = audioMappings[paramName];
@@ -5206,32 +5979,71 @@
                     
                     // Get min/max for this metric
                     let minMax = { min: 0, max: 1 };
-                    if (audioMetric === 'bandEnergy') {
-                        minMax = audioAnalyzer.getMinMax('bandEnergy', 1);
-                    } else {
-                        minMax = audioAnalyzer.getMinMax(audioMetric);
+                    try {
+                        if (audioMetric === 'bandEnergy') {
+                            minMax = audioAnalyzer.getMinMax('bandEnergy', 1);
+                        } else {
+                            minMax = audioAnalyzer.getMinMax(audioMetric);
+                        }
+                    } catch (e) {
+                        console.warn('Error getting min/max for', audioMetric, e);
+                        minMax = { min: 0, max: 1 };
                     }
                     
                     // Get current normalized value
                     let currentNorm = 0.5;
-                    if (audioMetric === 'bandEnergy') {
-                        currentNorm = audioAnalyzer.getNormalizedMetric('bandEnergy', 1);
-                    } else {
-                        currentNorm = audioAnalyzer.getNormalizedMetric(audioMetric);
+                    try {
+                        if (audioMetric === 'bandEnergy') {
+                            currentNorm = audioAnalyzer.getNormalizedMetric('bandEnergy', 1);
+                        } else {
+                            currentNorm = audioAnalyzer.getNormalizedMetric(audioMetric);
+                        }
+                    } catch (e) {
+                        console.warn('Error getting normalized metric for', audioMetric, e);
+                        currentNorm = 0.5;
                     }
                     
-                    // Get current raw value
-                    const metrics = audioAnalyzer.getMetrics();
+                    // Get current raw value (use already retrieved metrics)
                     let currentRaw = 0.5;
-                    if (audioMetric === 'bandEnergy') {
-                        currentRaw = metrics.u_bandEnergy ? metrics.u_bandEnergy[1] : 0.5;
-                    } else {
-                        currentRaw = metrics[`u_${audioMetric}`] || 0.5;
+                    try {
+                        if (audioMetric === 'bandEnergy') {
+                            currentRaw = metrics.u_bandEnergy ? metrics.u_bandEnergy[1] : 0.5;
+                        } else {
+                            currentRaw = metrics[`u_${audioMetric}`] || 0.5;
+                        }
+                    } catch (e) {
+                        console.warn('Error getting raw metric for', audioMetric, e);
+                        currentRaw = 0.5;
                     }
                     
-                    // Update displays
+                    // Update displays - always update regardless of enabled state
                     minmaxDisplay.textContent = `Min: ${minMax.min.toFixed(3)} | Max: ${minMax.max.toFixed(3)}`;
                     currentDisplay.textContent = `Current: ${currentNorm.toFixed(3)}`;
+                    
+                    // Update display color based on whether value is changing
+                    if (currentNorm !== 0.5 || currentRaw !== 0.5) {
+                        currentDisplay.style.color = '#0af';
+                    } else {
+                        currentDisplay.style.color = '#888';
+                    }
+                    
+                    // Update compact view (shown when collapsed)
+                    const compactCurrent = document.getElementById(`${mappingId}-compact-current`);
+                    const compactBar = document.getElementById(`${mappingId}-compact-bar`);
+                    if (compactCurrent) {
+                        compactCurrent.textContent = currentNorm.toFixed(3);
+                        // Color code based on value
+                        if (Math.abs(currentNorm - 0.5) > 0.1) {
+                            compactCurrent.style.color = '#0af';
+                        } else {
+                            compactCurrent.style.color = '#888';
+                        }
+                    }
+                    if (compactBar) {
+                        // Map normalized value (0-1) to bar width (0-100%)
+                        const barWidth = Math.max(0, Math.min(100, currentNorm * 100));
+                        compactBar.style.width = `${barWidth}%`;
+                    }
                     
                     // Draw range visualization
                     if (!(rangeDisplay instanceof HTMLCanvasElement)) {
@@ -5301,14 +6113,135 @@
                 }
             });
             
-            // Initialize on load
-            initAudioAnalyzer();
-            initAudioMappingUI();
+            // Initialize on load - wait for AudioAnalyzer to be available
+            let audioMappingInitialized = false;
+            
+            // Function to wait for AudioAnalyzer to be available
+            async function waitForAudioAnalyzer(maxAttempts = 100, delay = 50) {
+                // First check if script is loaded
+                const script = document.getElementById('analyzer-script');
+                if (script) {
+                    // Wait for script to load if it hasn't already
+                    if (script.readyState && script.readyState !== 'complete' && script.readyState !== 'loaded') {
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                script.removeEventListener('load', resolve);
+                                script.removeEventListener('error', reject);
+                                resolve(); // Continue with polling
+                            }, 2000);
+                            
+                            script.addEventListener('load', () => {
+                                clearTimeout(timeout);
+                                resolve();
+                            }, { once: true });
+                            script.addEventListener('error', () => {
+                                clearTimeout(timeout);
+                                reject(new Error('Script failed to load'));
+                            }, { once: true });
+                        }).catch(() => {
+                            // Continue with polling if script load fails
+                        });
+                    }
+                }
+                
+                // Poll for AudioAnalyzer class
+                for (let i = 0; i < maxAttempts; i++) {
+                    if (typeof AudioAnalyzer !== 'undefined' && typeof AudioAnalyzer === 'function') {
+                        console.log(`AudioAnalyzer available after ${i * delay}ms`);
+                        return true;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+                console.error(`AudioAnalyzer not available after ${maxAttempts * delay}ms`);
+                return false;
+            }
+            
+            // Initialize after DOM is ready and AudioAnalyzer is loaded
+            async function initializeAudioMapping() {
+                // Wait for DOM to be ready
+                if (document.readyState === 'loading') {
+                    await new Promise(resolve => {
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', resolve, { once: true });
+                        } else {
+                            resolve();
+                        }
+                    });
+                }
+                
+                // Wait for AudioAnalyzer to be available
+                const analyzerReady = await waitForAudioAnalyzer();
+                if (!analyzerReady) {
+                    console.error('AudioAnalyzer not available after waiting - audio mapping will not work');
+                    // Still initialize UI but disable functionality
+                    initAudioMappingUI();
+                    setupAudioReactiveToggle();
+                    return;
+                }
+                
+                // Now initialize
+                try {
+                    await initAudioAnalyzer();
+                    initAudioMappingUI();
+                    setupAudioReactiveToggle();
+                    audioMappingInitialized = true;
+                    console.log('Audio mapping initialized successfully');
+                } catch (err) {
+                    console.error('Failed to initialize audio mapping:', err);
+                }
+            }
+            
+            // Start initialization - use multiple strategies to ensure it works
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                // DOM already ready, start immediately
+                initializeAudioMapping();
+            } else {
+                // Wait for DOM
+                document.addEventListener('DOMContentLoaded', initializeAudioMapping, { once: true });
+            }
+            
+            // Fallback: also try after a short delay in case DOMContentLoaded already fired
+            setTimeout(() => {
+                if (!audioMappingInitialized) {
+                    console.log('Retrying audio mapping initialization...');
+                    initializeAudioMapping();
+                }
+            }, 100);
             
             // Update loop
+            let updateFrameCount = 0;
             function audioMappingUpdate() {
-                updateAudioOffsets();
-                updateDiagnostics();
+                updateFrameCount++;
+                
+                // Always update diagnostics and metrics visualization if analyzer exists
+                if (audioMappingInitialized && audioAnalyzer) {
+                    try {
+                        // Always update offsets for display (even if audio reactive is off)
+                        updateAudioOffsets();
+                        updateDiagnostics();
+                        updateMetricsVisualization();
+                        
+                        // Debug: log every 60 frames to verify loop is running and values are updating
+                        if (updateFrameCount % 60 === 0 && audioAnalyzer.isEnabled) {
+                            const testMetrics = audioAnalyzer.getMetrics();
+                            const testNormalized = audioAnalyzer.normalizedMetrics || null;
+                            console.log('Audio mapping update:', {
+                                frame: updateFrameCount,
+                                audioEnabled: audioAnalyzer.isEnabled,
+                                audioReactiveEnabled: window.audioReactiveEnabled,
+                                hasMetrics: !!testMetrics,
+                                hasNormalizedMetrics: !!testNormalized,
+                                audioAmp: testMetrics?.u_audioAmp?.toFixed(3),
+                                normalizedAmp: testNormalized?.audioAmp?.toFixed(3),
+                                collision: testMetrics?.u_collision?.toFixed(3),
+                                normalizedCollision: testNormalized?.collision?.toFixed(3),
+                                normalizedKeys: testNormalized ? Object.keys(testNormalized) : []
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error in audio mapping update loop:', e);
+                    }
+                }
                 requestAnimationFrame(audioMappingUpdate);
             }
             audioMappingUpdate();
@@ -5319,7 +6252,9 @@
             };
             
             // Make audioReactiveEnabled accessible globally
-            window.audioReactiveEnabled = false;
+            // Initialize to true since checkbox is checked by default
+            window.audioReactiveEnabled = true;
+            audioReactiveEnabled = true;
             window.setAudioReactiveEnabled = (enabled) => {
                 window.audioReactiveEnabled = enabled;
                 audioReactiveEnabled = enabled;

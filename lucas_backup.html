@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
+<!-- saved from url=(0032)http://localhost:8000/lucas.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Droplet Visual Sandbox</title>
+    <title>Lucas - Audio-Reactive Visual Sandbox</title>
     <style>
         * {
             margin: 0;
@@ -146,136 +146,6 @@
             min-width: 50px;
             font-size: 9px;
             color: #0af;
-            text-align: right;
-        }
-        
-        #audio-mapping-panel {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(20, 20, 20, 0.95);
-            border: 1px solid #444;
-            border-radius: 6px;
-            padding: 12px;
-            color: #fff;
-            min-width: 400px;
-            max-width: 500px;
-            max-height: calc(100vh - 20px);
-            overflow-y: auto;
-            z-index: 1004;
-            font-size: 10px;
-            display: none;
-        }
-        
-        #audio-mapping-panel.visible {
-            display: block;
-        }
-        
-        #audio-mapping-panel h4 {
-            margin: 0 0 10px 0;
-            font-size: 11px;
-            color: #aaa;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
-            border-bottom: 1px solid #333;
-            padding-bottom: 6px;
-        }
-        
-        .mapping-param-group {
-            margin-bottom: 12px;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid #333;
-            border-radius: 4px;
-        }
-        
-        .mapping-param-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
-        
-        .mapping-param-header input[type="checkbox"] {
-            cursor: pointer;
-        }
-        
-        .mapping-param-name {
-            font-weight: 600;
-            font-size: 10px;
-            color: #fff;
-        }
-        
-        .mapping-source {
-            font-size: 8px;
-            color: #888;
-            margin-left: auto;
-        }
-        
-        .mapping-diagnostic {
-            margin: 8px 0;
-            padding: 6px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 3px;
-            font-size: 8px;
-        }
-        
-        .mapping-range-display {
-            height: 60px;
-            margin: 6px 0;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #333;
-            border-radius: 3px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .mapping-minmax-display {
-            display: flex;
-            justify-content: space-between;
-            font-size: 8px;
-            color: #888;
-            margin-top: 4px;
-        }
-        
-        .mapping-control {
-            margin: 6px 0;
-        }
-        
-        .mapping-control label {
-            display: block;
-            font-size: 9px;
-            color: #bbb;
-            margin-bottom: 3px;
-        }
-        
-        .mapping-control-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .mapping-control-row input[type="range"] {
-            flex: 1;
-        }
-        
-        .mapping-control-row input[type="number"] {
-            width: 80px;
-            font-size: 9px;
-            padding: 3px;
-            background: #333;
-            color: #eee;
-            border: 1px solid #555;
-            border-radius: 3px;
-        }
-        
-        .mapping-current-value {
-            font-size: 9px;
-            color: #0af;
-            font-weight: 600;
-            min-width: 60px;
             text-align: right;
         }
         
@@ -643,20 +513,269 @@
         .curve-btn-primary:hover {
             background: #1bf;
         }
+        
+        /* Audio Visualization Panel (left side) */
+        #audio-visualization-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 12px;
+            color: #fff;
+            min-width: 280px;
+            max-width: 320px;
+            max-height: calc(100vh - 20px);
+            overflow-y: auto;
+            z-index: 1004;
+            font-size: 11px;
+            display: none;
+        }
+        
+        #audio-visualization-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 11px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        /* Audio Mappings Panel (right side) */
+        #audio-mappings-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 12px;
+            color: #fff;
+            min-width: 320px;
+            max-width: 400px;
+            max-height: calc(100vh - 20px);
+            overflow-y: auto;
+            z-index: 1004;
+            font-size: 11px;
+            display: none;
+        }
+        
+        #audio-meters-container .meter-container {
+            margin: 6px 0;
+            font-size: 9px;
+        }
+        
+        #audio-meters-container .meter-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2px;
+            font-size: 9px;
+        }
+        
+        #audio-meters-container .meter-label .legend-swatch {
+            margin-right: 4px;
+        }
+        
+        #audio-meters-container .meter-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+        
+        #audio-meters-container .meter-bar {
+            flex: 1;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #audio-meters-container .meter-fill {
+            height: 100%;
+            background: #0f0;
+            transition: width 0.1s linear, background-color 0.2s;
+            min-width: 0;
+        }
+        
+        #audio-meters-container .meter-value {
+            min-width: 32px;
+            font-size: 8px;
+            color: #aaa;
+            text-align: right;
+            font-family: monospace;
+        }
+        
+        #audio-meters-container .stability-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+        }
+        
+        #audio-meters-container .stability-label {
+            font-size: 7px;
+            color: #888;
+            min-width: 50px;
+            text-transform: capitalize;
+        }
+        
+        #audio-meters-container .stability-visualizer {
+            flex: 1;
+            height: 12px;
+            display: flex;
+            align-items: center;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+        
+        #audio-meters-container .stability-visualizer:hover {
+            opacity: 0.8;
+        }
+        
+        #audio-meters-container .stability-indicators {
+            display: flex;
+            gap: 2px;
+            height: 3px;
+            width: 100%;
+            align-items: center;
+        }
+        
+        #audio-meters-container .stability-bar {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 1px;
+            transition: width 0.2s, background-color 0.2s;
+            min-width: 0;
+            height: 3px;
+        }
+        
+        #audio-meters-container .stability-waveform-container,
+        #audio-meters-container .stability-histogram-container {
+            display: flex;
+            gap: 2px;
+            width: 100%;
+            height: 12px;
+            align-items: center;
+        }
+        
+        #audio-meters-container .stability-waveform,
+        #audio-meters-container .stability-histogram {
+            flex: 1;
+            image-rendering: pixelated;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1px;
+            height: 8px;
+        }
+        
+        #audio-meters-container .stability-rings-container {
+            display: flex;
+            gap: 4px;
+            width: 100%;
+            height: 12px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #audio-meters-container .stability-ring {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 12px;
+        }
+        
+        #audio-meters-container .stability-ring svg {
+            display: block;
+            width: 12px;
+            height: 12px;
+        }
+        
+        #audio-meters-container .stability-dots-container {
+            display: flex;
+            gap: 2px;
+            width: 100%;
+            height: 12px;
+            align-items: center;
+        }
+        
+        #audio-meters-container .stability-dots {
+            flex: 1;
+            position: relative;
+            height: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #audio-meters-container .legend-swatch {
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+        
+        /* Position mappings panel below dev-toolbox when both are visible */
+        #dev-toolbox:not([hidden]) + #audio-mappings-panel[style*="block"] {
+            top: auto;
+            bottom: 10px;
+        }
+        
+        #audio-mappings-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 11px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        /* Audio mappings panel uses same control-group and control-row styles as visual parameters */
+        #audio-mappings-panel .control-group {
+            margin-bottom: 8px;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        #audio-mappings-panel .control-group label {
+            font-size: 9px;
+        }
+        
+        #audio-mappings-panel .control-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+        
+        #audio-mappings-panel .control-row input[type="range"] {
+            flex: 1;
+        }
+        
+        #audio-mappings-panel .control-row .value {
+            min-width: 40px;
+            font-size: 9px;
+            text-align: right;
+        }
+        
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" width="1707" height="791"></canvas>
     
     <!-- Curve Editor Overlay -->
     <div id="curve-editor-overlay" class="curve-editor-overlay">
         <div class="curve-editor">
             <div class="curve-editor-header">
-                <div class="curve-editor-title" id="curve-editor-title">Parameter Curve Editor</div>
-                <button class="curve-editor-close" id="curve-editor-close">&times;</button>
+                <div class="curve-editor-title" id="curve-editor-title">Curve Editor: Hue Shift~</div>
+                <button class="curve-editor-close" id="curve-editor-close">×</button>
             </div>
             <div class="curve-canvas-container">
-                <canvas id="curve-canvas" class="curve-canvas"></canvas>
+                <canvas id="curve-canvas" class="curve-canvas" width="557" height="300"></canvas>
             </div>
             <div class="curve-controls">
                 <div class="curve-control-group">
@@ -669,7 +788,7 @@
                 </div>
             </div>
             <div class="curve-power-slider">
-                <label>Curve Power (exponent): <span id="curve-power-value">1.0</span></label>
+                <label>Curve Power (exponent): <span id="curve-power-value">1.00</span></label>
                 <input type="range" id="curve-power" min="0.1" max="5" step="0.1" value="1.0">
             </div>
             <div class="curve-actions">
@@ -946,7 +1065,10 @@
             gl_FragColor = vec4(shiftedColor, history.a * fade * decay);
         }
     </script>
-    <script src="vendor/gif.js"></script>
+    <script src="./lucas_backup_files/gif.js.download"></script>
+    <script src="./lucas_backup_files/analyzer.js.download"></script>
+    <script src="./lucas_backup_files/legend.js.download"></script>
+    <script src="./lucas_backup_files/meters.js.download"></script>
     
     <div id="hotkey-legend">
         <h4>Hotkeys</h4>
@@ -991,20 +1113,52 @@
             <span class="hotkey-desc">Toggle Interpolation</span>
         </div>
         <div class="hotkey-item">
+            <span class="hotkey-key">V</span>
+            <span class="hotkey-desc">Toggle Visual Menu</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">M</span>
+            <span class="hotkey-desc">Toggle Audio Mappings</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">A</span>
+            <span class="hotkey-desc">Toggle Audio Analysis</span>
+        </div>
+        <div class="hotkey-item">
             <span class="hotkey-key">H</span>
-            <span class="hotkey-desc">Toggle UI</span>
+            <span class="hotkey-desc">Toggle Last Selected Menu</span>
         </div>
     </div>
     
-    <div id="status-indicators">
-        <span id="freeze-indicator" style="display: none; background: #0af; color: #fff;">FREEZE</span>
-        <span id="jiggle-indicator" style="display: none; background: #a0a; color: #fff;">JIGGLE</span>
+    <div id="status-indicators" style="top: 340px; left: 10px;">
+        <span id="freeze-indicator" style="display: none; background: rgb(0, 170, 255); color: rgb(255, 255, 255);">FREEZE</span>
+        <span id="jiggle-indicator" style="display: none; background: rgb(170, 0, 170); color: rgb(255, 255, 255);">JIGGLE</span>
+        <span id="audio-indicator" style="display: inline-block; background: rgb(0, 255, 0); color: rgb(0, 0, 0);">AUDIO</span>
         <span id="unsaved-indicator" style="display: none; background: #fa0; color: #fff;">UNSAVED</span>
         <span id="record-indicator" style="display: none; background: #e33; color: #fff;">RECORD</span>
     </div>
     
-    <div id="ux-toolbox">
-        <h4>Experimental</h4>
+    <div id="ux-toolbox" style="top: 360px; left: 10px;">
+        <h4>Audio Reactive</h4>
+        
+        <div id="audio-controls" style="background: rgba(20, 20, 20, 0.5); border: 1px solid #444; border-radius: 4px; padding: 8px; margin-bottom: 10px;">
+            <h4 style="margin: 0 0 6px 0; font-size: 9px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; border-bottom: 1px solid #333; padding-bottom: 4px;">Audio Input</h4>
+            <select id="audio-device-select" style="width: 100%; font-size: 9px; padding: 3px; margin-bottom: 4px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;" disabled=""><option value="">Default (System Default)</option><option value="9736bca451f6d060799cbb225bdc55c8a84a19a856a24775f63da9168ae5474a">Stereo Mix (Realtek(R) Audio)</option><option value="3ee8048ea9671314de68426c523c531c060202ca7db038d018bcd43bd3baea4b">Microphone (Realtek(R) Audio)</option><option value="3dfea30ecb0bcbd76b62ee3ac7a3f3155a132dacb16d3e23b9b47ec6a6a053cc">Headset Microphone (Oculus Virtual Audio Device)</option><option value="default">Default - Stereo Mix (Realtek(R) Audio)</option><option value="communications">Communications - Headset Microphone (Oculus Virtual Audio Device)</option></select>
+            <button id="enable-audio-btn" style="width: 100%; font-size: 9px; padding: 4px; margin-bottom: 4px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Disable Audio</button>
+            <div id="audio-status" style="font-size: 8px; color: rgb(0, 255, 0); margin-bottom: 4px;">Audio: STEREO</div>
+            <div class="audio-reactive-toggle" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                <input type="checkbox" id="audio-reactive-enabled" checked="" style="cursor: pointer;">
+                <label for="audio-reactive-enabled" style="font-size: 9px; color: #bbb; cursor: pointer; margin: 0;">Audio Reactive Mode</label>
+            </div>
+        </div>
+        
+        <div id="audio-events-controls" style="background: rgba(20, 20, 20, 0.5); border: 1px solid #444; border-radius: 4px; padding: 8px; margin-top: 10px;">
+            <h4 style="margin: 0 0 6px 0; font-size: 9px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; border-bottom: 1px solid #333; padding-bottom: 4px;">Audio Events</h4>
+            <div style="font-size: 8px; color: #888; margin-bottom: 6px;">Detect song changes and structural moments</div>
+            <div id="audio-events-config" style="display: flex; flex-direction: column; gap: 4px;">
+                <!-- Event triggers will be generated dynamically -->
+            <div style="margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 3px;"><div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="event-enabled-songChange" style="margin: 0px; cursor: pointer;"><label for="event-enabled-songChange" style="font-size: 9px; font-weight: 600; color: rgb(0, 170, 255); cursor: pointer;">Song Change</label></div><div id="event-actions-songChange" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;"><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Flip Dilation Polarity</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Toggle Jiggle</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Randomize Parameters</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Next Preset</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Previous Preset</button></div></div><div style="margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 3px;"><div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="event-enabled-chorus" style="margin: 0px; cursor: pointer;"><label for="event-enabled-chorus" style="font-size: 9px; font-weight: 600; color: rgb(0, 170, 255); cursor: pointer;">Chorus</label></div><div id="event-actions-chorus" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;"><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Flip Dilation Polarity</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Toggle Jiggle</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Randomize Parameters</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Next Preset</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Previous Preset</button></div></div><div style="margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 3px;"><div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="event-enabled-verse" style="margin: 0px; cursor: pointer;"><label for="event-enabled-verse" style="font-size: 9px; font-weight: 600; color: rgb(0, 170, 255); cursor: pointer;">Verse</label></div><div id="event-actions-verse" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;"><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Flip Dilation Polarity</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Toggle Jiggle</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Randomize Parameters</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Next Preset</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Previous Preset</button></div></div><div style="margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 3px;"><div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="event-enabled-drop" style="margin: 0px; cursor: pointer;"><label for="event-enabled-drop" style="font-size: 9px; font-weight: 600; color: rgb(0, 170, 255); cursor: pointer;">Drop</label></div><div id="event-actions-drop" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;"><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Flip Dilation Polarity</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Toggle Jiggle</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Randomize Parameters</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Next Preset</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Previous Preset</button></div></div><div style="margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 3px;"><div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="event-enabled-tonalShift" style="margin: 0px; cursor: pointer;"><label for="event-enabled-tonalShift" style="font-size: 9px; font-weight: 600; color: rgb(0, 170, 255); cursor: pointer;">Tonal Shift</label></div><div id="event-actions-tonalShift" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;"><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Flip Dilation Polarity</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Toggle Jiggle</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Randomize Parameters</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Next Preset</button><button style="font-size: 8px; padding: 2px 6px; background: rgb(51, 51, 51); border: 1px solid rgb(85, 85, 85); border-radius: 2px; color: rgb(187, 187, 187); cursor: pointer;">Previous Preset</button></div></div></div>
+        </div>
         
         <div class="section-header collapsed" id="interpolation-settings-header" style="margin-top: 0; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
             <span>Smooth Interpolation</span>
@@ -1012,7 +1166,7 @@
         <div id="interpolation-settings-content" style="display: none; padding-left: 8px;">
             <div class="control-group">
                 <label>
-                    <input type="checkbox" id="interpolation-enabled" checked>
+                    <input type="checkbox" id="interpolation-enabled" checked="">
                     <span style="margin-left: 6px;">Enabled</span>
                 </label>
             </div>
@@ -1029,7 +1183,7 @@
                 <label for="interpolation-easing-select">Easing Type</label>
                 <select id="interpolation-easing-select" style="width: 100%; font-size: 9px; padding: 3px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
                     <option value="linear">Linear</option>
-                    <option value="easeInOut" selected>Ease In-Out</option>
+                    <option value="easeInOut" selected="">Ease In-Out</option>
                     <option value="easeIn">Ease In</option>
                     <option value="easeOut">Ease Out</option>
                     <option value="spring">Spring</option>
@@ -1054,18 +1208,247 @@
             
             <div class="control-group">
                 <label>
-                    <input type="checkbox" id="interpolation-rotation-spring" checked>
+                    <input type="checkbox" id="interpolation-rotation-spring" checked="">
                     <span style="margin-left: 6px;">Use Spring for Rotation</span>
                 </label>
             </div>
         </div>
     </div>
     
-    <div id="audio-mapping-panel">
-        <h4>Audio Mapping</h4>
-        <div id="audio-mapping-content">
-            <!-- Audio mapping controls will be generated dynamically -->
-        </div>
+    <!-- Audio Visualization Panel (left side) -->
+    <div id="audio-visualization-panel" style="display: none;">
+        <h3>Audio Analysis</h3>
+        <div id="audio-meters-container"><div class="meter-container" data-metric-name="coherence">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>Coherence</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-coherence" style="width: 61.1962%; background-color: rgb(255, 255, 0);"></div>
+                </div>
+                <div class="meter-value" id="value-coherence">0.61</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-coherence">waveform</div>
+                <div class="stability-visualizer" id="stability-visualizer-coherence" data-metric="coherence" style="cursor: pointer;">
+                    
+                <div class="stability-waveform-container">
+                    <canvas class="stability-waveform" id="stability-1bar-coherence" title="1 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-2bar-coherence" title="2 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-4bar-coherence" title="4 bar stability" width="30" height="8"></canvas>
+                </div>
+            
+                </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="mud">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>Mud</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-mud" style="width: 51.967%; background-color: rgb(255, 255, 0);"></div>
+                </div>
+                <div class="meter-value" id="value-mud">0.52</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-mud">waveform</div>
+                <div class="stability-visualizer" id="stability-visualizer-mud" data-metric="mud" style="cursor: pointer;">
+                    
+                <div class="stability-waveform-container">
+                    <canvas class="stability-waveform" id="stability-1bar-mud" title="1 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-2bar-mud" title="2 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-4bar-mud" title="4 bar stability" width="30" height="8"></canvas>
+                </div>
+            
+                </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="harshness">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>Harshness</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-harshness" style="width: 35.5387%; background-color: rgb(255, 255, 0);"></div>
+                </div>
+                <div class="meter-value" id="value-harshness">0.36</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-harshness">waveform</div>
+                <div class="stability-visualizer" id="stability-visualizer-harshness" data-metric="harshness" style="cursor: pointer;">
+                    
+                <div class="stability-waveform-container">
+                    <canvas class="stability-waveform" id="stability-1bar-harshness" title="1 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-2bar-harshness" title="2 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-4bar-harshness" title="4 bar stability" width="30" height="8"></canvas>
+                </div>
+            
+                </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="compression">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>Compression</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-compression" style="width: 81.3212%; background-color: rgb(255, 0, 0);"></div>
+                </div>
+                <div class="meter-value" id="value-compression">0.81</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-compression">waveform</div>
+                <div class="stability-visualizer" id="stability-visualizer-compression" data-metric="compression" style="cursor: pointer;">
+                    
+                <div class="stability-waveform-container">
+                    <canvas class="stability-waveform" id="stability-1bar-compression" title="1 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-2bar-compression" title="2 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-4bar-compression" title="4 bar stability" width="30" height="8"></canvas>
+                </div>
+            
+                </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="collision">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>Collision</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-collision" style="width: 3.12106%; background-color: rgb(0, 255, 0);"></div>
+                </div>
+                <div class="meter-value" id="value-collision">0.03</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-collision">rings</div>
+                <div class="stability-visualizer" id="stability-visualizer-collision" data-metric="collision" style="cursor: pointer;">
+                <div class="stability-rings-container">
+                    <div class="stability-ring" id="stability-1bar-collision" title="1 bar stability">
+                        <svg width="16" height="16" viewBox="0 0 16 16">
+                            <circle class="ring-bg" cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"></circle>
+                            <circle class="ring-fill" cx="8" cy="8" r="6" fill="none" stroke="#ff0" stroke-width="1" stroke-dasharray="24.015787075563257 37.69911184307752" transform="rotate(-90 8 8)" stroke-dashoffset="13.68332476751426"></circle>
+                        </svg>
+                    </div>
+                    <div class="stability-ring" id="stability-2bar-collision" title="2 bar stability">
+                        <svg width="16" height="16" viewBox="0 0 16 16">
+                            <circle class="ring-bg" cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"></circle>
+                            <circle class="ring-fill" cx="8" cy="8" r="6" fill="none" stroke="#ff0" stroke-width="1" stroke-dasharray="24.30576544638681 37.69911184307752" transform="rotate(-90 8 8)" stroke-dashoffset="13.393346396690704"></circle>
+                        </svg>
+                    </div>
+                    <div class="stability-ring" id="stability-4bar-collision" title="4 bar stability">
+                        <svg width="16" height="16" viewBox="0 0 16 16">
+                            <circle class="ring-bg" cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"></circle>
+                            <circle class="ring-fill" cx="8" cy="8" r="6" fill="none" stroke="#ff0" stroke-width="1" stroke-dasharray="24.41705525999149 37.69911184307752" transform="rotate(-90 8 8)" stroke-dashoffset="13.282056583086028"></circle>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="phaseRisk">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>PhaseRisk</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-phaseRisk" style="width: 0.389573%; background-color: rgb(0, 255, 0);"></div>
+                </div>
+                <div class="meter-value" id="value-phaseRisk">0.00</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-phaseRisk">waveform</div>
+                <div class="stability-visualizer" id="stability-visualizer-phaseRisk" data-metric="phaseRisk" style="cursor: pointer;">
+                    
+                <div class="stability-waveform-container">
+                    <canvas class="stability-waveform" id="stability-1bar-phaseRisk" title="1 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-2bar-phaseRisk" title="2 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-4bar-phaseRisk" title="4 bar stability" width="30" height="8"></canvas>
+                </div>
+            
+                </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="audioAmp">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>Amp</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-audioAmp" style="width: 5.72133%; background-color: rgb(0, 255, 0);"></div>
+                </div>
+                <div class="meter-value" id="value-audioAmp">0.06</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-audioAmp">waveform</div>
+                <div class="stability-visualizer" id="stability-visualizer-audioAmp" data-metric="audioAmp" style="cursor: pointer;">
+                    
+                <div class="stability-waveform-container">
+                    <canvas class="stability-waveform" id="stability-1bar-audioAmp" title="1 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-2bar-audioAmp" title="2 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-4bar-audioAmp" title="4 bar stability" width="30" height="8"></canvas>
+                </div>
+            
+                </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="bandLow">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>Low</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-bandLow" style="width: 29.1808%; background-color: rgb(64, 29, 14);"></div>
+                </div>
+                <div class="meter-value" id="value-bandLow">0.29</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-bandLow">waveform</div>
+                <div class="stability-visualizer" id="stability-visualizer-bandLow" data-metric="bandLow" style="cursor: pointer;">
+                <div class="stability-waveform-container">
+                    <canvas class="stability-waveform" id="stability-1bar-bandLow" title="1 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-2bar-bandLow" title="2 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-4bar-bandLow" title="4 bar stability" width="30" height="8"></canvas>
+                </div>
+            </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="bandMid">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>Mid</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-bandMid" style="width: 43.1102%; background-color: rgb(77, 86, 51);"></div>
+                </div>
+                <div class="meter-value" id="value-bandMid">0.43</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-bandMid">rings</div>
+                <div class="stability-visualizer" id="stability-visualizer-bandMid" data-metric="bandMid" style="cursor: pointer;">
+                <div class="stability-rings-container">
+                    <div class="stability-ring" id="stability-1bar-bandMid" title="1 bar stability">
+                        <svg width="16" height="16" viewBox="0 0 16 16">
+                            <circle class="ring-bg" cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"></circle>
+                            <circle class="ring-fill" cx="8" cy="8" r="6" fill="none" stroke="#0f0" stroke-width="1" stroke-dasharray="36.479925403873516 37.69911184307752" transform="rotate(-90 8 8)" stroke-dashoffset="1.2191864392039984"></circle>
+                        </svg>
+                    </div>
+                    <div class="stability-ring" id="stability-2bar-bandMid" title="2 bar stability">
+                        <svg width="16" height="16" viewBox="0 0 16 16">
+                            <circle class="ring-bg" cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"></circle>
+                            <circle class="ring-fill" cx="8" cy="8" r="6" fill="none" stroke="#0f0" stroke-width="1" stroke-dasharray="36.3283264337368 37.69911184307752" transform="rotate(-90 8 8)" stroke-dashoffset="1.3707854093407204"></circle>
+                        </svg>
+                    </div>
+                    <div class="stability-ring" id="stability-4bar-bandMid" title="4 bar stability">
+                        <svg width="16" height="16" viewBox="0 0 16 16">
+                            <circle class="ring-bg" cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"></circle>
+                            <circle class="ring-fill" cx="8" cy="8" r="6" fill="none" stroke="#0f0" stroke-width="1" stroke-dasharray="36.0239510921264 37.69911184307752" transform="rotate(-90 8 8)" stroke-dashoffset="1.6751607509511117"></circle>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div><div class="meter-container" data-metric-name="bandHigh">
+            <div class="meter-label"><canvas width="20" height="20" style="width: 20px; height: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 2px; margin-left: 4px; margin-right: 4px; vertical-align: middle; display: inline-block; image-rendering: pixelated;"></canvas>High</div>
+            <div class="meter-wrapper">
+                <div class="meter-bar">
+                    <div class="meter-fill" id="meter-bandHigh" style="width: 27.2256%; background-color: rgb(13, 40, 69);"></div>
+                </div>
+                <div class="meter-value" id="value-bandHigh">0.27</div>
+            </div>
+            <div class="stability-wrapper">
+                <div class="stability-label" id="mode-label-bandHigh">waveform</div>
+                <div class="stability-visualizer" id="stability-visualizer-bandHigh" data-metric="bandHigh" style="cursor: pointer;">
+                    
+                <div class="stability-waveform-container">
+                    <canvas class="stability-waveform" id="stability-1bar-bandHigh" title="1 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-2bar-bandHigh" title="2 bar stability" width="30" height="8"></canvas>
+                    <canvas class="stability-waveform" id="stability-4bar-bandHigh" title="4 bar stability" width="30" height="8"></canvas>
+                </div>
+            
+                </div>
+            </div>
+        </div></div>
+    </div>
+    
+    <!-- Audio Mappings Panel (right side) -->
+    <div id="audio-mappings-panel" style="display: none; top: 10px; right: 10px;">
+        <h3>Audio Mappings</h3>
+        <div id="audio-mappings-content"><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-spikiness" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">spikiness</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(collision)</span><span id="mapping-value-spikiness" style="font-size: 8px; font-family: monospace; color: rgb(255, 0, 0); margin-left: auto;">-0.890</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-spikiness" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-spikiness" contenteditable="true">0.7</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-spikiness" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-spikiness" contenteditable="true">0.80</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-spikeFrequency" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">spikeFrequency</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(bandEnergy)</span><span id="mapping-value-spikeFrequency" style="font-size: 8px; font-family: monospace; color: rgb(255, 0, 0); margin-left: auto;">-0.314</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-spikeFrequency" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-spikeFrequency" contenteditable="true">2.5</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-spikeFrequency" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-spikeFrequency" contenteditable="true">0.59</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-spikeSharpness" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">spikeSharpness</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(harshness)</span><span id="mapping-value-spikeSharpness" style="font-size: 8px; font-family: monospace; color: rgb(136, 136, 136); margin-left: auto;">0.000</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-spikeSharpness" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-spikeSharpness" contenteditable="true">0.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-spikeSharpness" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-spikeSharpness" contenteditable="true">0.80</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-hue" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">hue</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(bandEnergy)</span><span id="mapping-value-hue" style="font-size: 8px; font-family: monospace; color: rgb(255, 0, 0); margin-left: auto;">-0.361</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-hue" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-hue" contenteditable="true">3.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-hue" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-hue" contenteditable="true">0.50</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-scale" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">scale</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(audioAmp)</span><span id="mapping-value-scale" style="font-size: 8px; font-family: monospace; color: rgb(255, 0, 0); margin-left: auto;">-0.867</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-scale" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-scale" contenteditable="true">3.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-scale" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-scale" contenteditable="true">0.62</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-emanationRate" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">emanationRate</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(audioAmp)</span><span id="mapping-value-emanationRate" style="font-size: 8px; font-family: monospace; color: rgb(255, 0, 0); margin-left: auto;">-0.865</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-emanationRate" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-emanationRate" contenteditable="true">1.7</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-emanationRate" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-emanationRate" contenteditable="true">0.69</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-dilationSpeed" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">dilationSpeed</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(coherence)</span><span id="mapping-value-dilationSpeed" style="font-size: 8px; font-family: monospace; color: rgb(0, 255, 0); margin-left: auto;">0.229</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-dilationSpeed" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-dilationSpeed" contenteditable="true">0.9</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-dilationSpeed" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-dilationSpeed" contenteditable="true">0.66</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-fadeAmount" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">fadeAmount</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(mud)</span><span id="mapping-value-fadeAmount" style="font-size: 8px; font-family: monospace; color: rgb(136, 136, 136); margin-left: auto;">0.000</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-fadeAmount" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-fadeAmount" contenteditable="true">1.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-fadeAmount" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-fadeAmount" contenteditable="true">0.85</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-fillOpacity" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">fillOpacity</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(compression)</span><span id="mapping-value-fillOpacity" style="font-size: 8px; font-family: monospace; color: rgb(136, 136, 136); margin-left: auto;">0.000</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-fillOpacity" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-fillOpacity" contenteditable="true">1.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-fillOpacity" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-fillOpacity" contenteditable="true">0.85</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-autoRotationSpeed" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">autoRotationSpeed</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(phaseRisk)</span><span id="mapping-value-autoRotationSpeed" style="font-size: 8px; font-family: monospace; color: rgb(255, 0, 0); margin-left: auto;">-0.990</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-autoRotationSpeed" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-autoRotationSpeed" contenteditable="true">2.1</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-autoRotationSpeed" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-autoRotationSpeed" contenteditable="true">0.90</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-hueShiftAmount" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">hueShiftAmount</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(stereoWidth)</span><span id="mapping-value-hueShiftAmount" style="font-size: 8px; font-family: monospace; color: rgb(255, 0, 0); margin-left: auto;">-0.994</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-hueShiftAmount" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-hueShiftAmount" contenteditable="true">1.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-hueShiftAmount" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-hueShiftAmount" contenteditable="true">0.55</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-noiseAmount" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">noiseAmount</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(harshness)</span><span id="mapping-value-noiseAmount" style="font-size: 8px; font-family: monospace; color: rgb(136, 136, 136); margin-left: auto;">0.000</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-noiseAmount" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-noiseAmount" contenteditable="true">3.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-noiseAmount" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-noiseAmount" contenteditable="true">0.98</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-blendOpacity" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">blendOpacity</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(coherence)</span><span id="mapping-value-blendOpacity" style="font-size: 8px; font-family: monospace; color: rgb(136, 136, 136); margin-left: auto;">0.000</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-blendOpacity" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-blendOpacity" contenteditable="true">2.4</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-blendOpacity" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-blendOpacity" contenteditable="true">0.90</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-fillSize" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">fillSize</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(compression)</span><span id="mapping-value-fillSize" style="font-size: 8px; font-family: monospace; color: rgb(0, 255, 0); margin-left: auto;">0.609</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-fillSize" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-fillSize" contenteditable="true">1.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-fillSize" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-fillSize" contenteditable="true">0.85</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-noiseRate" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">noiseRate</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(collision)</span><span id="mapping-value-noiseRate" style="font-size: 8px; font-family: monospace; color: rgb(255, 0, 0); margin-left: auto;">-0.890</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-noiseRate" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-noiseRate" contenteditable="true">1.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-noiseRate" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-noiseRate" contenteditable="true">0.80</div></div></div><div class="control-group"><label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"><input type="checkbox" id="mapping-enabled-blurRate" style="margin: 0px; cursor: pointer;"><span style="font-weight: 600; color: rgb(0, 170, 255);">blurRate</span><span style="font-size: 8px; color: rgb(136, 136, 136); font-style: italic;">(mud)</span><span id="mapping-value-blurRate" style="font-size: 8px; font-family: monospace; color: rgb(0, 255, 0); margin-left: auto;">0.006</span></label><div class="control-row" style="margin-bottom: 4px;"><label style="min-width: 70px; font-size: 9px;">Sensitivity</label><input type="range" id="mapping-sensitivity-blurRate" min="0" max="3" step="0.1"><div class="value" id="mapping-sensitivity-value-blurRate" contenteditable="true">1.0</div></div><div class="control-row"><label style="min-width: 70px; font-size: 9px;">Smoothing</label><input type="range" id="mapping-smoothing-blurRate" min="0.5" max="0.99" step="0.01"><div class="value" id="mapping-smoothing-value-blurRate" contenteditable="true">0.85</div></div></div></div>
     </div>
     
     <div id="dev-toolbox">
@@ -1073,9 +1456,7 @@
         
         <div class="control-group">
             <label for="preset-select">Preset</label>
-            <select id="preset-select" style="width: 100%; font-size: 10px; padding: 3px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
-                <option value="">-- Select --</option>
-            </select>
+            <select id="preset-select" style="width: 100%; font-size: 10px; padding: 3px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;"><option value="">-- Select Preset --</option><option value="Burn">Burn</option><option value="Rainbow">Rainbow</option><option value="Spray">Spray</option><option value="Flower">Flower</option><option value="Portal">Portal</option><option value="Braid">Braid</option><option value="Pool">Pool</option><option value="Cross">Cross</option><option value="Wash">Wash</option><option value="Wiggle">Wiggle</option><option value="VHS">VHS</option><option value="Dive">Dive</option><option value="JiggleFreezeGlitch">JiggleFreezeGlitch</option><option value="Conch">Conch</option><option value="Smoke">Smoke</option><option value="Corduroy">Corduroy</option><option value="Moire">Moire</option><option value="Conway">Conway</option><option value="Doughnut">Doughnut</option><option value="Sparkle">Sparkle</option><option value="Slurry">Slurry</option><option value="Gunbuster">Gunbuster</option><option value="EYELINER">EYELINER</option><option value="Ekhart">Ekhart</option><option value="RainbowSwim">RainbowSwim</option><option value="Megacross">Megacross</option><option value="Feather">Feather</option><option value="Gas">Gas</option><option value="Oasis">Oasis</option><option value="Daisy">Daisy</option><option value="Ryan">Ryan</option><option value="Cosm">Cosm</option><option value="Starwash">Starwash</option><option value="Oyster">Oyster</option><option value="p3n0r">p3n0r</option><option value="Peacock">Peacock</option><option value="RecycledColors">RecycledColors</option><option value="RaveSoap">RaveSoap</option><option value="TyeDyed">TyeDyed</option><option value="WadingRainbow">WadingRainbow</option><option value="JiggleStorm">JiggleStorm</option><option value="LUCAS">LUCAS</option><option value="BUMPER">BUMPER</option><option value="WONDERWELL">WONDERWELL</option><option value="HUELOOP">HUELOOP</option><option value="GUMMY">GUMMY</option></select>
             <div style="margin-top: 6px; display: flex; gap: 4px;">
                 <input type="text" id="preset-name-input" placeholder="Name" style="flex: 1; font-size: 10px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
                 <button id="save-preset-btn" style="font-size: 10px; padding: 3px 6px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Save</button>
@@ -1094,7 +1475,7 @@
                 <button id="res-4k-btn" class="resolution-btn" data-resolution="4k" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">4K UHD</button>
                 <button id="res-pc-btn" class="resolution-btn" data-resolution="pc" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Full HD</button>
                 <button id="res-mobile-btn" class="resolution-btn" data-resolution="mobile" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Mobile</button>
-                <button id="res-window-btn" class="resolution-btn" data-resolution="window" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Window</button>
+                <button id="res-window-btn" class="resolution-btn active" data-resolution="window" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Window</button>
             </div>
             <div id="current-resolution-display" style="margin-top: 4px; font-size: 9px; color: #aaa;">Current: Window Size</div>
         </div>
@@ -1104,7 +1485,7 @@
             <label for="spikiness-slider">Spikiness<span class="curve-btn" data-param="spikiness" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="spikiness-slider" min="0" max="100" value="50" step="1">
-                <div class="value" contenteditable="true" id="spikiness-value">0.50</div>
+                <div class="value" contenteditable="true" id="spikiness-value">0.65</div>
             </div>
         </div>
         
@@ -1112,7 +1493,7 @@
             <label for="spike-frequency-slider">Frequency<span class="curve-btn" data-param="spikeFrequency" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="spike-frequency-slider" min="2" max="20" value="5" step="0.1">
-                <div class="value" contenteditable="true" id="spike-frequency-value">5.0</div>
+                <div class="value" contenteditable="true" id="spike-frequency-value">22.8</div>
             </div>
         </div>
         
@@ -1120,7 +1501,7 @@
             <label for="spike-sharpness-slider">Sharpness<span class="curve-btn" data-param="spikeSharpness" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="spike-sharpness-slider" min="0" max="100" value="0" step="1">
-                <div class="value" contenteditable="true" id="spike-sharpness-value">0.00</div>
+                <div class="value" contenteditable="true" id="spike-sharpness-value">0.79</div>
             </div>
         </div>
         
@@ -1130,7 +1511,7 @@
                 <label for="hue-slider">Hue<span class="curve-btn" data-param="hue" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="hue-slider" min="0" max="360" value="45" step="1">
-                    <div class="value" contenteditable="true" id="hue-value">45°</div>
+                    <div class="value" contenteditable="true" id="hue-value">163.14380348484315°</div>
                 </div>
             </div>
             
@@ -1138,7 +1519,7 @@
                 <label for="scale-slider">Scale<span class="curve-btn" data-param="scale" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="scale-slider" min="0.05" max="1.0" value="0.2" step="0.01">
-                    <div class="value" contenteditable="true" id="scale-value">0.20</div>
+                    <div class="value" contenteditable="true" id="scale-value">4.73</div>
                 </div>
             </div>
         </div>
@@ -1148,7 +1529,7 @@
                 <label for="fill-size-slider">Fill Size<span class="curve-btn" data-param="fillSize" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="fill-size-slider" min="0" max="100" value="0" step="1">
-                    <div class="value" contenteditable="true" id="fill-size-value">0.00</div>
+                    <div class="value" contenteditable="true" id="fill-size-value">0.36</div>
                 </div>
             </div>
             
@@ -1156,7 +1537,7 @@
                 <label for="fill-opacity-slider">Fill Opacity<span class="curve-btn" data-param="fillOpacity" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="fill-opacity-slider" min="0" max="100" value="60" step="1">
-                    <div class="value" contenteditable="true" id="fill-opacity-value">0.60</div>
+                    <div class="value" contenteditable="true" id="fill-opacity-value">0.85</div>
                 </div>
             </div>
         </div>
@@ -1166,15 +1547,19 @@
             <label for="dilation-slider">Dilation Speed<span class="curve-btn" data-param="dilationSpeed" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="dilation-slider" min="0" max="200" value="20" step="1">
-                <div class="value" contenteditable="true" id="dilation-value">1.01</div>
+                <div class="value" contenteditable="true" id="dilation-value">0.9218</div>
             </div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-top: 4px; cursor: pointer;">
+                <input type="checkbox" id="dilation-polarity-flip">
+                <span>Flip Polarity (reflect over 1.0)</span>
+            </label>
         </div>
         
         <div class="control-group">
             <label for="fade-slider">Fade Amount<span class="curve-btn" data-param="fadeAmount" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="fade-slider" min="0" max="100" value="30" step="1">
-                <div class="value" contenteditable="true" id="fade-value">0.30</div>
+                <div class="value" contenteditable="true" id="fade-value">3.018</div>
             </div>
         </div>
         
@@ -1182,7 +1567,7 @@
             <label for="emanation-rate-slider">Rate (per sec)<span class="curve-btn" data-param="emanationRate" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="emanation-rate-slider" min="2" max="200" value="2" step="0.1">
-                <div class="value" contenteditable="true" id="emanation-rate-value">2.0</div>
+                <div class="value" contenteditable="true" id="emanation-rate-value">127.2</div>
             </div>
         </div>
         
@@ -1192,7 +1577,7 @@
                 <label for="noise-amount-slider">Noise Amount<span class="curve-btn" data-param="noiseAmount" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="noise-amount-slider" min="0" max="100" value="0" step="1">
-                    <div class="value" contenteditable="true" id="noise-amount-value">0.00</div>
+                    <div class="value" contenteditable="true" id="noise-amount-value">0.06</div>
                 </div>
             </div>
             
@@ -1200,7 +1585,7 @@
                 <label for="noise-rate-slider">Noise Rate (1.0 = every 2s)<span class="curve-btn" data-param="noiseRate" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="noise-rate-slider" min="0" max="100" value="0" step="0.1">
-                    <div class="value" contenteditable="true" id="noise-rate-value">0.0</div>
+                    <div class="value" contenteditable="true" id="noise-rate-value">7.76</div>
                 </div>
             </div>
             
@@ -1216,7 +1601,7 @@
                 <label for="blur-rate-slider">Blur Rate (1.0 = every 2s)<span class="curve-btn" data-param="blurRate" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="blur-rate-slider" min="0" max="100" value="0" step="0.1">
-                    <div class="value" contenteditable="true" id="blur-rate-value">0.0</div>
+                    <div class="value" contenteditable="true" id="blur-rate-value">1.75</div>
                 </div>
             </div>
         </div>
@@ -1227,7 +1612,7 @@
                 <label for="rotation-slider">Manual<span class="curve-btn" data-param="rotation" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
-                    <div class="value" contenteditable="true" id="rotation-value">0°</div>
+                    <div class="value" contenteditable="true" id="rotation-value">5.6644146367928965°</div>
                 </div>
             </div>
             
@@ -1235,7 +1620,7 @@
                 <label for="auto-rotation-slider">Auto (deg/s)<span class="curve-btn" data-param="autoRotationSpeed" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="auto-rotation-slider" min="0" max="200" value="50" step="1">
-                    <div class="value" contenteditable="true" id="auto-rotation-value">30°</div>
+                    <div class="value" contenteditable="true" id="auto-rotation-value">-1.0°</div>
                 </div>
             </div>
         </div>
@@ -1246,7 +1631,7 @@
                 <label for="hue-shift-slider">Hue Shift<span class="curve-btn" data-param="hueShiftAmount" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="hue-shift-slider" min="0.0" max="0.2" value="0.05" step="0.001">
-                    <div class="value" contenteditable="true" id="hue-shift-value">0.050</div>
+                    <div class="value" contenteditable="true" id="hue-shift-value">22.200</div>
                 </div>
             </div>
             
@@ -1254,7 +1639,7 @@
                 <label for="blend-opacity-slider">Opacity<span class="curve-btn" data-param="blendOpacity" title="Edit curve">~</span></label>
                 <div class="control-row">
                     <input type="range" id="blend-opacity-slider" min="0.0" max="1.0" value="0.3" step="0.01">
-                    <div class="value" contenteditable="true" id="blend-opacity-value">0.30</div>
+                    <div class="value" contenteditable="true" id="blend-opacity-value">0.25</div>
                 </div>
             </div>
         </div>
@@ -1263,7 +1648,7 @@
             <label for="blend-mode-select">Blend Mode</label>
             <select id="blend-mode-select" style="width: 100%; font-size: 10px; padding: 3px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
                 <option value="additive">Additive</option>
-                <option value="alpha" selected>Alpha Blend</option>
+                <option value="alpha" selected="">Alpha Blend</option>
                 <option value="multiply">Multiply</option>
                 <option value="screen">Screen</option>
                 <option value="overlay">Overlay</option>
@@ -1274,18 +1659,18 @@
         <div class="control-group">
             <div style="display: flex; gap: 6px; margin-bottom: 8px;">
                 <button id="randomize-btn" style="flex: 1; font-size: 10px; padding: 6px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: 500;">Randomize</button>
-                <button id="jiggle-btn" style="flex: 1; font-size: 10px; padding: 6px; background: #a0a; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: 500;">Jiggle</button>
+                <button id="jiggle-btn" style="flex: 1 1 0%; font-size: 10px; padding: 6px; background: rgb(170, 0, 170); color: rgb(255, 255, 255); border: none; border-radius: 3px; cursor: pointer; font-weight: 500;">Jiggle</button>
             </div>
             <label for="jiggle-amount-slider">Jiggle Amount<span class="curve-btn" data-param="jiggleAmount" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="jiggle-amount-slider" min="0" max="100" value="10" step="1">
-                <div class="value" contenteditable="true" id="jiggle-amount-value">10%</div>
+                <div class="value" contenteditable="true" id="jiggle-amount-value">96%</div>
             </div>
             
-            <div class="section-header collapsed" id="jiggle-settings-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
+            <div class="section-header" id="jiggle-settings-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid rgb(51, 51, 51); cursor: pointer; user-select: none;">
                 <span>Jiggle Settings</span>
             </div>
-            <div id="jiggle-settings-content" style="display: none; padding-left: 8px;">
+            <div id="jiggle-settings-content" style="display: block; padding-left: 8px;">
                 <div style="display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap;">
                     <button id="jiggle-all-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">All</button>
                     <button id="jiggle-none-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">None</button>
@@ -1294,81 +1679,81 @@
                 </div>
                 <div style="font-size: 9px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Shape</div>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-spikiness" checked>
+                    <input type="checkbox" id="jiggle-param-spikiness" checked="">
                     <span>Spikiness</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-spikeFrequency" checked>
+                    <input type="checkbox" id="jiggle-param-spikeFrequency" checked="">
                     <span>Frequency</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-spikeSharpness" checked>
+                    <input type="checkbox" id="jiggle-param-spikeSharpness" checked="">
                     <span>Sharpness</span>
                 </label>
                 
                 <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Appearance</div>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-hue" checked>
+                    <input type="checkbox" id="jiggle-param-hue" checked="">
                     <span>Hue</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-scale" checked>
+                    <input type="checkbox" id="jiggle-param-scale" checked="">
                     <span>Scale</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-fillSize" checked>
+                    <input type="checkbox" id="jiggle-param-fillSize" checked="">
                     <span>Fill Size</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-fillOpacity" checked>
+                    <input type="checkbox" id="jiggle-param-fillOpacity" checked="">
                     <span>Fill Opacity</span>
                 </label>
                 
                 <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Emanation</div>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-dilationSpeed" checked>
+                    <input type="checkbox" id="jiggle-param-dilationSpeed" checked="">
                     <span>Dilation Speed</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-fadeAmount" checked>
+                    <input type="checkbox" id="jiggle-param-fadeAmount" checked="">
                     <span>Fade Amount</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-emanationRate" checked>
+                    <input type="checkbox" id="jiggle-param-emanationRate" checked="">
                     <span>Rate</span>
                 </label>
                 
                 <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Filters</div>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-noiseAmount" checked>
+                    <input type="checkbox" id="jiggle-param-noiseAmount" checked="">
                     <span>Noise Amount</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-noiseRate" checked>
+                    <input type="checkbox" id="jiggle-param-noiseRate" checked="">
                     <span>Noise Rate</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-blurAmount" checked>
+                    <input type="checkbox" id="jiggle-param-blurAmount" checked="">
                     <span>Blur Amount</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-blurRate" checked>
+                    <input type="checkbox" id="jiggle-param-blurRate" checked="">
                     <span>Blur Rate</span>
                 </label>
                 
                 <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Rotation</div>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-autoRotationSpeed" checked>
+                    <input type="checkbox" id="jiggle-param-autoRotationSpeed" checked="">
                     <span>Auto Rotation</span>
                 </label>
                 
                 <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Effects</div>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-hueShiftAmount" checked>
+                    <input type="checkbox" id="jiggle-param-hueShiftAmount" checked="">
                     <span>Hue Shift</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
-                    <input type="checkbox" id="jiggle-param-blendOpacity" checked>
+                    <input type="checkbox" id="jiggle-param-blendOpacity" checked="">
                     <span>Blend Opacity</span>
                 </label>
             </div>
@@ -1377,14 +1762,13 @@
         <div class="section-header collapsed" id="debug-values-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
             <span>Debug Values</span>
         </div>
-        <div id="debug-values-content" style="display: none; padding-left: 8px;">
+        <div id="debug-values-content" style="display: none; padding-left: 8px;" data-_display="block">
             <div id="debug-output" style="font-size: 8px; font-family: monospace; color: #aaa; line-height: 1.4; max-height: 400px; overflow-y: auto; background: #1a1a1a; padding: 6px; border-radius: 3px; border: 1px solid #333; white-space: pre-wrap;">
                 <!-- Debug values will be populated here -->
             </div>
         </div>
     </div>
     
-    <script src="audio/analyzer.js"></script>
     <script>
         // Resolution configuration
         const RESOLUTIONS = {
@@ -1404,6 +1788,900 @@
         let currentResolution = getUrlParam('resolution') || 'window';
         if (!RESOLUTIONS[currentResolution]) {
             currentResolution = 'window';
+        }
+        
+        // ============================================
+        // Audio Analyzer Integration
+        // ============================================
+        
+        // Create global audio analyzer instance
+        const audioAnalyzer = new AudioAnalyzer();
+        let audioEnabled = false;
+        let audioReactiveEnabled = true;
+        
+        // Audio visualization components
+        let audioMeters = null;
+        let audioLegend = null;
+        
+        // Audio mapping configuration - RELATIVE OFFSET SYSTEM
+        // Maps audio metrics to normalized offsets (-1 to 1) that modulate parameters
+        // relative to their base values, using jiggle ranges and enabled params
+        //
+        // AESTHETIC RATIONALE FOR EACH MAPPING:
+        const audioMapping = {
+            // SPIKINESS: Driven by collision (transient spikes/overlaps)
+            // Rationale: Transient collisions create visual "spikes" - when audio has overlapping
+            // transients, the shape becomes more spiky. Clean audio = smoother shapes.
+            spikiness: {
+                enabled: true,
+                source: 'collision',
+                smoothing: 0.8,
+                sensitivity: 1.0, // Adjustable via UI
+                // Maps collision (0-1) to offset (-1 to 1)
+                // High collision = positive offset (more spiky)
+                transform: (collision) => (collision - 0.5) * 2.0 // Center at 0.5, scale to -1..1
+            },
+            
+            // SPIKE FREQUENCY: Driven by band energy variation (spectral richness)
+            // Rationale: Rich, full-spectrum audio creates more complex shapes with more spikes.
+            // Sparse audio = simpler shapes. Uses average energy across bands.
+            spikeFrequency: {
+                enabled: true,
+                source: 'bandEnergy',
+                smoothing: 0.85,
+                sensitivity: 1.0,
+                transform: (bandEnergy) => {
+                    const [low, mid, high] = bandEnergy;
+                    const avgEnergy = (low + mid + high) / 3;
+                    // Map energy (0-1) to offset (-1 to 1), centered around 0.5
+                    return (avgEnergy - 0.5) * 2.0;
+                }
+            },
+            
+            // SPIKE SHARPNESS: Driven by harshness (high-frequency content)
+            // Rationale: Harsh, bright audio creates sharper, more angular shapes.
+            // Smooth audio = rounded shapes. High frequencies = sharp visual spikes.
+            spikeSharpness: {
+                enabled: true,
+                source: 'harshness',
+                smoothing: 0.8,
+                sensitivity: 1.0,
+                transform: (harshness) => harshness * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // HUE: Driven by band energy distribution (spectral color)
+            // Rationale: Low frequencies = warm colors (red/orange), mid = green, high = cool (blue).
+            // Creates color shifts that reflect the spectral content of the audio.
+            hue: {
+                enabled: true,
+                source: 'bandEnergy',
+                smoothing: 0.9,
+                sensitivity: 1.0,
+                transform: (bandEnergy) => {
+                    const [low, mid, high] = bandEnergy;
+                    // Weighted hue: low=0°, mid=120°, high=240°
+                    const weightedHue = (low * 0 + mid * 120 + high * 240) / (low + mid + high + 0.001);
+                    // Normalize to 0-360, then convert to offset (-1 to 1) relative to current hue
+                    // This creates a relative offset, not absolute hue
+                    // Return normalized value that will be used as offset multiplier
+                    const normalizedHue = weightedHue / 360.0;
+                    return (normalizedHue - 0.5) * 2.0; // Center around middle hue
+                }
+            },
+            
+            // SCALE: Driven by audio amplitude (volume/loudness)
+            // Rationale: Louder audio = larger shapes. Creates pulsing effect that follows
+            // the music's dynamics. Quiet passages = smaller, more intimate visuals.
+            scale: {
+                enabled: true,
+                source: 'audioAmp',
+                smoothing: 0.85,
+                sensitivity: 1.0,
+                transform: (audioAmp) => (audioAmp - 0.5) * 2.0 // Center at 0.5, scale to -1..1
+            },
+            
+            // EMANATION RATE: Driven by audio amplitude (rhythmic pulsing)
+            // Rationale: Faster music = more frequent shape emissions. Creates visual rhythm
+            // that matches the beat. Loud passages emit shapes more rapidly.
+            emanationRate: {
+                enabled: true,
+                source: 'audioAmp',
+                smoothing: 0.85,
+                sensitivity: 1.0,
+                transform: (audioAmp) => audioAmp * 2.0 - 1.0 // 0-1 to -1..1 (positive bias for faster)
+            },
+            
+            // DILATION SPEED: Driven by coherence (audio clarity)
+            // Rationale: Clean, coherent audio = faster expansion (confident, clear visuals).
+            // Muddy/chaotic audio = slower expansion (uncertain, hesitant visuals).
+            // Creates visual metaphor for audio quality.
+            dilationSpeed: {
+                enabled: true,
+                source: 'coherence',
+                smoothing: 0.9,
+                sensitivity: 1.0,
+                transform: (coherence) => coherence * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // FADE AMOUNT: Driven by mud (midrange masking)
+            // Rationale: Muddy audio = more fade (visuals fade faster, less persistent).
+            // Clean audio = less fade (shapes persist longer, clearer trails).
+            fadeAmount: {
+                enabled: true,
+                source: 'mud',
+                smoothing: 0.85,
+                sensitivity: 1.0,
+                transform: (mud) => mud * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // FILL OPACITY: Driven by compression (dynamic range)
+            // Rationale: Compressed audio (less dynamic range) = more filled shapes (solid).
+            // Dynamic audio = more outline-focused shapes (hollow). Reflects audio dynamics.
+            fillOpacity: {
+                enabled: true,
+                source: 'compression',
+                smoothing: 0.85,
+                sensitivity: 1.0,
+                transform: (compression) => compression * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // AUTO ROTATION SPEED: Driven by phase risk (stereo issues)
+            // Rationale: Phase problems = rotation (visual "dizziness" reflects audio problems).
+            // Clean stereo = stable rotation. Creates visual metaphor for stereo quality.
+            autoRotationSpeed: {
+                enabled: true,
+                source: 'phaseRisk',
+                smoothing: 0.9,
+                sensitivity: 1.0,
+                transform: (phaseRisk) => phaseRisk * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // HUE SHIFT AMOUNT: Driven by stereo width (spatial spread)
+            // Rationale: Wide stereo = more hue shift in dilation (colors shift more as shapes expand).
+            // Mono/narrow = less shift. Creates visual representation of spatial audio.
+            hueShiftAmount: {
+                enabled: true,
+                source: 'stereoWidth',
+                smoothing: 0.85,
+                sensitivity: 1.0,
+                transform: (stereoWidth) => {
+                    if (Array.isArray(stereoWidth)) {
+                        const avg = (stereoWidth[0] + stereoWidth[1] + stereoWidth[2]) / 3;
+                        return avg * 2.0 - 1.0; // 0-1 to -1..1
+                    }
+                    return 0;
+                }
+            },
+            
+            // NOISE AMOUNT: Driven by harshness (high-frequency distortion)
+            // Rationale: Harsh, distorted audio = visual noise/grain. Clean audio = smooth visuals.
+            // High frequencies create visual "grit" that matches audio texture.
+            noiseAmount: {
+                enabled: true,
+                source: 'harshness',
+                smoothing: 0.8,
+                sensitivity: 1.0,
+                transform: (harshness) => harshness * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // BLEND OPACITY: Driven by coherence (overall audio quality)
+            // Rationale: Coherent audio = higher opacity (clear, confident visuals).
+            // Chaotic audio = lower opacity (transparent, uncertain visuals).
+            // Overall quality metric affects visual presence.
+            blendOpacity: {
+                enabled: true,
+                source: 'coherence',
+                smoothing: 0.9,
+                sensitivity: 1.0,
+                transform: (coherence) => coherence * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // FILL SIZE: Driven by compression (dynamic range)
+            // Rationale: Compressed audio = larger fills (more solid shapes).
+            // Dynamic audio = smaller fills (more outline-focused). Complements fillOpacity.
+            fillSize: {
+                enabled: true,
+                source: 'compression',
+                smoothing: 0.85,
+                sensitivity: 1.0,
+                transform: (compression) => compression * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // NOISE RATE: Driven by collision (transient frequency)
+            // Rationale: Frequent collisions = more frequent noise bursts.
+            // Creates rhythmic noise patterns that match transient density.
+            noiseRate: {
+                enabled: true,
+                source: 'collision',
+                smoothing: 0.8,
+                sensitivity: 1.0,
+                transform: (collision) => collision * 2.0 - 1.0 // 0-1 to -1..1
+            },
+            
+            // BLUR RATE: Driven by mud (midrange complexity)
+            // Rationale: Muddy audio = more frequent blur bursts (visual "smearing").
+            // Clean audio = less blur. Creates visual metaphor for audio clarity.
+            blurRate: {
+                enabled: true,
+                source: 'mud',
+                smoothing: 0.85,
+                sensitivity: 1.0,
+                transform: (mud) => mud * 2.0 - 1.0 // 0-1 to -1..1
+            }
+        };
+        
+        // Smoothed audio-driven offsets (-1 to 1 range)
+        const audioDrivenOffsets = {};
+        Object.keys(audioMapping).forEach(key => {
+            audioDrivenOffsets[key] = 0.0; // Start at 0 (no offset)
+        });
+        
+        // Function to update audio-driven offsets
+        function updateAudioDrivenParams(metrics) {
+            if (!audioReactiveEnabled || !audioEnabled) {
+                // Reset offsets when audio is disabled
+                Object.keys(audioDrivenOffsets).forEach(key => {
+                    audioDrivenOffsets[key] = 0.0;
+                });
+                return;
+            }
+            
+            Object.keys(audioMapping).forEach(paramName => {
+                const mapping = audioMapping[paramName];
+                if (!mapping.enabled) {
+                    audioDrivenOffsets[paramName] = 0.0;
+                    return;
+                }
+                
+                let rawValue = null;
+                
+                if (mapping.source === 'bandEnergy' && Array.isArray(metrics.u_bandEnergy)) {
+                    rawValue = metrics.u_bandEnergy;
+                } else if (mapping.source === 'stereoWidth' && Array.isArray(metrics.u_stereoWidth)) {
+                    rawValue = metrics.u_stereoWidth;
+                } else {
+                    rawValue = metrics[`u_${mapping.source}`];
+                }
+                
+                if (rawValue === null || rawValue === undefined) {
+                    audioDrivenOffsets[paramName] = 0.0;
+                    return;
+                }
+                
+                // rawValue is already normalized to 0-1 range based on song's min/max from AudioAnalyzer
+                // Transform functions convert 0-1 to -1..1 centered at 0.5 (baseline)
+                let transformedValue = rawValue;
+                if (mapping.transform) {
+                    transformedValue = mapping.transform(rawValue);
+                } else {
+                    // Default transform: map 0-1 to -1..1, centered at 0.5
+                    // This ensures normalized min (0.0) → -1, baseline (0.5) → 0, max (1.0) → +1
+                    transformedValue = (rawValue - 0.5) * 2.0;
+                }
+                
+                // Clamp to -1..1 range
+                // -1 represents the song's minimum (normalized 0.0)
+                // 0 represents the song's baseline (normalized 0.5)
+                // +1 represents the song's maximum (normalized 1.0)
+                const clampedOffset = Math.max(-1.0, Math.min(1.0, transformedValue));
+                
+                // Apply smoothing
+                const currentOffset = audioDrivenOffsets[paramName];
+                audioDrivenOffsets[paramName] = currentOffset * mapping.smoothing + clampedOffset * (1 - mapping.smoothing);
+            });
+        }
+        
+        // Jiggle range multipliers (same as used in jiggle system)
+        const jiggleRanges = {
+            spikiness: 1.0,           // jiggleAmount * 1.0
+            spikeFrequency: 9.0,      // jiggleAmount * 9.0
+            spikeSharpness: 1.0,      // jiggleAmount * 1.0
+            hue: 180.0,               // jiggleAmount * 180.0
+            scale: 0.3,               // jiggleAmount * 0.3
+            fillSize: 1.0,            // jiggleAmount * 1.0
+            fillOpacity: 1.0,          // jiggleAmount * 1.0
+            hueShiftAmount: 0.1,      // jiggleAmount * 0.1
+            dilationSpeed: 0.1,      // jiggleAmount * 0.1
+            fadeAmount: 1.0,          // jiggleAmount * 1.0
+            emanationRate: 20.0,      // jiggleAmount * 20.0
+            autoRotationSpeed: 30.0,  // jiggleAmount * 30.0
+            noiseAmount: 0.2,         // jiggleAmount * 0.2
+            noiseRate: 2.0,           // jiggleAmount * 2.0
+            blurAmount: 0.2,          // jiggleAmount * 0.2
+            blurRate: 2.0,            // jiggleAmount * 2.0
+            blendOpacity: 0.1         // jiggleAmount * 0.1
+        };
+        
+        // Function to apply audio-driven relative offsets
+        // Uses normalized min/max values to span the full jiggle range
+        // Normalized 0.0 → minimum of jiggle range, 0.5 → base value, 1.0 → maximum of jiggle range
+        function applyAudioReactivity(paramName, baseValue, jiggleEnabledParams, jiggleAmount) {
+            if (!audioReactiveEnabled || !audioEnabled) {
+                return baseValue;
+            }
+            
+            const mapping = audioMapping[paramName];
+            if (!mapping || !mapping.enabled) {
+                return baseValue;
+            }
+            
+            // Only apply if parameter is enabled in jiggle settings
+            if (jiggleEnabledParams && !jiggleEnabledParams[paramName]) {
+                return baseValue;
+            }
+            
+            // Get normalized audio offset (-1 to 1, where 0 = baseline)
+            // This offset is already based on normalized min/max values from AudioAnalyzer
+            const audioOffset = audioDrivenOffsets[paramName] || 0.0;
+            
+            // Get jiggle range for this parameter
+            const range = jiggleRanges[paramName] || 1.0;
+            
+            // Get sensitivity multiplier (default 1.0, adjustable via UI)
+            // Sensitivity allows fine-tuning the strength of audio reactivity
+            const sensitivity = mapping.sensitivity !== undefined ? mapping.sensitivity : 1.0;
+            
+            // Map normalized audio offset to jiggle range
+            // audioOffset is -1..1 (centered at 0, which represents the song's baseline)
+            // We map this to span the full jiggle range defined by jiggleAmount
+            // Formula: offset = audioOffset * sensitivity * jiggleAmount * range
+            // This ensures normalized min/max values span the full jiggle range
+            const offset = audioOffset * sensitivity * jiggleAmount * range;
+            
+            // Apply offset to base value
+            let newValue = baseValue + offset;
+            
+            // Clamp to parameter-specific limits (same as jiggle system)
+            switch(paramName) {
+                case 'spikiness':
+                case 'spikeSharpness':
+                case 'fillSize':
+                case 'fillOpacity':
+                case 'blendOpacity':
+                case 'noiseAmount':
+                case 'blurAmount':
+                    newValue = Math.max(0, Math.min(1, newValue));
+                    break;
+                case 'spikeFrequency':
+                    newValue = Math.max(2, Math.min(20, newValue));
+                    break;
+                case 'hue':
+                    newValue = ((newValue % 360) + 360) % 360; // Wrap around
+                    break;
+                case 'scale':
+                    newValue = Math.max(0.05, Math.min(1.0, newValue));
+                    break;
+                case 'dilationSpeed':
+                    newValue = Math.max(0.88, Math.min(1.22, newValue));
+                    break;
+                case 'fadeAmount':
+                    newValue = Math.max(0, Math.min(5.0, newValue));
+                    break;
+                case 'emanationRate':
+                    newValue = Math.max(2, Math.min(200, newValue));
+                    break;
+                case 'autoRotationSpeed':
+                    newValue = Math.max(-1, Math.min(360, newValue));
+                    break;
+                case 'hueShiftAmount':
+                    newValue = Math.max(0, Math.min(0.2, newValue));
+                    break;
+                case 'noiseRate':
+                case 'blurRate':
+                    newValue = Math.max(0, Math.min(10, newValue));
+                    break;
+            }
+            
+            return newValue;
+        }
+        
+        // Audio device loading and controls
+        async function loadAudioDevices() {
+            const select = document.getElementById('audio-device-select');
+            if (!select) return;
+            
+            try {
+                const devices = await audioAnalyzer.getAudioDevices();
+                select.innerHTML = '<option value="">Default (System Default)</option>';
+                
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = device.label;
+                    select.appendChild(option);
+                });
+                
+                console.log(`Loaded ${devices.length} audio input devices`);
+            } catch (err) {
+                console.error('Failed to load audio devices:', err);
+                select.innerHTML = '<option value="">Error loading devices</option>';
+            }
+        }
+        
+        function setupAudioVisualization() {
+            const container = document.getElementById('audio-meters-container');
+            if (!container || !audioMeters || !audioLegend) return;
+            
+            // Create meters for each metric
+            const metricNames = ['coherence', 'mud', 'harshness', 'compression', 'collision', 'phaseRisk', 'audioAmp', 'bandLow', 'bandMid', 'bandHigh'];
+            
+            metricNames.forEach(name => {
+                const meter = audioMeters.createMeter(name);
+                
+                // Add legend swatch to the label
+                const label = meter.querySelector('.meter-label');
+                if (label) {
+                    let swatchId;
+                    if (name === 'bandLow' || name === 'bandMid' || name === 'bandHigh') {
+                        swatchId = 'legend-bandEnergy';
+                    } else if (name === 'audioAmp') {
+                        swatchId = 'legend-bandEnergy';
+                    } else {
+                        swatchId = `legend-${name}`;
+                    }
+                    
+                    const swatch = audioLegend.createLegendCanvas(swatchId);
+                    label.insertBefore(swatch, label.firstChild);
+                }
+                
+                container.appendChild(meter);
+            });
+            
+            // Set up legend canvases
+            const metricMap = {
+                'legend-coherence': 'coherence',
+                'legend-mud': 'mud',
+                'legend-harshness': 'harshness',
+                'legend-compression': 'compression',
+                'legend-collision': 'collision',
+                'legend-phaseRisk': 'phaseRisk',
+                'legend-bandEnergy': 'bandEnergy'
+            };
+            
+            Object.keys(metricMap).forEach(elementId => {
+                const canvas = document.getElementById(elementId);
+                if (canvas) {
+                    canvas.width = 20;
+                    canvas.height = 20;
+                    canvas.style.width = '20px';
+                    canvas.style.height = '20px';
+                    canvas.style.border = '1px solid rgba(255,255,255,0.4)';
+                    canvas.style.borderRadius = '2px';
+                    canvas.style.imageRendering = 'pixelated';
+                    
+                    const metricName = metricMap[elementId];
+                    if (metricName === 'bandEnergy') {
+                        audioLegend.ctx[elementId] = canvas.getContext('2d');
+                    } else {
+                        audioLegend.ctx[metricName] = canvas.getContext('2d');
+                    }
+                }
+            });
+        }
+        
+        function setupAudioControls() {
+            const btn = document.getElementById('enable-audio-btn');
+            const status = document.getElementById('audio-status');
+            const deviceSelect = document.getElementById('audio-device-select');
+            const audioReactiveCheckbox = document.getElementById('audio-reactive-enabled');
+            
+            if (!btn || !status) return;
+            
+            loadAudioDevices();
+            
+            if (deviceSelect) {
+                deviceSelect.addEventListener('change', () => {
+                    if (audioEnabled) {
+                        btn.click();
+                        btn.click();
+                    }
+                });
+            }
+            
+            if (audioReactiveCheckbox) {
+                audioReactiveCheckbox.addEventListener('change', (e) => {
+                    audioReactiveEnabled = e.target.checked;
+                    updateStatusIndicators();
+                });
+            }
+            
+            btn.addEventListener('click', async () => {
+                if (audioEnabled) {
+                    audioAnalyzer.disableAudio();
+                    audioEnabled = false;
+                    btn.textContent = 'Enable Audio';
+                    status.textContent = 'Audio: Disabled';
+                    status.style.color = '#888';
+                    if (deviceSelect) deviceSelect.disabled = false;
+                    updateStatusIndicators();
+                } else {
+                    try {
+                        const selectedDeviceId = deviceSelect?.value || null;
+                        await audioAnalyzer.enableAudio(selectedDeviceId, true);
+                        audioEnabled = true;
+                        const mode = audioAnalyzer.isStereo ? 'STEREO' : 'MONO';
+                        btn.textContent = 'Disable Audio';
+                        status.textContent = `Audio: ${mode}`;
+                        status.style.color = audioAnalyzer.isStereo ? '#0f0' : '#ff0';
+                        if (deviceSelect) deviceSelect.disabled = true;
+                        updateStatusIndicators();
+                    } catch (err) {
+                        console.error('Failed to enable audio:', err);
+                        alert('Failed to enable audio: ' + err.message);
+                    }
+                }
+            });
+        }
+        
+        // Generate audio mapping controls UI (compact, matching visual parameters style)
+        function generateAudioMappingControls() {
+            const container = document.getElementById('audio-mappings-content');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            Object.keys(audioMapping).forEach(paramName => {
+                const mapping = audioMapping[paramName];
+                const group = document.createElement('div');
+                group.className = 'control-group';
+                
+                // Label with checkbox and source info
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '6px';
+                label.style.marginBottom = '4px';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `mapping-enabled-${paramName}`;
+                checkbox.checked = mapping.enabled;
+                checkbox.style.margin = '0';
+                checkbox.style.cursor = 'pointer';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = paramName;
+                nameSpan.style.fontWeight = '600';
+                nameSpan.style.color = '#0af';
+                
+                const sourceSpan = document.createElement('span');
+                sourceSpan.textContent = `(${mapping.source})`;
+                sourceSpan.style.fontSize = '8px';
+                sourceSpan.style.color = '#888';
+                sourceSpan.style.fontStyle = 'italic';
+                
+                const valueSpan = document.createElement('span');
+                valueSpan.id = `mapping-value-${paramName}`;
+                valueSpan.textContent = '0.00';
+                valueSpan.style.fontSize = '8px';
+                valueSpan.style.fontFamily = 'monospace';
+                valueSpan.style.color = '#0f0';
+                valueSpan.style.marginLeft = 'auto';
+                
+                checkbox.addEventListener('change', (e) => {
+                    mapping.enabled = e.target.checked;
+                });
+                
+                label.appendChild(checkbox);
+                label.appendChild(nameSpan);
+                label.appendChild(sourceSpan);
+                label.appendChild(valueSpan);
+                
+                // Sensitivity control row
+                const sensitivityRow = document.createElement('div');
+                sensitivityRow.className = 'control-row';
+                sensitivityRow.style.marginBottom = '4px';
+                
+                const sensitivityLabel = document.createElement('label');
+                sensitivityLabel.textContent = 'Sensitivity';
+                sensitivityLabel.style.minWidth = '70px';
+                sensitivityLabel.style.fontSize = '9px';
+                
+                const sensitivitySlider = document.createElement('input');
+                sensitivitySlider.type = 'range';
+                sensitivitySlider.id = `mapping-sensitivity-${paramName}`;
+                sensitivitySlider.min = '0';
+                sensitivitySlider.max = '3';
+                sensitivitySlider.step = '0.1';
+                sensitivitySlider.value = (mapping.sensitivity !== undefined ? mapping.sensitivity : 1.0).toString();
+                
+                const sensitivityValue = document.createElement('div');
+                sensitivityValue.className = 'value';
+                sensitivityValue.id = `mapping-sensitivity-value-${paramName}`;
+                sensitivityValue.textContent = (mapping.sensitivity !== undefined ? mapping.sensitivity : 1.0).toFixed(1);
+                sensitivityValue.contentEditable = 'true';
+                
+                sensitivitySlider.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    mapping.sensitivity = val;
+                    sensitivityValue.textContent = val.toFixed(1);
+                });
+                
+                sensitivityValue.addEventListener('blur', () => {
+                    const val = parseFloat(sensitivityValue.textContent);
+                    if (!isNaN(val)) {
+                        const clamped = Math.max(0, Math.min(3, val));
+                        mapping.sensitivity = clamped;
+                        sensitivitySlider.value = clamped.toString();
+                        sensitivityValue.textContent = clamped.toFixed(1);
+                    }
+                });
+                
+                sensitivityRow.appendChild(sensitivityLabel);
+                sensitivityRow.appendChild(sensitivitySlider);
+                sensitivityRow.appendChild(sensitivityValue);
+                
+                // Smoothing control row
+                const smoothingRow = document.createElement('div');
+                smoothingRow.className = 'control-row';
+                
+                const smoothingLabel = document.createElement('label');
+                smoothingLabel.textContent = 'Smoothing';
+                smoothingLabel.style.minWidth = '70px';
+                smoothingLabel.style.fontSize = '9px';
+                
+                const smoothingSlider = document.createElement('input');
+                smoothingSlider.type = 'range';
+                smoothingSlider.id = `mapping-smoothing-${paramName}`;
+                smoothingSlider.min = '0.5';
+                smoothingSlider.max = '0.99';
+                smoothingSlider.step = '0.01';
+                smoothingSlider.value = mapping.smoothing.toString();
+                
+                const smoothingValue = document.createElement('div');
+                smoothingValue.className = 'value';
+                smoothingValue.id = `mapping-smoothing-value-${paramName}`;
+                smoothingValue.textContent = mapping.smoothing.toFixed(2);
+                smoothingValue.contentEditable = 'true';
+                
+                smoothingSlider.addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    mapping.smoothing = val;
+                    smoothingValue.textContent = val.toFixed(2);
+                });
+                
+                smoothingValue.addEventListener('blur', () => {
+                    const val = parseFloat(smoothingValue.textContent);
+                    if (!isNaN(val)) {
+                        const clamped = Math.max(0.5, Math.min(0.99, val));
+                        mapping.smoothing = clamped;
+                        smoothingSlider.value = clamped.toString();
+                        smoothingValue.textContent = clamped.toFixed(2);
+                    }
+                });
+                
+                smoothingRow.appendChild(smoothingLabel);
+                smoothingRow.appendChild(smoothingSlider);
+                smoothingRow.appendChild(smoothingValue);
+                
+                group.appendChild(label);
+                group.appendChild(sensitivityRow);
+                group.appendChild(smoothingRow);
+                container.appendChild(group);
+            });
+        }
+        
+        // Update mapping value displays
+        function updateMappingValueDisplays() {
+            Object.keys(audioMapping).forEach(paramName => {
+                const valueSpan = document.getElementById(`mapping-value-${paramName}`);
+                if (valueSpan) {
+                    const offset = audioDrivenOffsets[paramName] || 0.0;
+                    valueSpan.textContent = offset.toFixed(3);
+                    // Color code: green for positive, red for negative
+                    valueSpan.style.color = offset > 0 ? '#0f0' : offset < 0 ? '#f00' : '#888';
+                }
+            });
+        }
+        
+        // Audio event configuration and handlers
+        const audioEventConfig = {
+            songChange: { enabled: false, actions: [] },
+            chorus: { enabled: false, actions: [] },
+            verse: { enabled: false, actions: [] },
+            drop: { enabled: false, actions: [] },
+            tonalShift: { enabled: false, actions: [] }
+        };
+        
+        // Available event actions
+        const eventActions = [
+            { id: 'flipDilation', name: 'Flip Dilation Polarity' },
+            { id: 'toggleJiggle', name: 'Toggle Jiggle' },
+            { id: 'randomize', name: 'Randomize Parameters' },
+            { id: 'nextPreset', name: 'Next Preset' },
+            { id: 'prevPreset', name: 'Previous Preset' }
+        ];
+        
+        // Setup audio event system
+        function setupAudioEvents() {
+            const container = document.getElementById('audio-events-config');
+            if (!container) return;
+            
+            // Create UI for each event type
+            Object.keys(audioEventConfig).forEach(eventType => {
+                const eventGroup = document.createElement('div');
+                eventGroup.style.marginBottom = '8px';
+                eventGroup.style.padding = '6px';
+                eventGroup.style.background = 'rgba(255, 255, 255, 0.02)';
+                eventGroup.style.border = '1px solid rgba(255, 255, 255, 0.05)';
+                eventGroup.style.borderRadius = '3px';
+                
+                const header = document.createElement('div');
+                header.style.display = 'flex';
+                header.style.alignItems = 'center';
+                header.style.gap = '6px';
+                header.style.marginBottom = '4px';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `event-enabled-${eventType}`;
+                checkbox.checked = audioEventConfig[eventType].enabled;
+                checkbox.style.margin = '0';
+                checkbox.style.cursor = 'pointer';
+                
+                const label = document.createElement('label');
+                label.textContent = eventType.charAt(0).toUpperCase() + eventType.slice(1).replace(/([A-Z])/g, ' $1');
+                label.style.fontSize = '9px';
+                label.style.fontWeight = '600';
+                label.style.color = '#0af';
+                label.style.cursor = 'pointer';
+                label.setAttribute('for', `event-enabled-${eventType}`);
+                
+                checkbox.addEventListener('change', (e) => {
+                    audioEventConfig[eventType].enabled = e.target.checked;
+                    if (e.target.checked) {
+                        registerEventHandlers(eventType);
+                    } else {
+                        unregisterEventHandlers(eventType);
+                    }
+                });
+                
+                header.appendChild(checkbox);
+                header.appendChild(label);
+                
+                const actionsContainer = document.createElement('div');
+                actionsContainer.id = `event-actions-${eventType}`;
+                actionsContainer.style.display = 'flex';
+                actionsContainer.style.flexWrap = 'wrap';
+                actionsContainer.style.gap = '4px';
+                actionsContainer.style.marginTop = '4px';
+                
+                eventActions.forEach(action => {
+                    const actionBtn = document.createElement('button');
+                    actionBtn.textContent = action.name;
+                    actionBtn.style.fontSize = '8px';
+                    actionBtn.style.padding = '2px 6px';
+                    actionBtn.style.background = '#333';
+                    actionBtn.style.border = '1px solid #555';
+                    actionBtn.style.borderRadius = '2px';
+                    actionBtn.style.color = '#bbb';
+                    actionBtn.style.cursor = 'pointer';
+                    
+                    const isActive = audioEventConfig[eventType].actions.includes(action.id);
+                    if (isActive) {
+                        actionBtn.style.background = '#0af';
+                        actionBtn.style.color = '#fff';
+                    }
+                    
+                    actionBtn.addEventListener('click', () => {
+                        const index = audioEventConfig[eventType].actions.indexOf(action.id);
+                        if (index > -1) {
+                            audioEventConfig[eventType].actions.splice(index, 1);
+                            actionBtn.style.background = '#333';
+                            actionBtn.style.color = '#bbb';
+                        } else {
+                            audioEventConfig[eventType].actions.push(action.id);
+                            actionBtn.style.background = '#0af';
+                            actionBtn.style.color = '#fff';
+                        }
+                    });
+                    
+                    actionsContainer.appendChild(actionBtn);
+                });
+                
+                eventGroup.appendChild(header);
+                eventGroup.appendChild(actionsContainer);
+                container.appendChild(eventGroup);
+            });
+            
+            // Register handlers for initially enabled events
+            Object.keys(audioEventConfig).forEach(eventType => {
+                if (audioEventConfig[eventType].enabled) {
+                    registerEventHandlers(eventType);
+                }
+            });
+        }
+        
+        // Register event handlers
+        function registerEventHandlers(eventType) {
+            audioAnalyzer.onEvent(eventType, (data) => {
+                if (!audioEventConfig[eventType].enabled) return;
+                
+                audioEventConfig[eventType].actions.forEach(actionId => {
+                    executeEventAction(actionId, eventType, data);
+                });
+            });
+        }
+        
+        // Unregister event handlers
+        function unregisterEventHandlers(eventType) {
+            // Note: AudioAnalyzer doesn't have offEvent implemented yet, but this is the structure
+            // For now, we'll just check enabled state in the callback
+        }
+        
+        // Execute event action
+        // Note: This function will be called after main script variables are defined
+        // We use a closure to access variables from the main script scope
+        function executeEventAction(actionId, eventType, eventData) {
+            const dilationFlipCheckbox = document.getElementById('dilation-polarity-flip');
+            const jiggleButton = document.getElementById('jiggle-btn');
+            const randomizeButton = document.getElementById('randomize-btn');
+            
+            switch(actionId) {
+                case 'flipDilation':
+                    if (dilationFlipCheckbox) {
+                        dilationFlipCheckbox.checked = !dilationFlipCheckbox.checked;
+                        console.log(`Event ${eventType}: Flipped dilation polarity`);
+                    }
+                    break;
+                    
+                case 'toggleJiggle':
+                    if (jiggleButton) {
+                        jiggleButton.click();
+                        console.log(`Event ${eventType}: Toggled jiggle`);
+                    }
+                    break;
+                    
+                case 'randomize':
+                    if (randomizeButton) {
+                        randomizeButton.click();
+                        console.log(`Event ${eventType}: Randomized parameters`);
+                    }
+                    break;
+                    
+                case 'nextPreset':
+                    // Access variables from main scope via closure
+                    // These are defined in the main IIFE and accessible here
+                    try {
+                        if (typeof presetSelect !== 'undefined' && presetSelect && 
+                            typeof presetNames !== 'undefined' && presetNames.length > 0) {
+                            const currentValue = presetSelect.value;
+                            const currentIndex = presetNames.indexOf(currentValue);
+                            if (currentIndex >= 0) {
+                                const nextIndex = (currentIndex + 1) % presetNames.length;
+                                presetSelect.value = presetNames[nextIndex];
+                                if (typeof loadPreset === 'function') {
+                                    loadPreset(presetNames[nextIndex]);
+                                }
+                                console.log(`Event ${eventType}: Loaded next preset: ${presetNames[nextIndex]}`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error executing nextPreset action:', err);
+                    }
+                    break;
+                    
+                case 'prevPreset':
+                    // Access variables from main scope via closure
+                    try {
+                        if (typeof presetSelect !== 'undefined' && presetSelect && 
+                            typeof presetNames !== 'undefined' && presetNames.length > 0) {
+                            const currentValue = presetSelect.value;
+                            const currentIndex = presetNames.indexOf(currentValue);
+                            if (currentIndex >= 0) {
+                                const prevIndex = (currentIndex - 1 + presetNames.length) % presetNames.length;
+                                presetSelect.value = presetNames[prevIndex];
+                                if (typeof loadPreset === 'function') {
+                                    loadPreset(presetNames[prevIndex]);
+                                }
+                                console.log(`Event ${eventType}: Loaded previous preset: ${presetNames[prevIndex]}`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error executing prevPreset action:', err);
+                    }
+                    break;
+            }
         }
         
         // Simple WebGL renderer
@@ -2106,6 +3384,8 @@
             const hueSlider = document.getElementById('hue-slider');
             const scaleSlider = document.getElementById('scale-slider');
             const dilationSlider = document.getElementById('dilation-slider');
+            const dilationValue = document.getElementById('dilation-value');
+            const dilationPolarityFlip = document.getElementById('dilation-polarity-flip');
             const fadeSlider = document.getElementById('fade-slider');
             const hueShiftSlider = document.getElementById('hue-shift-slider');
             const rotationSlider = document.getElementById('rotation-slider');
@@ -2114,7 +3394,6 @@
             const spikeSharpnessValue = document.getElementById('spike-sharpness-value');
             const hueValue = document.getElementById('hue-value');
             const scaleValue = document.getElementById('scale-value');
-            const dilationValue = document.getElementById('dilation-value');
             const fadeValue = document.getElementById('fade-value');
             const hueShiftValue = document.getElementById('hue-shift-value');
             const rotationValue = document.getElementById('rotation-value');
@@ -2813,6 +4092,10 @@
             function updateStatusIndicators() {
                 freezeIndicator.style.display = freezeEnabled ? 'inline-block' : 'none';
                 jiggleIndicator.style.display = jiggleEnabled ? 'inline-block' : 'none';
+                const audioIndicator = document.getElementById('audio-indicator');
+                if (audioIndicator) {
+                    audioIndicator.style.display = (audioEnabled && audioReactiveEnabled) ? 'inline-block' : 'none';
+                }
                 
                 // Check if current values differ from last loaded preset
                 if (lastLoadedPresetName && lastLoadedPresetValues) {
@@ -3015,6 +4298,51 @@
                             jiggleEnabledParams[param] = preset.jiggleEnabledParams[param];
                             const checkbox = document.getElementById(`jiggle-param-${param}`);
                             if (checkbox) checkbox.checked = jiggleEnabledParams[param];
+                        }
+                    });
+                }
+                
+                // Restore dilation polarity flip if present
+                if (preset.dilationPolarityFlip !== undefined) {
+                    const dilationFlipCheckbox = document.getElementById('dilation-polarity-flip');
+                    if (dilationFlipCheckbox) {
+                        dilationFlipCheckbox.checked = preset.dilationPolarityFlip;
+                    }
+                }
+                
+                // Restore audio mapping configuration if present
+                if (preset.audioMapping) {
+                    Object.keys(preset.audioMapping).forEach(paramName => {
+                        const savedMapping = preset.audioMapping[paramName];
+                        if (audioMapping[paramName]) {
+                            // Restore enabled state
+                            if (savedMapping.enabled !== undefined) {
+                                audioMapping[paramName].enabled = savedMapping.enabled;
+                                const checkbox = document.getElementById(`mapping-enabled-${paramName}`);
+                                if (checkbox) checkbox.checked = savedMapping.enabled;
+                            }
+                            
+                            // Restore sensitivity
+                            if (savedMapping.sensitivity !== undefined) {
+                                audioMapping[paramName].sensitivity = savedMapping.sensitivity;
+                                const sensitivitySlider = document.getElementById(`mapping-sensitivity-${paramName}`);
+                                const sensitivityValue = document.getElementById(`mapping-sensitivity-value-${paramName}`);
+                                if (sensitivitySlider) {
+                                    sensitivitySlider.value = savedMapping.sensitivity.toString();
+                                    if (sensitivityValue) sensitivityValue.textContent = savedMapping.sensitivity.toFixed(1);
+                                }
+                            }
+                            
+                            // Restore smoothing
+                            if (savedMapping.smoothing !== undefined) {
+                                audioMapping[paramName].smoothing = savedMapping.smoothing;
+                                const smoothingSlider = document.getElementById(`mapping-smoothing-${paramName}`);
+                                const smoothingValue = document.getElementById(`mapping-smoothing-value-${paramName}`);
+                                if (smoothingSlider) {
+                                    smoothingSlider.value = savedMapping.smoothing.toString();
+                                    if (smoothingValue) smoothingValue.textContent = savedMapping.smoothing.toFixed(2);
+                                }
+                            }
                         }
                     });
                 }
@@ -3769,6 +5097,17 @@
                     return;
                 }
                 
+                // Build audio mapping configuration object
+                const audioMappingConfig = {};
+                Object.keys(audioMapping).forEach(paramName => {
+                    const mapping = audioMapping[paramName];
+                    audioMappingConfig[paramName] = {
+                        enabled: mapping.enabled,
+                        sensitivity: mapping.sensitivity !== undefined ? mapping.sensitivity : 1.0,
+                        smoothing: mapping.smoothing
+                    };
+                });
+                
                 const preset = {
                     spikiness: spikiness,
                     spikeFrequency: spikeFrequency,
@@ -3791,7 +5130,9 @@
                     autoRotationSpeed: autoRotationSpeed, // Store actual value (will reverse map to slider on load)
                     autoRotationSlider: parseFloat(autoRotationSlider.value), // Also store slider for easier restoration
                     jiggleAmount: jiggleAmount, // Store jiggle amount
-                    jiggleEnabledParams: { ...jiggleEnabledParams } // Store jiggle enabled params (copy object)
+                    jiggleEnabledParams: { ...jiggleEnabledParams }, // Store jiggle enabled params (copy object)
+                    audioMapping: audioMappingConfig, // Store audio mapping configuration
+                    dilationPolarityFlip: dilationPolarityFlip ? dilationPolarityFlip.checked : false // Store dilation polarity flip state
                 };
                 
                 const presets = loadPresets();
@@ -4329,6 +5670,22 @@
             function render() {
                 const currentTime = (Date.now() - startTime) / 1000.0;
                 
+                // Get audio metrics if enabled
+                let audioMetrics = null;
+                if (audioEnabled && audioAnalyzer) {
+                    audioMetrics = audioAnalyzer.getMetrics();
+                    updateAudioDrivenParams(audioMetrics);
+                    
+                    // Update audio visualization (meters and legend)
+                    if (audioMeters && audioLegend) {
+                        audioMeters.updateAll(audioMetrics);
+                        audioLegend.update(audioMetrics);
+                    }
+                    
+                    // Update mapping value displays
+                    updateMappingValueDisplays();
+                }
+                
                 // Update interpolation system (only if enabled and jiggle is off)
                 // When jiggle is enabled, it bypasses interpolation and sets values directly
                 const interpolationActive = interpolator.enabled && !jiggleEnabled;
@@ -4339,12 +5696,15 @@
                 // Get values for rendering
                 // When jiggle is enabled OR interpolation is disabled, use direct values
                 // When jiggle is off AND interpolation is enabled, use interpolated values
+                // Then blend with audio-driven values if audio reactive is enabled
                 let interpolatedRotation, interpolatedAutoRotationSpeed, interpolatedHueShiftAmount;
                 let interpolatedDilationSpeed, interpolatedEmanationRate, interpolatedNoiseAmount;
                 let interpolatedNoiseRate, interpolatedBlurAmount, interpolatedBlurRate;
                 let interpolatedSpikiness, interpolatedSpikeFrequency, interpolatedSpikeSharpness;
                 let interpolatedHue, interpolatedScale, interpolatedFillSize;
                 let interpolatedFillOpacity, interpolatedFadeAmount, interpolatedBlendOpacity;
+                
+                const audioReactiveStrength = audioReactiveEnabled && audioEnabled ? 1.0 : 0.0;
                 
                 if (interpolationActive) {
                     // Use interpolated values when interpolation is enabled and jiggle is off
@@ -4386,6 +5746,29 @@
                     interpolatedFillOpacity = fillOpacity;
                     interpolatedFadeAmount = fadeAmount;
                     interpolatedBlendOpacity = blendOpacity;
+                }
+                
+                // Apply audio-driven relative offsets if audio reactive is enabled
+                // Uses jiggle ranges and respects jiggleEnabledParams
+                // Audio offsets are applied relative to interpolated values, within jiggle ranges
+                if (audioReactiveEnabled && audioEnabled) {
+                    interpolatedSpikiness = applyAudioReactivity('spikiness', interpolatedSpikiness, jiggleEnabledParams, jiggleAmount);
+                    interpolatedSpikeFrequency = applyAudioReactivity('spikeFrequency', interpolatedSpikeFrequency, jiggleEnabledParams, jiggleAmount);
+                    interpolatedSpikeSharpness = applyAudioReactivity('spikeSharpness', interpolatedSpikeSharpness, jiggleEnabledParams, jiggleAmount);
+                    interpolatedHue = applyAudioReactivity('hue', interpolatedHue, jiggleEnabledParams, jiggleAmount);
+                    interpolatedScale = applyAudioReactivity('scale', interpolatedScale, jiggleEnabledParams, jiggleAmount);
+                    interpolatedFillSize = applyAudioReactivity('fillSize', interpolatedFillSize, jiggleEnabledParams, jiggleAmount);
+                    interpolatedFillOpacity = applyAudioReactivity('fillOpacity', interpolatedFillOpacity, jiggleEnabledParams, jiggleAmount);
+                    interpolatedEmanationRate = applyAudioReactivity('emanationRate', interpolatedEmanationRate, jiggleEnabledParams, jiggleAmount);
+                    interpolatedDilationSpeed = applyAudioReactivity('dilationSpeed', interpolatedDilationSpeed, jiggleEnabledParams, jiggleAmount);
+                    interpolatedFadeAmount = applyAudioReactivity('fadeAmount', interpolatedFadeAmount, jiggleEnabledParams, jiggleAmount);
+                    interpolatedAutoRotationSpeed = applyAudioReactivity('autoRotationSpeed', interpolatedAutoRotationSpeed, jiggleEnabledParams, jiggleAmount);
+                    interpolatedHueShiftAmount = applyAudioReactivity('hueShiftAmount', interpolatedHueShiftAmount, jiggleEnabledParams, jiggleAmount);
+                    interpolatedNoiseAmount = applyAudioReactivity('noiseAmount', interpolatedNoiseAmount, jiggleEnabledParams, jiggleAmount);
+                    interpolatedNoiseRate = applyAudioReactivity('noiseRate', interpolatedNoiseRate, jiggleEnabledParams, jiggleAmount);
+                    interpolatedBlurAmount = applyAudioReactivity('blurAmount', interpolatedBlurAmount, jiggleEnabledParams, jiggleAmount);
+                    interpolatedBlurRate = applyAudioReactivity('blurRate', interpolatedBlurRate, jiggleEnabledParams, jiggleAmount);
+                    interpolatedBlendOpacity = applyAudioReactivity('blendOpacity', interpolatedBlendOpacity, jiggleEnabledParams, jiggleAmount);
                 }
                 
                 // Apply jiggle if enabled
@@ -4515,90 +5898,6 @@
                     }
                 }
                 
-                // Apply audio-driven offsets if enabled (after jiggle so audio modulates jiggle values)
-                if (window.getAudioOffset && window.audioReactiveEnabled) {
-                    const audioOffsetSpikiness = window.getAudioOffset('spikiness') || 0;
-                    const audioOffsetSpikeFrequency = window.getAudioOffset('spikeFrequency') || 0;
-                    const audioOffsetSpikeSharpness = window.getAudioOffset('spikeSharpness') || 0;
-                    const audioOffsetHue = window.getAudioOffset('hue') || 0;
-                    const audioOffsetScale = window.getAudioOffset('scale') || 0;
-                    const audioOffsetDilationSpeed = window.getAudioOffset('dilationSpeed') || 0;
-                    const audioOffsetFadeAmount = window.getAudioOffset('fadeAmount') || 0;
-                    const audioOffsetHueShiftAmount = window.getAudioOffset('hueShiftAmount') || 0;
-                    const audioOffsetRotation = window.getAudioOffset('rotation') || 0;
-                    const audioOffsetFillSize = window.getAudioOffset('fillSize') || 0;
-                    const audioOffsetFillOpacity = window.getAudioOffset('fillOpacity') || 0;
-                    const audioOffsetBlendOpacity = window.getAudioOffset('blendOpacity') || 0;
-                    
-                    // Get jiggle ranges for each parameter (used to scale audio offsets)
-                    const jiggleRanges = {
-                        spikiness: jiggleAmount || 0.1,
-                        spikeFrequency: (jiggleAmount || 0.1) * 9.0,
-                        spikeSharpness: jiggleAmount || 0.1,
-                        hue: (jiggleAmount || 0.1) * 180.0,
-                        scale: (jiggleAmount || 0.1) * 0.3,
-                        dilationSpeed: (jiggleAmount || 0.1) * 0.1,
-                        fadeAmount: (jiggleAmount || 0.1) * 5.0,
-                        hueShiftAmount: (jiggleAmount || 0.1) * 0.1,
-                        rotation: (jiggleAmount || 0.1) * 180.0,
-                        fillSize: jiggleAmount || 0.1,
-                        fillOpacity: jiggleAmount || 0.1,
-                        blendOpacity: (jiggleAmount || 0.1) * 0.1
-                    };
-                    
-                    // Apply audio offsets scaled to jiggle range (modulates current values)
-                    const config = window.getAudioMappingConfig ? window.getAudioMappingConfig() : {};
-                    
-                    if (config.spikiness?.enabled) {
-                        spikiness += audioOffsetSpikiness * jiggleRanges.spikiness;
-                        spikiness = Math.max(0, Math.min(1, spikiness));
-                    }
-                    if (config.spikeFrequency?.enabled) {
-                        spikeFrequency += audioOffsetSpikeFrequency * jiggleRanges.spikeFrequency;
-                        spikeFrequency = Math.max(2, Math.min(20, spikeFrequency));
-                    }
-                    if (config.spikeSharpness?.enabled) {
-                        spikeSharpness += audioOffsetSpikeSharpness * jiggleRanges.spikeSharpness;
-                        spikeSharpness = Math.max(0, Math.min(1, spikeSharpness));
-                    }
-                    if (config.hue?.enabled) {
-                        hue += audioOffsetHue * jiggleRanges.hue;
-                        hue = ((hue % 360) + 360) % 360;
-                    }
-                    if (config.scale?.enabled) {
-                        scale += audioOffsetScale * jiggleRanges.scale;
-                        scale = Math.max(0.05, Math.min(1.0, scale));
-                    }
-                    if (config.dilationSpeed?.enabled) {
-                        dilationSpeed += audioOffsetDilationSpeed * jiggleRanges.dilationSpeed;
-                        dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed));
-                    }
-                    if (config.fadeAmount?.enabled) {
-                        fadeAmount += audioOffsetFadeAmount * jiggleRanges.fadeAmount;
-                        fadeAmount = Math.max(0, Math.min(5, fadeAmount));
-                    }
-                    if (config.hueShiftAmount?.enabled) {
-                        hueShiftAmount += audioOffsetHueShiftAmount * jiggleRanges.hueShiftAmount;
-                        hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
-                    }
-                    if (config.rotation?.enabled) {
-                        rotation += audioOffsetRotation * jiggleRanges.rotation;
-                        rotation = ((rotation % 360) + 360) % 360;
-                    }
-                    if (config.fillSize?.enabled) {
-                        fillSize += audioOffsetFillSize * jiggleRanges.fillSize;
-                        fillSize = Math.max(0, Math.min(1, fillSize));
-                    }
-                    if (config.fillOpacity?.enabled) {
-                        fillOpacity += audioOffsetFillOpacity * jiggleRanges.fillOpacity;
-                        fillOpacity = Math.max(0, Math.min(1, fillOpacity));
-                    }
-                    if (config.blendOpacity?.enabled) {
-                        blendOpacity += audioOffsetBlendOpacity * jiggleRanges.blendOpacity;
-                        blendOpacity = Math.max(0, Math.min(1, blendOpacity));
-                    }
-                }
-                
                 // Calculate capture interval from interpolated emanation rate (emanations per second)
                 const captureInterval = 1.0 / interpolatedEmanationRate;
                 
@@ -4613,7 +5912,33 @@
                 const totalRotation = interpolatedRotation + (currentTime * interpolatedAutoRotationSpeed);
                 
                 // Apply freeze: if frozen, set dilation to 1.0 (no expansion)
-                const effectiveDilationSpeed = freezeEnabled ? 1.0 : interpolatedDilationSpeed;
+                let effectiveDilationSpeed = freezeEnabled ? 1.0 : interpolatedDilationSpeed;
+                
+                // Apply polarity flip if enabled: reflect dilation speed over 1.0
+                // If dilationSpeed < 1.0, flip it to > 1.0 preserving distance from 1.0
+                // Example: 0.9 → 1.1 (distance 0.1 preserved), 1.1 → 0.9
+                if (dilationPolarityFlip && dilationPolarityFlip.checked && !freezeEnabled) {
+                    if (effectiveDilationSpeed < 1.0) {
+                        const distance = 1.0 - effectiveDilationSpeed;
+                        effectiveDilationSpeed = 1.0 + distance;
+                    } else if (effectiveDilationSpeed > 1.0) {
+                        const distance = effectiveDilationSpeed - 1.0;
+                        effectiveDilationSpeed = 1.0 - distance;
+                    }
+                }
+                
+                // Apply polarity flip if enabled: reflect dilation speed over 1.0
+                // If dilationSpeed < 1.0, flip it to > 1.0 preserving distance from 1.0
+                // Example: 0.9 → 1.1 (distance 0.1 preserved)
+                if (dilationPolarityFlip && dilationPolarityFlip.checked && !freezeEnabled) {
+                    if (effectiveDilationSpeed < 1.0) {
+                        const distance = 1.0 - effectiveDilationSpeed;
+                        effectiveDilationSpeed = 1.0 + distance;
+                    } else if (effectiveDilationSpeed > 1.0) {
+                        const distance = effectiveDilationSpeed - 1.0;
+                        effectiveDilationSpeed = 1.0 - distance;
+                    }
+                }
                 
                 // Use interpolated values for rendering
                 renderer.render({
@@ -4635,8 +5960,22 @@
             setInterval(render, FRAME_TIME);
             render(); // Initial render
             
+            // Setup audio controls
+            setupAudioControls();
+            
+            // Initialize audio visualization components
+            audioLegend = new MetricLegend();
+            audioMeters = new MetricMeters('waveform');
+            setupAudioVisualization();
+            
+            // Generate audio mapping controls UI
+            generateAudioMappingControls();
+            
             // Hotkey handlers
             let presetNames = [];
+            
+            // Track last selected menu panel for H key toggle
+            let lastSelectedMenuPanel = null; // 'visual', 'mappings', or 'analysis'
             
             // Store reference to original loadPresets before it gets wrapped
             const originalLoadPresetsForHotkeys = loadPresets;
@@ -4647,6 +5986,9 @@
                 presetNames = Object.keys(presets);
             }
             updatePresetNames();
+            
+            // Setup audio event system (after variables are defined)
+            setupAudioEvents();
             
             // Track current preset index
             let currentPresetIndex = -1;
@@ -4849,8 +6191,84 @@
                     downloadSnapshot();
                 }
 
+                // V: Toggle visual menu (dev-toolbox, hotkey-legend, ux-toolbox)
+                if (e.key === 'v' || e.key === 'V') {
+                    e.preventDefault();
+                    toggleFullScreen();
+                    lastSelectedMenuPanel = 'visual';
+                }
+                
+                // M: Toggle audio mappings panel
+                if (e.key === 'm' || e.key === 'M') {
+                    e.preventDefault();
+                    const mappingsPanel = document.getElementById('audio-mappings-panel');
+                    const devToolbox = document.getElementById('dev-toolbox');
+                    
+                    if (mappingsPanel) {
+                        const isVisible = mappingsPanel.style.display !== 'none';
+                        mappingsPanel.style.display = isVisible ? 'none' : 'block';
+                        
+                        // Position below dev-toolbox if it's visible
+                        if (!isVisible && devToolbox && !devToolbox.hidden) {
+                            const devRect = devToolbox.getBoundingClientRect();
+                            mappingsPanel.style.top = (devRect.bottom + 10) + 'px';
+                            mappingsPanel.style.right = '10px';
+                        } else if (!isVisible) {
+                            mappingsPanel.style.top = '10px';
+                            mappingsPanel.style.right = '10px';
+                        }
+                    }
+                    lastSelectedMenuPanel = 'mappings';
+                }
+                
+                // A: Toggle audio analysis visualization panel
+                if (e.key === 'a' || e.key === 'A') {
+                    e.preventDefault();
+                    const visualizationPanel = document.getElementById('audio-visualization-panel');
+                    if (visualizationPanel) {
+                        const isVisible = visualizationPanel.style.display !== 'none';
+                        visualizationPanel.style.display = isVisible ? 'none' : 'block';
+                    }
+                    lastSelectedMenuPanel = 'analysis';
+                }
+                
+                // H: Toggle last selected menu panel
                 if (e.key === 'h' || e.key === 'H') {
-		    toggleFullScreen();
+                    e.preventDefault();
+                    
+                    if (!lastSelectedMenuPanel) {
+                        // If no panel was selected yet, default to visual menu
+                        toggleFullScreen();
+                        lastSelectedMenuPanel = 'visual';
+                        return;
+                    }
+                    
+                    if (lastSelectedMenuPanel === 'visual') {
+                        toggleFullScreen();
+                    } else if (lastSelectedMenuPanel === 'mappings') {
+                        const mappingsPanel = document.getElementById('audio-mappings-panel');
+                        const devToolbox = document.getElementById('dev-toolbox');
+                        
+                        if (mappingsPanel) {
+                            const isVisible = mappingsPanel.style.display !== 'none';
+                            mappingsPanel.style.display = isVisible ? 'none' : 'block';
+                            
+                            if (!isVisible && devToolbox && !devToolbox.hidden) {
+                                const devRect = devToolbox.getBoundingClientRect();
+                                mappingsPanel.style.top = (devRect.bottom + 10) + 'px';
+                                mappingsPanel.style.right = '10px';
+                            } else if (!isVisible) {
+                                mappingsPanel.style.top = '10px';
+                                mappingsPanel.style.right = '10px';
+                            }
+                        }
+                    } else if (lastSelectedMenuPanel === 'analysis') {
+                        const visualizationPanel = document.getElementById('audio-visualization-panel');
+                        if (visualizationPanel) {
+                            const isVisible = visualizationPanel.style.display !== 'none';
+                            visualizationPanel.style.display = isVisible ? 'none' : 'block';
+                        }
+                    }
                 }
                 
                 // G: Toggle GIF recording (max 10s, forward + reverse loop)
@@ -5004,357 +6422,8 @@
             // already calls the original function directly to avoid circular references.
             // If you need to update preset names after loading, call updatePresetNames() explicitly.
         })();
-        
-        // Audio Mapping System
-        (() => {
-            let audioAnalyzer = null;
-            let audioMappingConfig = {};
-            let audioReactiveEnabled = false;
-            let lastSelectedMenu = null;
-            
-            // Audio parameter mappings: visualParam -> audioMetric
-            const audioMappings = {
-                spikiness: 'collision',
-                spikeFrequency: 'audioAmp',
-                spikeSharpness: 'harshness',
-                hue: 'bandEnergy',
-                scale: 'audioAmp',
-                dilationSpeed: 'compression',
-                fadeAmount: 'emptiness',
-                hueShiftAmount: 'bandEnergy',
-                rotation: 'phaseRisk',
-                fillSize: 'audioAmp',
-                fillOpacity: 'coherence',
-                blendOpacity: 'coherence'
-            };
-            
-            // Initialize audio analyzer
-            async function initAudioAnalyzer() {
-                if (typeof AudioAnalyzer === 'undefined') {
-                    console.warn('AudioAnalyzer not loaded');
-                    return;
-                }
-                audioAnalyzer = new AudioAnalyzer();
-            }
-            
-            // Initialize audio mapping UI
-            function initAudioMappingUI() {
-                const panel = document.getElementById('audio-mapping-panel');
-                const content = document.getElementById('audio-mapping-content');
-                if (!panel || !content) return;
-                
-                // Create mapping controls for each parameter
-                Object.keys(audioMappings).forEach(paramName => {
-                    const audioMetric = audioMappings[paramName];
-                    const mappingId = `mapping-${paramName}`;
-                    
-                    // Initialize config with defaults
-                    if (!audioMappingConfig[paramName]) {
-                        audioMappingConfig[paramName] = {
-                            enabled: false,
-                            sensitivity: 1.0,
-                            smoothing: 0.8,
-                            multiplier: 1.0,
-                            offset: 0.0
-                        };
-                    }
-                    
-                    const config = audioMappingConfig[paramName];
-                    
-                    // Create parameter group
-                    const group = document.createElement('div');
-                    group.className = 'mapping-param-group';
-                    group.id = `mapping-group-${paramName}`;
-                    
-                    group.innerHTML = `
-                        <div class="mapping-param-header">
-                            <input type="checkbox" id="${mappingId}-enabled" ${config.enabled ? 'checked' : ''}>
-                            <span class="mapping-param-name">${paramName}</span>
-                            <span class="mapping-source">from ${audioMetric}</span>
-                        </div>
-                        <div class="mapping-diagnostic">
-                            <canvas class="mapping-range-display" id="${mappingId}-range" width="200" height="60"></canvas>
-                            <div class="mapping-minmax-display">
-                                <span id="${mappingId}-minmax">Min: 0.000 | Max: 1.000</span>
-                                <span id="${mappingId}-current" class="mapping-current-value">Current: 0.000</span>
-                            </div>
-                        </div>
-                        <div class="mapping-control">
-                            <label>Sensitivity</label>
-                            <div class="mapping-control-row">
-                                <input type="range" id="${mappingId}-sensitivity" min="0" max="3" value="${config.sensitivity}" step="0.1">
-                                <input type="number" id="${mappingId}-sensitivity-num" value="${config.sensitivity}" step="0.1" min="0" max="10">
-                            </div>
-                        </div>
-                        <div class="mapping-control">
-                            <label>Smoothing</label>
-                            <div class="mapping-control-row">
-                                <input type="range" id="${mappingId}-smoothing" min="0.5" max="0.99" value="${config.smoothing}" step="0.01">
-                                <input type="number" id="${mappingId}-smoothing-num" value="${config.smoothing}" step="0.01" min="0.5" max="0.99">
-                            </div>
-                        </div>
-                        <div class="mapping-control">
-                            <label>Multiplier</label>
-                            <div class="mapping-control-row">
-                                <input type="range" id="${mappingId}-multiplier" min="-5" max="5" value="${config.multiplier}" step="0.1">
-                                <input type="number" id="${mappingId}-multiplier-num" value="${config.multiplier}" step="0.1">
-                            </div>
-                        </div>
-                        <div class="mapping-control">
-                            <label>Offset</label>
-                            <div class="mapping-control-row">
-                                <input type="range" id="${mappingId}-offset" min="-1" max="1" value="${config.offset}" step="0.01">
-                                <input type="number" id="${mappingId}-offset-num" value="${config.offset}" step="0.01">
-                            </div>
-                        </div>
-                    `;
-                    
-                    content.appendChild(group);
-                    
-                    // Wire up controls
-                    const enabledCheckbox = document.getElementById(`${mappingId}-enabled`);
-                    const sensitivitySlider = document.getElementById(`${mappingId}-sensitivity`);
-                    const sensitivityNum = document.getElementById(`${mappingId}-sensitivity-num`);
-                    const smoothingSlider = document.getElementById(`${mappingId}-smoothing`);
-                    const smoothingNum = document.getElementById(`${mappingId}-smoothing-num`);
-                    const multiplierSlider = document.getElementById(`${mappingId}-multiplier`);
-                    const multiplierNum = document.getElementById(`${mappingId}-multiplier-num`);
-                    const offsetSlider = document.getElementById(`${mappingId}-offset`);
-                    const offsetNum = document.getElementById(`${mappingId}-offset-num`);
-                    
-                    enabledCheckbox.addEventListener('change', (e) => {
-                        config.enabled = e.target.checked;
-                    });
-                    
-                    const syncSliderNum = (slider, num, prop) => {
-                        slider.addEventListener('input', (e) => {
-                            const val = parseFloat(e.target.value);
-                            config[prop] = val;
-                            num.value = val;
-                        });
-                        num.addEventListener('input', (e) => {
-                            const val = parseFloat(e.target.value);
-                            config[prop] = val;
-                            slider.value = val;
-                        });
-                    };
-                    
-                    syncSliderNum(sensitivitySlider, sensitivityNum, 'sensitivity');
-                    syncSliderNum(smoothingSlider, smoothingNum, 'smoothing');
-                    syncSliderNum(multiplierSlider, multiplierNum, 'multiplier');
-                    syncSliderNum(offsetSlider, offsetNum, 'offset');
-                });
-            }
-            
-            // Smooth audio-driven offsets
-            const audioOffsets = {};
-            Object.keys(audioMappings).forEach(param => {
-                audioOffsets[param] = 0.0;
-            });
-            
-            // Update audio-driven parameter offsets
-            function updateAudioOffsets() {
-                if (!audioAnalyzer || !audioReactiveEnabled) return;
-                
-                const metrics = audioAnalyzer.getMetrics();
-                const normalizedMetrics = audioAnalyzer.normalizedMetrics || {};
-                
-                Object.keys(audioMappings).forEach(paramName => {
-                    const config = audioMappingConfig[paramName];
-                    if (!config || !config.enabled) {
-                        audioOffsets[paramName] = 0.0;
-                        return;
-                    }
-                    
-                    const audioMetric = audioMappings[paramName];
-                    let rawValue = 0.5;
-                    
-                    // Get normalized metric value
-                    if (audioMetric === 'bandEnergy') {
-                        // Use mid band for bandEnergy mappings
-                        rawValue = normalizedMetrics.bandEnergy ? normalizedMetrics.bandEnergy[1] : 0.5;
-                    } else if (normalizedMetrics[audioMetric] !== undefined) {
-                        rawValue = normalizedMetrics[audioMetric];
-                    } else if (metrics[`u_${audioMetric}`] !== undefined) {
-                        // Fallback to raw metric
-                        rawValue = Array.isArray(metrics[`u_${audioMetric}`]) 
-                            ? metrics[`u_${audioMetric}`][1] || 0.5
-                            : metrics[`u_${audioMetric}`];
-                    }
-                    
-                    // Apply multiplier and offset
-                    let mappedValue = (rawValue - 0.5) * config.sensitivity * config.multiplier + config.offset;
-                    
-                    // Smooth the offset
-                    audioOffsets[paramName] = audioOffsets[paramName] * config.smoothing + mappedValue * (1 - config.smoothing);
-                });
-            }
-            
-            // Update diagnostic displays
-            function updateDiagnostics() {
-                if (!audioAnalyzer) return;
-                
-                Object.keys(audioMappings).forEach(paramName => {
-                    const audioMetric = audioMappings[paramName];
-                    const mappingId = `mapping-${paramName}`;
-                    
-                    const rangeDisplay = document.getElementById(`${mappingId}-range`);
-                    const minmaxDisplay = document.getElementById(`${mappingId}-minmax`);
-                    const currentDisplay = document.getElementById(`${mappingId}-current`);
-                    
-                    if (!rangeDisplay || !minmaxDisplay || !currentDisplay) return;
-                    
-                    // Get min/max for this metric
-                    let minMax = { min: 0, max: 1 };
-                    if (audioMetric === 'bandEnergy') {
-                        minMax = audioAnalyzer.getMinMax('bandEnergy', 1);
-                    } else {
-                        minMax = audioAnalyzer.getMinMax(audioMetric);
-                    }
-                    
-                    // Get current normalized value
-                    let currentNorm = 0.5;
-                    if (audioMetric === 'bandEnergy') {
-                        currentNorm = audioAnalyzer.getNormalizedMetric('bandEnergy', 1);
-                    } else {
-                        currentNorm = audioAnalyzer.getNormalizedMetric(audioMetric);
-                    }
-                    
-                    // Get current raw value
-                    const metrics = audioAnalyzer.getMetrics();
-                    let currentRaw = 0.5;
-                    if (audioMetric === 'bandEnergy') {
-                        currentRaw = metrics.u_bandEnergy ? metrics.u_bandEnergy[1] : 0.5;
-                    } else {
-                        currentRaw = metrics[`u_${audioMetric}`] || 0.5;
-                    }
-                    
-                    // Update displays
-                    minmaxDisplay.textContent = `Min: ${minMax.min.toFixed(3)} | Max: ${minMax.max.toFixed(3)}`;
-                    currentDisplay.textContent = `Current: ${currentNorm.toFixed(3)}`;
-                    
-                    // Draw range visualization
-                    if (!(rangeDisplay instanceof HTMLCanvasElement)) {
-                        // Convert to canvas if not already
-                        const canvas = document.createElement('canvas');
-                        canvas.className = rangeDisplay.className;
-                        canvas.style.cssText = rangeDisplay.style.cssText;
-                        canvas.id = rangeDisplay.id;
-                        rangeDisplay.parentNode.replaceChild(canvas, rangeDisplay);
-                        return;
-                    }
-                    const ctx = rangeDisplay.getContext('2d');
-                    const width = rangeDisplay.width = rangeDisplay.offsetWidth || 200;
-                    const height = rangeDisplay.height = rangeDisplay.offsetHeight || 60;
-                    
-                    ctx.clearRect(0, 0, width, height);
-                    
-                    // Draw min/max range
-                    const rangeStart = (minMax.min / 1.0) * width;
-                    const rangeEnd = (minMax.max / 1.0) * width;
-                    ctx.fillStyle = 'rgba(0, 170, 255, 0.2)';
-                    ctx.fillRect(rangeStart, 0, rangeEnd - rangeStart, height);
-                    
-                    // Draw current normalized position
-                    const currentX = currentNorm * width;
-                    ctx.strokeStyle = '#0af';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(currentX, 0);
-                    ctx.lineTo(currentX, height);
-                    ctx.stroke();
-                    
-                    // Draw current raw position
-                    const rawX = currentRaw * width;
-                    ctx.strokeStyle = '#fa0';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(rawX, 0);
-                    ctx.lineTo(rawX, height);
-                    ctx.stroke();
-                    
-                    // Draw offset indicator
-                    const config = audioMappingConfig[paramName];
-                    if (config && config.enabled) {
-                        const offset = audioOffsets[paramName] || 0;
-                        const offsetX = (0.5 + offset) * width;
-                        ctx.fillStyle = '#0f0';
-                        ctx.fillRect(offsetX - 1, height - 8, 2, 8);
-                    }
-                });
-            }
-            
-            // Toggle audio mapping panel
-            function toggleAudioMappingPanel() {
-                const panel = document.getElementById('audio-mapping-panel');
-                if (!panel) return;
-                panel.classList.toggle('visible');
-                lastSelectedMenu = 'audio-mapping';
-            }
-            
-            // Hotkey handler
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'm' || e.key === 'M') {
-                    if (!e.ctrlKey && !e.altKey && !e.metaKey) {
-                        toggleAudioMappingPanel();
-                    }
-                }
-            });
-            
-            // Initialize on load
-            initAudioAnalyzer();
-            initAudioMappingUI();
-            
-            // Update loop
-            function audioMappingUpdate() {
-                updateAudioOffsets();
-                updateDiagnostics();
-                requestAnimationFrame(audioMappingUpdate);
-            }
-            audioMappingUpdate();
-            
-            // Export for use in render loop
-            window.getAudioOffset = (paramName) => {
-                return audioOffsets[paramName] || 0.0;
-            };
-            
-            // Make audioReactiveEnabled accessible globally
-            window.audioReactiveEnabled = false;
-            window.setAudioReactiveEnabled = (enabled) => {
-                window.audioReactiveEnabled = enabled;
-                audioReactiveEnabled = enabled;
-            };
-            
-            window.getAudioMappingConfig = () => audioMappingConfig;
-            window.setAudioMappingConfig = (config) => {
-                audioMappingConfig = config;
-                // Update UI
-                Object.keys(audioMappingConfig).forEach(paramName => {
-                    const mappingId = `mapping-${paramName}`;
-                    const config = audioMappingConfig[paramName];
-                    const enabledCheckbox = document.getElementById(`${mappingId}-enabled`);
-                    const sensitivitySlider = document.getElementById(`${mappingId}-sensitivity`);
-                    const sensitivityNum = document.getElementById(`${mappingId}-sensitivity-num`);
-                    const smoothingSlider = document.getElementById(`${mappingId}-smoothing`);
-                    const smoothingNum = document.getElementById(`${mappingId}-smoothing-num`);
-                    const multiplierSlider = document.getElementById(`${mappingId}-multiplier`);
-                    const multiplierNum = document.getElementById(`${mappingId}-multiplier-num`);
-                    const offsetSlider = document.getElementById(`${mappingId}-offset`);
-                    const offsetNum = document.getElementById(`${mappingId}-offset-num`);
-                    
-                    if (enabledCheckbox) enabledCheckbox.checked = config.enabled;
-                    if (sensitivitySlider) sensitivitySlider.value = config.sensitivity;
-                    if (sensitivityNum) sensitivityNum.value = config.sensitivity;
-                    if (smoothingSlider) smoothingSlider.value = config.smoothing;
-                    if (smoothingNum) smoothingNum.value = config.smoothing;
-                    if (multiplierSlider) multiplierSlider.value = config.multiplier;
-                    if (multiplierNum) multiplierNum.value = config.multiplier;
-                    if (offsetSlider) offsetSlider.value = config.offset;
-                    if (offsetNum) offsetNum.value = config.offset;
-                });
-            };
-        })();
     </script>
-</body>
-</html>
 
+
+
+<div id="my-app"></div><div id="torrent-scanner-popup" style="display: none;"><template shadowrootmode="open"><link rel="stylesheet" href="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/css/custom.css"><div id="yf-bt-wrapper" class="free"><div class="header"><img class="sts-logo" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/ts-free-logo.png"><div class="search-content"><input id="search-input" class="search-input" type="search" placeholder="Start your search here..."><span id="search-btn" class="search-btn"></span></div></div><div class="container"><div class="main-container"><div id="torrent-data" class="torrent-content"><div class="t-table"><div class="t-header"><div class="t-name">Torrent search results</div></div><div id="checked-sites" class="checked-sites-section"><div class="left">Checked Sites</div><div class="right"><span id="sites-count" class="sites-count">0</span></div></div><div id="table-body" class="t-body"><div id="loading" class="spinner"><div class="bounce1"></div><div class="bounce2"></div><div class="bounce3"></div></div><div class="table-message-container" id="table-message"><p>No items to list <br> Use the search bar above for instant results</p></div></div></div></div><div class="tooltip"><p class="tooltip-text">To see search results, type here and hit `Enter`</p></div><div class="footer"><span><span id="numberScanned" class="numberScanned">No results</span></span></div><div class="upgradeProPanel"><div class="upgradeProPanelTitle">Try our Torrent Scanner Plus to unlock:</div><div class="upgradeProPanelList"><div><p>Faster Results</p></div><div><p>Unlimited Search Results with detailed torrent info</p></div><div><p>Secure Torrenting</p></div></div><a class="upgrade-to-pro-button-2" id="buy-pro" href="https://shop.lavasoft.com/clickgate/join.aspx?ref=shop.lavasoft.com&amp;ujid=W9yhyAwEW5Q%3D" target="_blank">Get Torrent Scanner +</a></div></div><div class="sync-container nav-se-container"><div class="nav-se-content"><img class="sync-icon nav-se-icon" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/icon-sync.svg"><div class="nav-se-title">One more step to go before you start torrenting!</div><p class="nav-se-text">This extension can sync results with BitTorrent and/or uTorrent for instant downloading.</p><p class="nav-se-text">To activate this feature, please click on the button below, and then on the Chrome message to activate the 'Messaging Permission'.</p><button class="sync-permission-btn nav-se-btn">Activate Messaging Permission</button></div><div class="nav-se-content display-none"><img class="sync-icon nav-se-icon" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/icon-sync.svg"><div class="nav-se-title">Syncing...</div><p class="nav-se-text">Please allow Messaging Permissions in the proceeding Chrome message.</p></div><div class="nav-se-content display-none"><img class="sync-icon nav-se-icon" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/icon-success.svg"><div class="nav-se-title">Sync Complete</div><p class="nav-se-text">You have successfully activated the “Messaging Permission” feature. All your search results will sync with BitTorrent and/or uTorrent.</p></div></div><div class="license-container nav-se-container"><div class="nav-se-content"><img class="nav-se-icon" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/icon-key2.svg"><div class="nav-se-title">Enter License Key</div><p class="nav-se-text">Enter your license key and click on the activate button to start using <span>Torrent Scanner Plus.</span></p><input type="text" id="license-input-key" class="license-input-key" placeholder="Enter Key"><div class="license-spinner"><div class="bounce1"></div><div class="bounce2"></div><div class="bounce3"></div></div><button id="license-activate-button" class="license-activate-button nav-se-btn">Activate</button><p>Don't have a license key? <a class="license-buy-link" target="_blank">Click here</a></p></div><div class="nav-se-content display-none"><img class="nav-se-icon" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/icon-success.svg"><div class="nav-se-title">Happy Torrenting!</div><p class="nav-se-text">You are now an active PRO user</p><p class="nav-se-text">Your key is valid until <span class="expiry-date"></span></p></div><div class="nav-se-content display-none"><img class="nav-se-icon" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/icon-alert.svg"><div class="nav-se-title">Your license key has expired</div><p class="nav-se-text">Looks like your license key has expired, to renew your PRO license key, please select a license type:</p><a class="upgrade-to-pro-button-2 buy-license-expiry-button" href="https://shop.lavasoft.com/clickgate/join.aspx?ref=shop.lavasoft.com&amp;ujid=W9yhyAwEW5Q%3D" target="_blank">Buy Torrent Scanner +</a><p class="nav-se-text">Already have a license key? <a class="link" id="show-license-panel">Click here</a></p></div><div class="nav-se-content display-none"><img class="nav-se-icon" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/icon-success.svg"><p class="nav-se-text">Your key is valid until <span class="expiry-date"></span></p><p class="nav-se-text">Your License Key:</p><p class="nav-se-text"></p><p class="nav-se-text margin-top-50">Switch back to Torrent Scanner Free?</p><button class="activate-free-btn nav-se-btn">Revert to Free Version</button></div></div><div class="feedback-container nav-se-container"><div class="nav-se-content"><img class="nav-se-icon" src="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/img/assets/icon-feedback.svg"><div class="nav-se-title">Feedback</div><p class="nav-se-text">Help us improve Torrent Scanner, send us comments, bugs, feedback, and suggestions.</p><button id="feedback-button" class="feedback-button nav-se-btn">Send Feedback</button></div></div><div class="settings-container nav-se-container"><div class="nav-se-content"><div class="settings-title">Settings</div></div><div class="s-table"><div class="s-row"><div class="s-title">FAQ<div class="s-arrow"><span class="arrow-down"></span></div></div><div class="s-content faq-content"><p class="faq-text">FAQ: <a href="chrome-extension://aegnopegbbhjeeiganiajffnalhlkkjb/faq.html" target="_blank">Click here</a></p></div></div><div class="s-row"><div class="s-title">Rate the extension<div class="s-arrow"><span class="arrow-down"></span></div></div><div class="s-content"><p class="rate-text">How did you like the extension experience?</p><div class="rating"><span class="rating-star">★</span><span class="rating-star">★</span><span class="rating-star">★</span><span class="rating-star">★</span><span class="rating-star">★</span></div><button class="rating-btn nav-se-btn" disabled="">Submit</button></div></div><div class="s-row"><div class="s-title">About<div class="s-arrow"><span class="arrow-down"></span></div></div><div class="s-content about-content"><div class="about-version">Version 1.4.0 <br><br> What's New</div><div class="about-new"><p></p><ul><li>Experience a complete new User Interface of the extension. It is enhanced and user friendly now.</li><li>Squashed some bugs.</li></ul><p></p></div></div></div><div class="s-row"><div class="s-title">Privacy Policy<div class="s-arrow"><span class="arrow-down"></span></div></div><div class="s-content"><div class="policy-text">Adaware Software (7270356 Canada Inc.) is the operator of the Adaware products suites and related services (the “<b>Company</b>”, ”<b>we</b>” or “<b>us</b>”). We respect your privacy rights and we are committed to protecting them. This privacy policy (“<b>Privacy Policy</b>” or simply “<b>policy</b>”) governs our products, services and websites that link to this Privacy Policy, and describes our practices of processing data from you. By “<b>you</b>”, we refer to either or all of the following: (i) visitors to our websites that links to this Privacy Policy (“<b>Visitor</b>” and “<b>Website</b>”, respectively); (ii) our customers using our software products and Services (“<b>User</b>”); and (c) a business customer, a business partner that has a contractual relationship with us or a prospective customer that is yet to be engaged in a contract with us (“Business Customer”). Unless explicitly mentioned otherwise, the information in this Privacy Policy refers to any and all data subject types (“you” or “your’). <br><br> For the purpose of this policy, the “<b>Service(s)</b>” shall include any software licensed by the Company, including features offered by or within the installed software or additional software scripts available therein (either downloaded from one of our websites, pre-installed on your device, downloaded through a third party website, obtained on a physical medium, or otherwise), or services provided through and/or on top such software, services offered on our websites, communication forums, support services, account operation, updates, enhancements, new features, premium support, extended guarantees, online version and free versions of a software or additional services or features as we ay make available from time to time. <br><br> If you are a California resident, please also see our <a href="https://www.adaware.com/CCPA/" target="_blank">CCPA Notice</a>. <br><br> <a href="https://www.adaware.com/privacy-policy/" target="_blank">Read more</a></div></div></div><div class="s-row" style="display: none;"><div class="s-title">Contact Us<div class="s-arrow"><span class="arrow-down"></span></div></div><div class="s-content"><div class="contact-text">For any payment and order-related support, please contact us at Email: <a href="mailto:support@torrentscanner.zendesk.com">support@torrentscanner.zendesk.com</a> or <a href="mailto:pcsoftwareinfo.com">pcsoftwareinfo.com</a><br><br>Phone: <a href="https://pcsoftwareinfo.com/contact.aspx" target="_blank">Click here</a></div></div></div></div></div></div><div class="nav"><button id="btnSync" class="nav-btn">Sync</button><button id="btnLicense" class="nav-btn">License</button><button id="btnHome" class="nav-btn">Home</button><button id="btnFeedback" class="nav-btn">Feedback</button><button id="btnSettings" class="nav-btn">Settings</button></div></div></template></div></body></html>
