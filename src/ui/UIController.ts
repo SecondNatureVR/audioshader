@@ -638,11 +638,18 @@ export class UIController {
 
     if (jiggleBtn !== null) {
       jiggleBtn.addEventListener('click', () => {
-        const isEnabled = !this.app.getRenderState().frozen; // Toggle logic would go here
+        // Toggle jiggle state properly
+        const wasEnabled = this.app.isJiggleEnabled();
+        const isEnabled = !wasEnabled;
         this.app.setJiggleEnabled(isEnabled);
         jiggleBtn.textContent = isEnabled ? 'Stop Jiggle' : 'Jiggle';
         jiggleBtn.style.background = isEnabled ? '#a00' : '#a0a';
         this.updateStatusIndicators();
+
+        // When disabling jiggle, update all sliders to show final values
+        if (!isEnabled) {
+          this.updateAllSliders();
+        }
       });
     }
 

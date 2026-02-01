@@ -313,6 +313,13 @@ export class App {
   }
 
   /**
+   * Check if jiggle is enabled
+   */
+  isJiggleEnabled(): boolean {
+    return this.jiggleEnabled;
+  }
+
+  /**
    * Enable/disable jiggle
    */
   setJiggleEnabled(enabled: boolean): void {

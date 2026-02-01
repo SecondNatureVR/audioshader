@@ -38,11 +38,11 @@ async function init(): Promise<void> {
   // Start the render loop
   app.start();
 
-  // Update UI when params change
-  app.onParamsChange(() => {
-    ui.updateAllSliders();
-    ui.updateStatusIndicators();
-  });
+  // Note: We don't register onParamsChange to call updateAllSliders here
+  // as it would cause severe lag - every slider input would update ALL sliders.
+  // Instead, sliders are updated:
+  // - On preset load (UIController.loadPreset)
+  // - When jiggle is stopped (UIController jiggle button handler)
 
   console.info('AudioShader initialized successfully');
 }

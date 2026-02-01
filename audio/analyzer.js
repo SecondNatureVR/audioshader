@@ -16,7 +16,8 @@ class AudioAnalyzer {
         this.source = null;
         this.stream = null;
         this.isEnabled = false;
-        
+        this.isTabCapture = false;  // True when capturing from browser tab
+
         // FFT buffer
         this.fftSize = 2048;
         this.frequencyData = null;
@@ -92,21 +93,30 @@ class AudioAnalyzer {
     
     /**
      * Get list of available audio input devices
+     * @param {boolean} requestPermission - If true, request mic permission first (shows prompt)
      * @returns {Promise<Array>} Array of device info objects
      */
-    async getAudioDevices() {
+    async getAudioDevices(requestPermission = false) {
         try {
-            // Request permission first (required for device enumeration)
-            await navigator.mediaDevices.getUserMedia({ audio: true });
-            
+            // Only request permission if explicitly asked
+            // This avoids showing a mic prompt when user just wants to see device list
+            // or when they're going to use tab capture instead
+            if (requestPermission) {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+
             const devices = await navigator.mediaDevices.enumerateDevices();
-            return devices
+            const audioDevices = devices
                 .filter(device => device.kind === 'audioinput')
                 .map(device => ({
                     deviceId: device.deviceId,
-                    label: device.label || `Microphone ${device.deviceId.substring(0, 8)}...`,
-                    groupId: device.groupId
+                    // Without permission, labels may be empty - show placeholder
+                    label: device.label || (device.deviceId ? `Audio Input (${device.deviceId.substring(0, 8)}...)` : 'Unknown Device'),
+                    groupId: device.groupId,
+                    hasLabel: !!device.label  // Track if we have the real label
                 }));
+
+            return audioDevices;
         } catch (error) {
             console.error('Error enumerating devices:', error);
             return [];
@@ -209,7 +219,141 @@ class AudioAnalyzer {
             throw error;
         }
     }
-    
+
+    /**
+     * Enable audio capture from a browser tab using getDisplayMedia
+     * This allows capturing audio from YouTube, Spotify Web, etc.
+     * @returns {Promise<void>}
+     */
+    async enableTabAudio() {
+        if (this.isEnabled) {
+            return;
+        }
+
+        try {
+            // Create AudioContext
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            // Check browser support
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                throw new Error('Your browser does not support screen/tab capture. Please use Chrome or Edge.');
+            }
+
+            // Request screen/tab capture with audio
+            // The user will be prompted to select a tab
+            // Note: Chrome shows "Share tab audio" checkbox only for Tab selection, not Window/Screen
+            const displayMediaOptions = {
+                video: {
+                    displaySurface: "browser",  // Prefer browser tab
+                    width: { max: 1 },  // Minimize video (we only want audio)
+                    height: { max: 1 },
+                    frameRate: { max: 1 }
+                },
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false,
+                    channelCount: 2,
+                    sampleRate: 44100
+                },
+                preferCurrentTab: false,
+                selfBrowserSurface: "include",
+                systemAudio: "include",
+                surfaceSwitching: "include",
+                monitorTypeSurfaces: "exclude"  // Exclude monitor to encourage tab selection
+            };
+
+            console.log('Requesting tab audio capture...');
+            console.log('TIP: Select a TAB (not window/screen) and check "Also share tab audio"');
+
+            this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+
+            // Log what we got
+            const videoTracks = this.stream.getVideoTracks();
+            const audioTracks = this.stream.getAudioTracks();
+
+            console.log('Capture result:', {
+                videoTracks: videoTracks.length,
+                audioTracks: audioTracks.length,
+                videoLabel: videoTracks[0]?.label,
+                audioLabel: audioTracks[0]?.label
+            });
+
+            // Check if we got audio tracks
+            if (audioTracks.length === 0) {
+                // Clean up video track before throwing
+                videoTracks.forEach(track => track.stop());
+                this.stream = null;
+
+                // Provide browser-specific guidance
+                const isChrome = navigator.userAgent.includes('Chrome');
+                const isFirefox = navigator.userAgent.includes('Firefox');
+                const isEdge = navigator.userAgent.includes('Edg');
+
+                let hint = '';
+                if (isChrome || isEdge) {
+                    hint = '\n\nIn Chrome/Edge:\n1. Click "Chrome Tab" at the top of the dialog\n2. Select a tab that is playing audio\n3. Check "Also share tab audio" at the bottom\n4. Click Share';
+                } else if (isFirefox) {
+                    hint = '\n\nFirefox has limited tab audio support. Try using Chrome or Edge for best results.';
+                }
+
+                throw new Error('No audio track captured.' + hint);
+            }
+
+            const settings = audioTracks[0]?.getSettings();
+            const channelCount = settings?.channelCount || 1;
+            this.isStereo = channelCount >= 2;
+
+            console.log(`Tab audio enabled: ${this.isStereo ? 'STEREO' : 'MONO'} (${channelCount} channels)`);
+            console.log('Audio track settings:', settings);
+            console.log('Audio track label:', audioTracks[0]?.label);
+
+            // Mark as tab capture mode
+            this.isTabCapture = true;
+
+            // Stop video track - we only need audio
+            videoTracks.forEach(track => track.stop());
+
+            // Handle track ending (user stops sharing)
+            audioTracks[0].addEventListener('ended', () => {
+                console.log('Tab audio capture ended by user');
+                this.disableAudio();
+                // Dispatch event so UI can update
+                window.dispatchEvent(new CustomEvent('tabAudioEnded'));
+            });
+
+            // Connect stream to audio graph
+            this.source = this.audioContext.createMediaStreamSource(this.stream);
+
+            if (this.isStereo) {
+                this.setupStereoAnalysis();
+            } else {
+                this.setupMonoAnalysis();
+            }
+
+            this.isEnabled = true;
+            this._needsInitialization = true;
+
+            // Check audio levels
+            this.checkAudioLevel();
+
+        } catch (error) {
+            console.error('Error enabling tab audio:', error);
+
+            // Clean up on error
+            if (this.audioContext) {
+                this.audioContext.close();
+                this.audioContext = null;
+            }
+
+            if (error.name === 'NotAllowedError') {
+                throw new Error('Tab capture was cancelled or denied. Please try again and select a tab with audio.');
+            }
+
+            throw error;
+        }
+    }
+
     /**
      * Check if audio is actually coming through (for debugging)
      */
@@ -1069,6 +1213,7 @@ class AudioAnalyzer {
         
         this.analyser = null;
         this.isEnabled = false;
+        this.isTabCapture = false;
         console.log('Audio disabled');
     }
 }

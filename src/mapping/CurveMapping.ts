@@ -205,6 +205,11 @@ export class CurveMapper {
 /**
  * Special mapping functions for dilation speed
  * This parameter has a complex exponential mapping centered around 1.0
+ * NOTE: The dilation slider uses 0-200 range (not 0-100)
+ *
+ * Formula from lucas.html ensures:
+ * - slider=100 → dilationSpeed = 1.0 (no expansion)
+ * - The curve uses power 1/8 for fine control near the center
  */
 export const DilationMapping = {
   /**
@@ -223,33 +228,39 @@ export const DilationMapping = {
   },
 
   /**
-   * Convert expansion factor to slider value with exponential curve
-   * This provides finer control at low speeds
+   * Convert expansion factor to slider value (0-200) with exponential curve
+   * This is the inverse of sliderToFactor
    */
   factorToSlider(factor: number): number {
-    const midPower = 0.125; // 1/8 power for very slow exponential
-    const min = 0.88;
-    const max = 1.22;
-    const range = (max - min) / (1.0 - midPower);
+    // Match lucas.html formula exactly
+    const midPower = Math.pow(0.5, 0.125);  // ~0.917
+    const range = 0.34 / (1.0 - midPower);
+    const min = 1.0 - midPower * range;
 
-    const normalized = (factor - min) / range;
-    if (normalized <= 0) return 0;
-    if (normalized >= 1) return 100;
+    // Solve: factor = min + curved * range
+    // curved = (factor - min) / range
+    const curved = (factor - min) / range;
+    if (curved <= 0) return 0;
+    if (curved >= 1) return 200;
 
-    return Math.pow(normalized, 1.0 / midPower) * 100;
+    // Inverse of curved = Math.pow(normalized, 0.125)
+    // normalized = Math.pow(curved, 8)
+    const normalized = Math.pow(curved, 8);
+    return normalized * 200;
   },
 
   /**
-   * Convert slider value to expansion factor
+   * Convert slider value (0-200) to expansion factor
+   * Matches lucas.html formula exactly
    */
   sliderToFactor(sliderValue: number): number {
-    const midPower = 0.125;
-    const min = 0.88;
-    const max = 1.22;
-    const range = (max - min) / (1.0 - midPower);
+    // Match lucas.html formula exactly for visual parity
+    const midPower = Math.pow(0.5, 0.125);  // ~0.917
+    const range = 0.34 / (1.0 - midPower);
+    const min = 1.0 - midPower * range;
 
-    const normalized = sliderValue / 100;
-    const curved = Math.pow(normalized, midPower);
+    const normalized = sliderValue / 200;
+    const curved = Math.pow(normalized, 0.125);
     return min + curved * range;
   },
 };
