@@ -218,13 +218,16 @@
         <div class="section-header">
             <span>Shape</span>
         </div>
-        <div class="control-group">
-            <label>Spikiness <span class="curve-btn" data-param="spikiness" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="spikiness-slider" min="0" max="100" value="50">
-                <span class="value" id="spikiness-value" contenteditable="true">0.50</span>
-            </div>
-        </div>
+        <!-- Label derived automatically from param-name using centralized PARAM_LABELS -->
+        <param-slider
+            param-name="spikiness"
+            value="0.5"
+            min="0"
+            max="100"
+            step="1"
+            format="decimal2"
+            show-curve-btn
+        ></param-slider>
         <div class="control-group">
             <label>Spike Frequency <span class="curve-btn" data-param="spikeFrequency" title="Edit curve">~</span></label>
             <div class="control-row">
@@ -524,6 +527,7 @@
                     <tr>
                         <th>Metric</th>
                         <th>Value</th>
+                        <th>Range</th>
                         <th>Bar</th>
                     </tr>
                 </thead>
@@ -531,42 +535,74 @@
                     <tr data-metric="rms">
                         <td class="metric-name">RMS</td>
                         <td class="metric-value">0.000</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
                     </tr>
                     <tr data-metric="bass">
                         <td class="metric-name">Bass</td>
                         <td class="metric-value">0.000</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
                     </tr>
                     <tr data-metric="mid">
                         <td class="metric-name">Mid</td>
                         <td class="metric-value">0.000</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
                     </tr>
                     <tr data-metric="high">
                         <td class="metric-name">High</td>
                         <td class="metric-value">0.000</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="harshness">
-                        <td class="metric-name">Harshness</td>
-                        <td class="metric-value">0.000</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="mud">
-                        <td class="metric-name">Mud</td>
-                        <td class="metric-value">0.000</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="coherence">
-                        <td class="metric-name">Coherence</td>
-                        <td class="metric-value">0.000</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
                     </tr>
                     <tr data-metric="presence">
                         <td class="metric-name">Presence</td>
                         <td class="metric-value">0.000</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="harshness">
+                        <td class="metric-name">Harshness</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="mud">
+                        <td class="metric-name">Mud</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="compression">
+                        <td class="metric-name">Compression</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="collision">
+                        <td class="metric-name">Collision</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="coherence">
+                        <td class="metric-name">Coherence</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="stereoWidth">
+                        <td class="metric-name">Stereo Width</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="phaseRisk">
+                        <td class="metric-name">Phase Risk</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
                     </tr>
                 </tbody>
             </table>

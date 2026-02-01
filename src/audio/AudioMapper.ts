@@ -25,23 +25,33 @@ export function createDefaultMappingConfig(source: keyof AudioMetrics = 'rms'): 
 
 /**
  * Default audio source for each visual parameter
- * Based on lucas.html defaults (with closest equivalents where needed)
+ * Based on lucas.html defaults with closest TypeScript equivalents:
+ *
+ * Lucas.html metric → TypeScript equivalent:
+ * - audioAmp → rms (overall amplitude)
+ * - bandEnergy[mid] → mid (mid frequency band)
+ * - emptiness → bass (low frequency content, inverted conceptually)
+ * - lowImbalance → stereoWidth (stereo characteristics)
  */
 export const DEFAULT_AUDIO_SOURCES: Partial<Record<keyof VisualParams, keyof AudioMetrics>> = {
-  spikiness: 'collision',        // lucas.html: collision
-  spikeFrequency: 'rms',         // lucas.html: audioAmp → closest is rms
-  spikeSharpness: 'harshness',   // lucas.html: harshness
-  hue: 'presence',               // lucas.html: bandEnergy → closest is presence
-  scale: 'compression',          // lucas.html: compression
-  expansionFactor: 'bass',       // lucas.html: emptiness → use bass as alternative
-  fadeAmount: 'mud',             // lucas.html: mud
-  hueShiftAmount: 'phaseRisk',   // lucas.html: phaseRisk
-  rotation: 'stereoWidth',       // lucas.html: lowImbalance → use stereoWidth
-  fillSize: 'rms',               // lucas.html: audioAmp → closest is rms
-  fillOpacity: 'coherence',      // lucas.html: coherence
-  blendOpacity: 'mud',           // lucas.html: mud
-  autoRotationSpeed: 'presence',
-  noiseAmount: 'harshness',
+  spikiness: 'collision',        // lucas.html: collision ✓
+  spikeFrequency: 'rms',         // lucas.html: audioAmp → rms
+  spikeSharpness: 'harshness',   // lucas.html: harshness ✓
+  hue: 'mid',                    // lucas.html: bandEnergy[mid] → mid
+  scale: 'compression',          // lucas.html: compression ✓
+  expansionFactor: 'bass',       // lucas.html: emptiness → bass
+  fadeAmount: 'mud',             // lucas.html: mud ✓
+  hueShiftAmount: 'phaseRisk',   // lucas.html: phaseRisk ✓
+  rotation: 'stereoWidth',       // lucas.html: lowImbalance → stereoWidth
+  fillSize: 'rms',               // lucas.html: audioAmp → rms
+  fillOpacity: 'coherence',      // lucas.html: coherence ✓
+  blendOpacity: 'mud',           // lucas.html: mud ✓
+  autoRotationSpeed: 'high',     // High frequencies for rotation speed variation
+  noiseAmount: 'harshness',      // Harshness adds visual noise
+  noiseRate: 'presence',         // Presence affects noise rate
+  blurAmount: 'mud',             // Mud adds blur
+  blurRate: 'bass',              // Bass affects blur pulsing
+  jiggleAmount: 'rms',           // Overall amplitude for jiggle
 };
 
 /**

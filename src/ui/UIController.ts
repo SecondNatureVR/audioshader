@@ -3,7 +3,7 @@
  * Handles all DOM interactions for the AudioShader UI
  */
 
-import type { VisualParams, AudioMetrics } from '../types';
+import type { VisualParams, AudioMetrics, BlendMode } from '../types';
 import {
   CurveMapper,
   getParamDefaultSettings,
@@ -16,12 +16,14 @@ import {
   RotationSpeedMapping,
   type CurveSettings,
 } from '../mapping/CurveMapping';
-import type { BlendMode } from '../render/Renderer';
 import type { App } from '../App';
 import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateExpandedRange } from './valueUtils';
+import { getParamLabel } from '../config/paramLabels';
+import type { ParamChangeEventDetail, CurveEditRequestEventDetail } from '../components/types';
+import type { ParamSlider } from '../components/param-slider/ParamSlider';
 
 export interface JiggleSettings {
   enabled: Record<keyof VisualParams, boolean>;
@@ -99,6 +101,7 @@ export class UIController {
    */
   init(): void {
     this.cacheElements();
+    this.setupComponentListeners();
     this.setupSliders();
     this.setupPresetControls();
     this.setupResolutionControls();
@@ -122,11 +125,42 @@ export class UIController {
   }
 
   /**
+   * Setup event listeners for Lit web components
+   * Allows incremental migration from vanilla HTML to components
+   */
+  private setupComponentListeners(): void {
+    // Listen for param-change events from <param-slider> components
+    document.addEventListener('param-change', (e: CustomEvent<ParamChangeEventDetail>) => {
+      const { paramName, value, source } = e.detail;
+
+      // Apply curve mapping for slider input, use direct value for direct input
+      const paramValue = source === 'slider'
+        ? this.sliderToParamValue(paramName, value)
+        : value;
+
+      // Expand curve range if needed (for direct input)
+      if (source === 'input') {
+        this.expandSliderRangeIfNeeded(paramName, paramValue);
+      }
+
+      this.app.setParam(paramName as keyof VisualParams, paramValue);
+      this.updateValueDisplay(paramName, paramValue);
+      this.config.onParamChange?.(paramName as keyof VisualParams, paramValue);
+    });
+
+    // Listen for curve-edit-request events from <param-slider> components
+    document.addEventListener('curve-edit-request', (e: CustomEvent<CurveEditRequestEventDetail>) => {
+      this.openCurveEditor(e.detail.paramName);
+    });
+  }
+
+  /**
    * Setup all parameter sliders
+   * Note: Migrated sliders (using <param-slider>) are handled by setupComponentListeners
    */
   private setupSliders(): void {
     // Shape sliders
-    this.setupParamSlider('spikiness', 0, 100, 1);
+    // 'spikiness' is migrated to <param-slider> component
     this.setupParamSlider('spikeFrequency', 2, 20, 0.1);
     this.setupParamSlider('spikeSharpness', 0, 100, 1);
 
@@ -208,7 +242,13 @@ export class UIController {
   }
 
   /**
-   * Setup emanation rate slider (separate from visual params)
+   * Setup emanation rate slider
+   *
+   * emanationRate is handled separately from VisualParams because:
+   * 1. It's a timing parameter (shapes/second), not a visual appearance parameter
+   * 2. It doesn't need smooth interpolation - rate changes are instant
+   * 3. It doesn't need curve mapping - slider maps directly 1:1 to rate
+   * 4. Presets store it as a separate field, not part of params
    */
   private setupEmanationRateSlider(): void {
     const slider = document.getElementById('emanation-rate-slider') as HTMLInputElement | null;
@@ -338,25 +378,19 @@ export class UIController {
   }
 
   /**
-   * Expand slider range if the given value exceeds current min/max
-   * Also updates curve settings to match
+   * Expand curve settings range if the given value exceeds current min/max
+   * The slider HTML range stays 0-100, only the curve mapping range is expanded
    */
   private expandSliderRangeIfNeeded(paramName: string, value: number): void {
-    const slider = this.sliders.get(paramName);
-    if (slider === null || slider === undefined) return;
-
-    const currentMin = parseFloat(slider.min);
-    const currentMax = parseFloat(slider.max);
+    // Get current curve settings (the actual parameter range)
+    const currentSettings = this.curveMapper.getSettings(paramName);
+    const currentMin = currentSettings.min;
+    const currentMax = currentSettings.max;
 
     const expanded = calculateExpandedRange(value, currentMin, currentMax);
 
     if (expanded !== null) {
-      // Update slider attributes
-      slider.min = String(expanded.min);
-      slider.max = String(expanded.max);
-
       // Update curve settings to match new range
-      const currentSettings = this.curveMapper.getSettings(paramName);
       this.curveMapper.setSettings(paramName, {
         ...currentSettings,
         min: expanded.min,
@@ -466,6 +500,26 @@ export class UIController {
       this.updateSliderFromValue(name, value);
       this.updateValueDisplay(name, value);
     }
+
+    // Update param-slider components
+    this.updateParamSliderComponents(params);
+  }
+
+  /**
+   * Update param-slider components with current values
+   */
+  private updateParamSliderComponents(params: VisualParams): void {
+    const components = document.querySelectorAll<ParamSlider>('param-slider');
+    components.forEach((component) => {
+      const paramName = component.paramName as keyof VisualParams;
+      if (paramName in params) {
+        const value = params[paramName];
+        component.value = value;
+        // Update slider position using curve mapping
+        const sliderValue = this.paramToSliderValue(paramName, value);
+        component.setSliderPosition(sliderValue);
+      }
+    });
   }
 
   /**
@@ -535,8 +589,38 @@ export class UIController {
     if (success) {
       this.currentPresetName = name;
       this.updateAllSliders();
+      this.updateEmanationRateSlider();
+      this.updateBlendModeSelect();
       this.updateStatusIndicators();
       this.config.onPresetLoad?.(name);
+    }
+  }
+
+  /**
+   * Update emanation rate slider from app state
+   */
+  private updateEmanationRateSlider(): void {
+    const rate = this.app.getEmanationRate();
+    const slider = document.getElementById('emanation-rate-slider') as HTMLInputElement | null;
+    const valueDisplay = document.getElementById('emanation-rate-value');
+
+    if (slider !== null) {
+      slider.value = String(rate);
+    }
+    if (valueDisplay !== null) {
+      valueDisplay.textContent = rate.toFixed(1);
+    }
+  }
+
+  /**
+   * Update blend mode select from app state
+   */
+  private updateBlendModeSelect(): void {
+    const mode = this.app.getBlendMode();
+    const select = document.getElementById('blend-mode-select') as HTMLSelectElement | null;
+
+    if (select !== null) {
+      select.value = mode;
     }
   }
 
@@ -1009,11 +1093,15 @@ export class UIController {
       return `
       <div class="mapping-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 3px;">
         <input type="checkbox" id="mapping-${param}-enabled" data-param="${param}" ${currentEnabled ? 'checked' : ''} style="cursor: pointer;">
-        <label for="mapping-${param}-enabled" style="font-size: 9px; color: #bbb; width: 100px; cursor: pointer;">${param}</label>
-        <select id="mapping-${param}-source" data-param="${param}" style="font-size: 8px; padding: 2px; background: #333; color: #eee; border: 1px solid #555; border-radius: 2px;">
+        <label for="mapping-${param}-enabled" style="font-size: 9px; color: #bbb; width: 80px; cursor: pointer;">${getParamLabel(param)}</label>
+        <div class="mapping-bar-container" style="width: 50px; height: 8px; background: #222; border-radius: 2px; overflow: hidden; position: relative;">
+          <div id="mapping-${param}-bar" class="mapping-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0af, #0fa); transition: width 0.05s;"></div>
+        </div>
+        <span id="mapping-${param}-value" style="font-size: 8px; color: #888; width: 35px; text-align: right;">0.00</span>
+        <select id="mapping-${param}-source" data-param="${param}" style="font-size: 8px; padding: 2px; background: #333; color: #eee; border: 1px solid #555; border-radius: 2px; width: 70px;">
           ${audioSources.map((src) => `<option value="${src}" ${src === currentSource ? 'selected' : ''}>${src}</option>`).join('')}
         </select>
-        <input type="range" id="mapping-${param}-sensitivity" data-param="${param}" min="0" max="200" value="${currentSensitivity}" style="width: 60px;">
+        <input type="range" id="mapping-${param}-sensitivity" data-param="${param}" min="0" max="200" value="${currentSensitivity}" style="width: 50px;">
       </div>
     `;
     }).join('');
@@ -1138,7 +1226,7 @@ export class UIController {
     const powerSlider = document.getElementById('curve-power') as HTMLInputElement | null;
     const powerValue = document.getElementById('curve-power-value');
 
-    if (title !== null) title.textContent = `Curve Editor: ${paramName}`;
+    if (title !== null) title.textContent = `Curve Editor: ${getParamLabel(paramName)}`;
     if (minInput !== null) minInput.value = String(settings.min);
     if (maxInput !== null) maxInput.value = String(settings.max);
     if (powerSlider !== null) powerSlider.value = String(settings.power);
@@ -1514,15 +1602,124 @@ export class UIController {
   updateAudioMetrics(metrics: AudioMetrics): void {
     // Update audio metrics visualization table
     const table = document.getElementById('audio-metrics-table');
-    if (table === null) return;
+    if (table !== null) {
+      // Map metric names to AudioAnalyzer internal names for min/max lookup
+      const metricToAnalyzerName: Record<string, { name: string; index?: number }> = {
+        rms: { name: 'audioAmp' },
+        bass: { name: 'bandEnergy', index: 0 },
+        mid: { name: 'bandEnergy', index: 1 },
+        high: { name: 'bandEnergy', index: 2 },
+        presence: { name: 'bandEnergy', index: 2 }, // Use high band for presence
+        harshness: { name: 'harshness' },
+        mud: { name: 'mud' },
+        compression: { name: 'compression' },
+        collision: { name: 'collision' },
+        coherence: { name: 'coherence' },
+        stereoWidth: { name: 'stereoWidth', index: 1 }, // Use mid band
+        phaseRisk: { name: 'phaseRisk' },
+      };
 
-    // Update each metric row
-    for (const [name, value] of Object.entries(metrics)) {
-      const row = document.querySelector(`[data-metric="${name}"]`);
-      if (row !== null) {
+      // Update each metric row
+      for (const [name, value] of Object.entries(metrics)) {
+        const row = document.querySelector(`[data-metric="${name}"]`);
+        if (row === null) continue;
+
+        // Update text value
         const valueCell = row.querySelector('.metric-value');
         if (valueCell !== null) {
           valueCell.textContent = typeof value === 'number' ? value.toFixed(3) : String(value);
+        }
+
+        // Get min/max from AudioAnalyzer if available
+        let minMax = { min: 0, max: 1 };
+        const analyzerMapping = metricToAnalyzerName[name];
+        if (this.audioAnalyzer !== null && analyzerMapping !== undefined) {
+          try {
+            minMax = this.audioAnalyzer.getMinMax(
+              analyzerMapping.name as 'audioAmp' | 'bandEnergy' | 'harshness' | 'mud' | 'compression' | 'collision' | 'coherence' | 'phaseRisk' | 'stereoWidth',
+              analyzerMapping.index
+            );
+          } catch {
+            // Use defaults if getMinMax fails
+          }
+        }
+
+        // Update range display text
+        const rangeCell = row.querySelector('.metric-range');
+        if (rangeCell !== null) {
+          rangeCell.textContent = `${minMax.min.toFixed(2)}-${minMax.max.toFixed(2)}`;
+        }
+
+        // Update bar visualization
+        if (typeof value === 'number') {
+          // Update range bar (shows min-max as filled area)
+          const rangeBar = row.querySelector('.metric-bar-range') as HTMLElement | null;
+          if (rangeBar !== null) {
+            const rangeStart = Math.max(0, Math.min(100, minMax.min * 100));
+            const rangeWidth = Math.max(0, Math.min(100 - rangeStart, (minMax.max - minMax.min) * 100));
+            rangeBar.style.left = `${rangeStart}%`;
+            rangeBar.style.width = `${rangeWidth}%`;
+          }
+
+          // Update current value marker
+          const currentBar = row.querySelector('.metric-bar-current') as HTMLElement | null;
+          if (currentBar !== null) {
+            const percentage = Math.max(0, Math.min(100, value * 100));
+            currentBar.style.left = `${percentage}%`;
+            currentBar.style.background = value > 0.3 ? '#0fa' : '#0af';
+          }
+        }
+      }
+    }
+
+    // Update mapping bars for each parameter
+    this.updateMappingBars(metrics);
+  }
+
+  /**
+   * Update the visualization bars for audio-mapped parameters
+   */
+  private updateMappingBars(metrics: AudioMetrics): void {
+    const audioMapper = this.app.getAudioMapper();
+    const mappableParams: Array<keyof VisualParams> = [
+      'spikiness', 'spikeFrequency', 'spikeSharpness', 'hue', 'scale',
+      'fillSize', 'fillOpacity', 'blendOpacity', 'expansionFactor',
+      'fadeAmount', 'hueShiftAmount', 'rotation', 'autoRotationSpeed',
+      'noiseAmount', 'noiseRate', 'blurAmount', 'blurRate', 'jiggleAmount',
+    ];
+
+    for (const param of mappableParams) {
+      const mapping = audioMapper.getMapping(param);
+      if (mapping === undefined) continue;
+
+      const bar = document.getElementById(`mapping-${param}-bar`);
+      const valueDisplay = document.getElementById(`mapping-${param}-value`);
+
+      // Get the current metric value
+      const metricValue = metrics[mapping.source] ?? 0;
+      // Apply sensitivity to get the effective value
+      const effectiveValue = Math.min(1, metricValue * mapping.sensitivity);
+
+      if (bar !== null) {
+        // Map to percentage (0-100%)
+        const barWidth = Math.max(0, Math.min(100, effectiveValue * 100));
+        bar.style.width = `${barWidth}%`;
+
+        // Color based on whether mapping is enabled
+        if (mapping.enabled) {
+          bar.style.background = 'linear-gradient(90deg, #0af, #0fa)';
+        } else {
+          bar.style.background = '#555';
+        }
+      }
+
+      if (valueDisplay !== null) {
+        valueDisplay.textContent = effectiveValue.toFixed(2);
+        // Highlight when active
+        if (mapping.enabled && effectiveValue > 0.1) {
+          valueDisplay.style.color = '#0af';
+        } else {
+          valueDisplay.style.color = '#888';
         }
       }
     }

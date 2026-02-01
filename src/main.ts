@@ -7,6 +7,9 @@ import { App } from './App';
 import { UIController } from './ui/UIController';
 import { AudioAnalyzer } from './audio/AudioAnalyzer';
 
+// Register Lit web components
+import './components';
+
 // Global app instance for debugging and console access
 declare global {
   interface Window {

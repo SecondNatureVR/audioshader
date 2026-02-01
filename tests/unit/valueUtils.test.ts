@@ -115,6 +115,14 @@ describe('valueUtils', () => {
       expect(result!.min).toBe(0);
       expect(result!.max).toBeCloseTo(550);
     });
+
+    it('should work with fractional parameter ranges (e.g., scale 0.05-1.0)', () => {
+      // User enters 6 when current range is 0.05-1.0
+      const result = calculateExpandedRange(6, 0.05, 1.0);
+      expect(result).not.toBeNull();
+      expect(result!.min).toBe(0.05); // min unchanged
+      expect(result!.max).toBeCloseTo(6.6); // 6 + 10% = 6.6
+    });
   });
 
   describe('ValueFormatters', () => {

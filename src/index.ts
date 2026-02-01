@@ -12,11 +12,12 @@ export type {
   AudioMappings,
   Preset,
   RenderState,
+  BlendMode,
 } from './types';
 
 // Rendering
 export { Renderer } from './render/Renderer';
-export type { RenderOptions, BlendMode } from './render/Renderer';
+export type { RenderOptions } from './render/Renderer';
 export { ParameterInterpolator } from './render/ParameterInterpolator';
 export type { EasingType } from './render/ParameterInterpolator';
 export {

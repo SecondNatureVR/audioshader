@@ -75,6 +75,24 @@ describe('PresetManager', () => {
       const loaded = presetManager.getPreset('Test');
       expect(loaded?.params.spikiness).toBe(0.1);
     });
+
+    it('should save and load emanationRate', () => {
+      presetManager.savePreset('WithRate', testParams, undefined, 150);
+
+      const loaded = presetManager.getPreset('WithRate');
+      expect(loaded?.emanationRate).toBe(150);
+    });
+
+    it('should preserve emanationRate when overwriting preset', () => {
+      presetManager.savePreset('Test', testParams, undefined, 100);
+
+      // Save again without specifying emanationRate
+      const newParams = { ...testParams, spikiness: 0.1 };
+      presetManager.savePreset('Test', newParams);
+
+      const loaded = presetManager.getPreset('Test');
+      expect(loaded?.emanationRate).toBe(100); // Should preserve existing rate
+    });
   });
 
   describe('loadPreset', () => {
@@ -238,6 +256,61 @@ describe('PresetManager', () => {
       presetManager.savePreset('P2', testParams);
 
       expect(presetManager.count).toBe(2);
+    });
+  });
+
+  describe('default presets', () => {
+    beforeEach(() => {
+      // Don't set migrated flag so defaults are loaded
+      localStorageMock.clear();
+    });
+
+    it('should load default presets with emanationRate', () => {
+      const manager = new PresetManager();
+
+      // VHS preset should have emanationRate
+      const vhs = manager.getPreset('VHS');
+      expect(vhs).not.toBeNull();
+      expect(vhs?.emanationRate).toBe(300);
+
+      // Other presets should also have emanationRate
+      const burn = manager.getPreset('Burn');
+      expect(burn).not.toBeNull();
+      expect(burn?.emanationRate).toBe(30);
+    });
+
+    it('should have emanationRate on all default presets', () => {
+      const manager = new PresetManager();
+      const names = manager.getPresetNames();
+
+      // All default presets should have emanationRate defined
+      for (const name of names) {
+        const preset = manager.getPreset(name);
+        expect(preset?.emanationRate).toBeDefined();
+        expect(typeof preset?.emanationRate).toBe('number');
+      }
+    });
+
+    it('should migrate emanationRate from defaults when loading stored presets without it', () => {
+      // Simulate stored presets without emanationRate (as if saved before emanationRate was added)
+      const storedPresets = {
+        'VHS': {
+          name: 'VHS',
+          params: { spikiness: 0.24, spikeFrequency: 3.77, spikeSharpness: 0.3, hue: 294.9,
+            scale: 0.99, fillSize: 0.99, fillOpacity: 0.02, blendOpacity: 0.14,
+            expansionFactor: 0.966, fadeAmount: 3.8, hueShiftAmount: 0.036, rotation: 0,
+            noiseAmount: 0, noiseRate: 0, blurAmount: 0, blurRate: 0,
+            autoRotationSpeed: 13, jiggleAmount: 0.3 },
+          // Note: no emanationRate!
+        },
+      };
+      localStorageMock.setItem('audioshader_presets', JSON.stringify(storedPresets));
+
+      const manager = new PresetManager();
+      const vhs = manager.getPreset('VHS');
+
+      // Should have migrated emanationRate from defaults
+      expect(vhs?.emanationRate).toBe(300);
     });
   });
 });

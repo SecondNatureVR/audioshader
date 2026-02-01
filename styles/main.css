@@ -251,6 +251,12 @@ body {
     color: #0f0;
 }
 
+.metric-range {
+    font-size: 8px;
+    color: #666;
+    font-family: monospace;
+}
+
 .metric-bar-container {
     width: 100px;
     height: 12px;

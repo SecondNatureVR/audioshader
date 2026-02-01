@@ -43,6 +43,22 @@ src/
 - **shaders/dilation.frag** - Dilation/expansion effect shader
 - **index.html** - Main HTML with all UI elements
 
+## Design Decisions
+
+### emanationRate vs VisualParams
+
+`emanationRate` is handled separately from `VisualParams` in the codebase. This is intentional:
+
+| Aspect | VisualParams | emanationRate |
+|--------|--------------|---------------|
+| Purpose | Visual appearance | Timing (shapes/second) |
+| Interpolation | Smooth transitions | Instant changes |
+| Curve mapping | Yes (non-linear sliders) | No (1:1 linear) |
+| Preset storage | `preset.params` | `preset.emanationRate` |
+| App storage | `this.params` + interpolator | `this.emanationRate` |
+
+This separation exists because emanationRate controls *when* shapes are captured, not *how* they look. Interpolating a rate value would cause unpredictable timing behavior.
+
 ## Current State
 
 ### What Works
@@ -190,6 +206,17 @@ When working on any feature:
 2. **During development:** Write tests alongside code
 3. **Before completing:** Run `npm run test:run` to verify all tests pass
 4. **On failure:** Fix the failing tests before proceeding
+
+## Code Standards
+
+### TypeScript Only
+**All code must be TypeScript (.ts/.tsx files).** Do not create JavaScript (.js/.jsx) files. This includes:
+- Source code in `src/`
+- Test files in `tests/`
+- Scripts in `scripts/`
+- Configuration files that support TypeScript (use .ts where possible)
+
+All code must pass type checking (`npm run typecheck`).
 
 ## Development Commands
 

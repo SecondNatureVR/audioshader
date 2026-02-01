@@ -3,9 +3,9 @@
  * Handles saving, loading, import/export of visual presets
  */
 
-import type { VisualParams, AudioMappings, Preset } from '../types';
+import type { VisualParams, AudioMappings, Preset, BlendMode } from '../types';
 import { DEFAULT_PARAMS } from '../render/Parameters';
-import { getDefaultPresetsMap, migrateOldLocalStorage } from './defaultPresets';
+import { getDefaultPresetsMap, migrateOldLocalStorage, getDefaultEmanationRate, getDefaultBlendMode } from './defaultPresets';
 
 const STORAGE_KEY = 'audioshader_presets';
 const CURRENT_PRESET_KEY = 'audioshader_current_preset';
@@ -31,6 +31,28 @@ export class PresetManager {
         // User has existing presets in new format
         const data = JSON.parse(stored) as Record<string, Preset>;
         this.presets = new Map(Object.entries(data));
+
+        // Migrate: add missing emanationRate and blendMode from defaults
+        let needsSave = false;
+        for (const [name, preset] of this.presets) {
+          if (preset.emanationRate === undefined) {
+            const defaultRate = getDefaultEmanationRate(name);
+            if (defaultRate !== undefined) {
+              preset.emanationRate = defaultRate;
+              needsSave = true;
+            }
+          }
+          if (preset.blendMode === undefined) {
+            const defaultMode = getDefaultBlendMode(name);
+            if (defaultMode !== undefined) {
+              preset.blendMode = defaultMode;
+              needsSave = true;
+            }
+          }
+        }
+        if (needsSave) {
+          this.saveToStorage();
+        }
       } else {
         // No new-format presets - try migration or use defaults
         const hasMigrated = localStorage.getItem(MIGRATION_KEY) === 'true';
@@ -110,13 +132,21 @@ export class PresetManager {
   /**
    * Save current parameters as a new preset or overwrite existing
    */
-  savePreset(name: string, params: VisualParams, audioMappings?: AudioMappings): void {
+  savePreset(
+    name: string,
+    params: VisualParams,
+    audioMappings?: AudioMappings,
+    emanationRate?: number,
+    blendMode?: BlendMode
+  ): void {
     const now = new Date().toISOString();
     const existing = this.presets.get(name);
 
     const preset: Preset = {
       name,
       params: { ...params },
+      blendMode: blendMode ?? existing?.blendMode,
+      emanationRate: emanationRate ?? existing?.emanationRate,
       audioMappings: audioMappings !== undefined ? { ...audioMappings } : undefined,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
