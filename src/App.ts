@@ -39,7 +39,10 @@ export class App {
   private lastCaptureTime: number = 0;
   private totalRotation: number = 0;
 
-  private animationFrameId: number | null = null;
+  // Use fixed interval timing like lucas.html for consistent behavior across browsers
+  private static readonly TARGET_FPS = 60;
+  private static readonly FRAME_TIME = 1000 / App.TARGET_FPS;  // ~16.67ms per frame
+  private intervalId: number | null = null;
   private lastFrameTime: number = 0;
 
   private audioMetrics: AudioMetrics | null = null;
@@ -83,21 +86,23 @@ export class App {
   }
 
   /**
-   * Start the render loop
+   * Start the render loop using fixed interval timing (like lucas.html)
    */
   start(): void {
-    if (this.animationFrameId !== null) return;
+    if (this.intervalId !== null) return;
     this.lastFrameTime = performance.now();
-    this.tick();
+    // Use setInterval for fixed 60fps like lucas.html - more consistent across browsers
+    this.intervalId = window.setInterval(this.tick, App.FRAME_TIME);
+    this.tick(); // Initial render
   }
 
   /**
    * Stop the render loop
    */
   stop(): void {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
+    if (this.intervalId !== null) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
     }
   }
 
@@ -113,8 +118,6 @@ export class App {
       this.update(deltaTime);
       this.render();
     }
-
-    this.animationFrameId = requestAnimationFrame(this.tick);
   };
 
   /**
