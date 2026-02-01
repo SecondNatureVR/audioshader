@@ -338,25 +338,19 @@ export class UIController {
   }
 
   /**
-   * Expand slider range if the given value exceeds current min/max
-   * Also updates curve settings to match
+   * Expand curve settings range if the given value exceeds current min/max
+   * The slider HTML range stays 0-100, only the curve mapping range is expanded
    */
   private expandSliderRangeIfNeeded(paramName: string, value: number): void {
-    const slider = this.sliders.get(paramName);
-    if (slider === null || slider === undefined) return;
-
-    const currentMin = parseFloat(slider.min);
-    const currentMax = parseFloat(slider.max);
+    // Get current curve settings (the actual parameter range)
+    const currentSettings = this.curveMapper.getSettings(paramName);
+    const currentMin = currentSettings.min;
+    const currentMax = currentSettings.max;
 
     const expanded = calculateExpandedRange(value, currentMin, currentMax);
 
     if (expanded !== null) {
-      // Update slider attributes
-      slider.min = String(expanded.min);
-      slider.max = String(expanded.max);
-
       // Update curve settings to match new range
-      const currentSettings = this.curveMapper.getSettings(paramName);
       this.curveMapper.setSettings(paramName, {
         ...currentSettings,
         min: expanded.min,
