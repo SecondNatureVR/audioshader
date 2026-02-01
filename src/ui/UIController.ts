@@ -226,6 +226,19 @@ export class UIController {
       this.config.onEmanationRateChange?.(rate);
     });
 
+    // Setup editable value display for direct input
+    if (valueDisplay !== null) {
+      this.setupGenericEditableValue(
+        valueDisplay,
+        slider,
+        (rate) => {
+          this.app.setEmanationRate(rate);
+          this.config.onEmanationRateChange?.(rate);
+        },
+        (v) => v.toFixed(1)
+      );
+    }
+
     // Setup curve button for emanation rate
     const controlGroup = slider.closest('.control-group');
     const curveBtn = controlGroup?.querySelector('.curve-btn');
@@ -293,6 +306,8 @@ export class UIController {
     onValue: (value: number) => void,
     formatValue: (value: number) => string = (v) => v.toFixed(2)
   ): void {
+    element.setAttribute('contenteditable', 'true');
+
     element.addEventListener('blur', () => {
       const text = element.textContent?.trim() ?? '';
       const numValue = parseNumericValue(text);
@@ -913,38 +928,40 @@ export class UIController {
 
     // Mic/Device button handler
     if (enableBtn !== null) {
-      enableBtn.addEventListener('click', async () => {
+      enableBtn.addEventListener('click', () => {
         if (audioAnalyzer.isEnabled) {
           audioAnalyzer.disableAudio();
           resetAudioUI();
         } else {
-          try {
-            await audioAnalyzer.enableAudio();
-            const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
-            setActiveUI(mode, false);
-          } catch (err) {
-            console.error('Failed to enable audio:', err);
-            alert('Failed to enable audio: ' + (err instanceof Error ? err.message : String(err)));
-          }
+          audioAnalyzer.enableAudio()
+            .then(() => {
+              const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
+              setActiveUI(mode, false);
+            })
+            .catch((err: unknown) => {
+              console.error('Failed to enable audio:', err);
+              alert('Failed to enable audio: ' + (err instanceof Error ? err.message : String(err)));
+            });
         }
       });
     }
 
     // Tab capture button handler
     if (tabBtn !== null) {
-      tabBtn.addEventListener('click', async () => {
+      tabBtn.addEventListener('click', () => {
         if (audioAnalyzer.isEnabled) {
           audioAnalyzer.disableAudio();
           resetAudioUI();
         } else {
-          try {
-            await audioAnalyzer.enableTabAudio();
-            const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
-            setActiveUI(mode, true);
-          } catch (err) {
-            console.error('Failed to capture tab audio:', err);
-            alert('Failed to capture tab audio: ' + (err instanceof Error ? err.message : String(err)));
-          }
+          audioAnalyzer.enableTabAudio()
+            .then(() => {
+              const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
+              setActiveUI(mode, true);
+            })
+            .catch((err: unknown) => {
+              console.error('Failed to capture tab audio:', err);
+              alert('Failed to capture tab audio: ' + (err instanceof Error ? err.message : String(err)));
+            });
         }
       });
     }
