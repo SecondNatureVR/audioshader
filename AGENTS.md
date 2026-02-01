@@ -100,14 +100,17 @@ src/
 7. **emanationRate** - Changed default from 1.0 to 2.0
 8. **Audio wiring** - Created AudioAnalyzer, wired to UIController, added M hotkey
 9. **Button IDs** - Fixed to match index.html (`audio-enable-btn`, `audio-tab-btn`)
+10. **Audio metrics UI** - Added `ui.updateAudioMetrics()` call to update the metrics table
+11. **Default audio mappings** - Enabled scale, spikiness, fillSize mappings by default
 
 ## Next Steps / TODO
 
 ### High Priority
 1. **Verify audio capture works end-to-end**
    - Test in Chrome: click "Capture Tab Audio", verify dialog appears
-   - Verify audio metrics flow to visualizer
+   - Verify audio metrics flow to visualizer (check 'M' panel for meter movement)
    - Check browser console for errors
+   - **Note:** 3 mappings enabled by default: scale, spikiness, fillSize
 
 2. **Visual parity debugging**
    - Add debug output to compare parameter values at runtime
