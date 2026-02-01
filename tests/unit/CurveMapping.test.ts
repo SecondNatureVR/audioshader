@@ -115,25 +115,33 @@ describe('CurveMapping', () => {
 
   describe('DilationMapping', () => {
     // DilationMapping uses slider range 0-200
-    // MIN: 0.88, MAX: 1.22, POWER: 0.125
-    // slider=0 → 0.88 (contracts)
-    // slider=100 → ~1.0 (neutral, midpoint)
+    // MIN: 0.78, MAX: 1.22, POWER: 1.0 (linear)
+    // slider=0 → 0.78 (contracts)
+    // slider=100 → 1.0 (neutral, centered)
     // slider=200 → 1.22 (expands)
 
-    it('should convert factor MIN (0.88) to slider 0', () => {
-      expect(DilationMapping.factorToSlider(0.88)).toBe(0);
+    it('should convert factor MIN (0.78) to slider 0', () => {
+      expect(DilationMapping.factorToSlider(0.78)).toBe(0);
     });
 
     it('should convert factor MAX (1.22) to slider 200', () => {
       expect(DilationMapping.factorToSlider(1.22)).toBe(200);
     });
 
-    it('should convert slider 0 to factor MIN (0.88)', () => {
-      expect(DilationMapping.sliderToFactor(0)).toBeCloseTo(0.88);
+    it('should convert factor 1.0 (neutral) to slider 100 (center)', () => {
+      expect(DilationMapping.factorToSlider(1.0)).toBe(100);
+    });
+
+    it('should convert slider 0 to factor MIN (0.78)', () => {
+      expect(DilationMapping.sliderToFactor(0)).toBeCloseTo(0.78);
     });
 
     it('should convert slider 200 to factor MAX (1.22)', () => {
       expect(DilationMapping.sliderToFactor(200)).toBeCloseTo(1.22);
+    });
+
+    it('should convert slider 100 (center) to factor 1.0 (neutral)', () => {
+      expect(DilationMapping.sliderToFactor(100)).toBeCloseTo(1.0);
     });
 
     it('should round-trip factor to slider and back', () => {

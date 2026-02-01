@@ -59,10 +59,10 @@ export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilation
   fadeAmount: { min: 0, max: 5, power: 0.333 },
   hueShiftAmount: { min: 0, max: 0.2, power: 1.0 },
 
-  // Dilation/expansion factor (very slow exponential for precise control)
+  // Dilation/expansion factor - linear mapping with 1.0 centered
   // Note: expansionFactor is the actual param name, dilationSpeed is legacy
-  expansionFactor: { min: 0.88, max: 1.22, power: 0.125 },
-  dilationSpeed: { min: 0.88, max: 1.22, power: 0.125 }, // legacy alias
+  expansionFactor: { min: 0.78, max: 1.22, power: 1.0 },
+  dilationSpeed: { min: 0.78, max: 1.22, power: 1.0 }, // legacy alias
 };
 
 /**
@@ -206,19 +206,19 @@ export class CurveMapper {
 
 /**
  * Special mapping functions for dilation speed
- * This parameter uses a power curve mapping with 1/8 power for fine control
  * NOTE: The dilation slider uses 0-200 range (not 0-100)
  *
- * Uses lucas.html CurveEditor defaults:
- * - min: 0.88, max: 1.22, power: 0.125 (1/8)
- * - slider=0 → 0.88 (contracts)
+ * Linear mapping with 1.0 (no dilation) centered at slider midpoint:
+ * - min: 0.78, max: 1.22, power: 1.0 (linear)
+ * - slider=0 → 0.78 (contracts)
+ * - slider=100 → 1.0 (no change)
  * - slider=200 → 1.22 (expands)
  */
 export const DilationMapping = {
-  // Curve settings matching lucas.html defaults
-  MIN: 0.88,
+  // Symmetric range centered on 1.0
+  MIN: 0.78,
   MAX: 1.22,
-  POWER: 0.125,
+  POWER: 1.0, // Linear
 
   /**
    * Convert expansion factor to slider value (0-200)
@@ -229,19 +229,17 @@ export const DilationMapping = {
     if (normalized <= 0) return 0;
     if (normalized >= 1) return 200;
 
-    // Inverse of power curve: normalized = curved^(1/power)
-    const curved = Math.pow(normalized, 1.0 / DilationMapping.POWER);
-    return curved * 200;
+    // Linear mapping (power = 1.0)
+    return normalized * 200;
   },
 
   /**
    * Convert slider value (0-200) to expansion factor
-   * Uses simple power curve formula matching lucas.html CurveEditor
+   * Linear mapping: slider 100 = factor 1.0 (centered)
    */
   sliderToFactor(sliderValue: number): number {
     const normalized = sliderValue / 200;
-    const curved = Math.pow(normalized, DilationMapping.POWER);
-    return DilationMapping.MIN + curved * (DilationMapping.MAX - DilationMapping.MIN);
+    return DilationMapping.MIN + normalized * (DilationMapping.MAX - DilationMapping.MIN);
   },
 };
 
