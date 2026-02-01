@@ -218,13 +218,16 @@
         <div class="section-header">
             <span>Shape</span>
         </div>
-        <div class="control-group">
-            <label>Spikiness <span class="curve-btn" data-param="spikiness" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="spikiness-slider" min="0" max="100" value="50">
-                <span class="value" id="spikiness-value" contenteditable="true">0.50</span>
-            </div>
-        </div>
+        <param-slider
+            param-name="spikiness"
+            label="Spikiness"
+            value="0.5"
+            min="0"
+            max="100"
+            step="1"
+            format="decimal2"
+            show-curve-btn
+        ></param-slider>
         <div class="control-group">
             <label>Spike Frequency <span class="curve-btn" data-param="spikeFrequency" title="Edit curve">~</span></label>
             <div class="control-row">

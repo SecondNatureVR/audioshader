@@ -22,6 +22,8 @@ import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateExpandedRange } from './valueUtils';
+import type { ParamChangeEventDetail, CurveEditRequestEventDetail } from '../components/types';
+import type { ParamSlider } from '../components/param-slider/ParamSlider';
 
 export interface JiggleSettings {
   enabled: Record<keyof VisualParams, boolean>;
@@ -99,6 +101,7 @@ export class UIController {
    */
   init(): void {
     this.cacheElements();
+    this.setupComponentListeners();
     this.setupSliders();
     this.setupPresetControls();
     this.setupResolutionControls();
@@ -122,11 +125,42 @@ export class UIController {
   }
 
   /**
+   * Setup event listeners for Lit web components
+   * Allows incremental migration from vanilla HTML to components
+   */
+  private setupComponentListeners(): void {
+    // Listen for param-change events from <param-slider> components
+    document.addEventListener('param-change', (e: CustomEvent<ParamChangeEventDetail>) => {
+      const { paramName, value, source } = e.detail;
+
+      // Apply curve mapping for slider input, use direct value for direct input
+      const paramValue = source === 'slider'
+        ? this.sliderToParamValue(paramName, value)
+        : value;
+
+      // Expand curve range if needed (for direct input)
+      if (source === 'input') {
+        this.expandSliderRangeIfNeeded(paramName, paramValue);
+      }
+
+      this.app.setParam(paramName as keyof VisualParams, paramValue);
+      this.updateValueDisplay(paramName, paramValue);
+      this.config.onParamChange?.(paramName as keyof VisualParams, paramValue);
+    });
+
+    // Listen for curve-edit-request events from <param-slider> components
+    document.addEventListener('curve-edit-request', (e: CustomEvent<CurveEditRequestEventDetail>) => {
+      this.openCurveEditor(e.detail.paramName);
+    });
+  }
+
+  /**
    * Setup all parameter sliders
+   * Note: Migrated sliders (using <param-slider>) are handled by setupComponentListeners
    */
   private setupSliders(): void {
     // Shape sliders
-    this.setupParamSlider('spikiness', 0, 100, 1);
+    // 'spikiness' is migrated to <param-slider> component
     this.setupParamSlider('spikeFrequency', 2, 20, 0.1);
     this.setupParamSlider('spikeSharpness', 0, 100, 1);
 
@@ -460,6 +494,26 @@ export class UIController {
       this.updateSliderFromValue(name, value);
       this.updateValueDisplay(name, value);
     }
+
+    // Update param-slider components
+    this.updateParamSliderComponents(params);
+  }
+
+  /**
+   * Update param-slider components with current values
+   */
+  private updateParamSliderComponents(params: VisualParams): void {
+    const components = document.querySelectorAll<ParamSlider>('param-slider');
+    components.forEach((component) => {
+      const paramName = component.paramName as keyof VisualParams;
+      if (paramName in params) {
+        const value = params[paramName];
+        component.value = value;
+        // Update slider position using curve mapping
+        const sliderValue = this.paramToSliderValue(paramName, value);
+        component.setSliderPosition(sliderValue);
+      }
+    });
   }
 
   /**
