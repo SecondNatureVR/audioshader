@@ -4,9 +4,7 @@
  */
 
 import { RESOLUTIONS, getCurrentResolution } from '../config/resolutions';
-import type { ResolutionKey } from '../types';
-
-export type BlendMode = 'additive' | 'alpha' | 'multiply' | 'screen' | 'overlay';
+import type { ResolutionKey, BlendMode } from '../types';
 
 export interface RenderUniforms {
   u_time: number;

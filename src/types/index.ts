@@ -72,10 +72,14 @@ export interface AudioMappingConfig {
 // Complete audio mapping for all parameters
 export type AudioMappings = Partial<Record<keyof VisualParams, AudioMappingConfig>>;
 
+// Blend mode for compositing
+export type BlendMode = 'additive' | 'alpha' | 'multiply' | 'screen' | 'overlay';
+
 // Preset data structure
 export interface Preset {
   name: string;
   params: VisualParams;
+  blendMode?: BlendMode | undefined;
   emanationRate?: number | undefined;
   audioMappings?: AudioMappings | undefined;
   createdAt?: string | undefined;

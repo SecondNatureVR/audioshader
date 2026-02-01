@@ -60,9 +60,10 @@ export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilation
   hueShiftAmount: { min: 0, max: 0.2, power: 1.0 },
 
   // Dilation/expansion factor - linear mapping with 1.0 centered
+  // Range widened to accommodate artistic preset values (e.g., HUELOOP: 0.55, Dive: 1.27)
   // Note: expansionFactor is the actual param name, dilationSpeed is legacy
-  expansionFactor: { min: 0.78, max: 1.22, power: 1.0 },
-  dilationSpeed: { min: 0.78, max: 1.22, power: 1.0 }, // legacy alias
+  expansionFactor: { min: 0.5, max: 1.5, power: 1.0 },
+  dilationSpeed: { min: 0.5, max: 1.5, power: 1.0 }, // legacy alias
 };
 
 /**
@@ -182,8 +183,9 @@ export class CurveMapper {
         const parsed = JSON.parse(saved) as Partial<CurveSettings>;
         Object.assign(settings, parsed);
       }
+      // No warning if localStorage doesn't have saved settings - this is normal on first load
     } catch {
-      console.warn('Failed to load curve settings for', paramName);
+      // Only warn on actual parse errors, not missing data
     }
   }
 
@@ -209,16 +211,17 @@ export class CurveMapper {
  * NOTE: The dilation slider uses 0-200 range (not 0-100)
  *
  * Linear mapping with 1.0 (no dilation) centered at slider midpoint:
- * - min: 0.78, max: 1.22, power: 1.0 (linear)
- * - slider=0 → 0.78 (contracts)
+ * - slider=0 → 0.5 (contracts)
  * - slider=100 → 1.0 (no change)
- * - slider=200 → 1.22 (expands)
+ * - slider=200 → 1.5 (expands)
+ *
+ * Range widened to accommodate artistic preset values (e.g., HUELOOP: 0.55, Dive: 1.27)
+ * while keeping 1.0 centered at slider=100.
  */
 export const DilationMapping = {
-  // Symmetric range centered on 1.0
-  MIN: 0.78,
-  MAX: 1.22,
-  POWER: 1.0, // Linear
+  // Symmetric range centered on 1.0, widened to cover all presets
+  MIN: 0.5,
+  MAX: 1.5,
 
   /**
    * Convert expansion factor to slider value (0-200)
@@ -229,7 +232,6 @@ export const DilationMapping = {
     if (normalized <= 0) return 0;
     if (normalized >= 1) return 200;
 
-    // Linear mapping (power = 1.0)
     return normalized * 200;
   },
 

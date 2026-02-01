@@ -3,13 +3,13 @@
  * Main application state and render loop management
  */
 
-import { Renderer, type RenderOptions, type BlendMode } from './render/Renderer';
+import { Renderer, type RenderOptions } from './render/Renderer';
 import { loadAllShaders } from './render/shaders';
 import { ParameterInterpolator } from './render/ParameterInterpolator';
 import { createDefaultParams, PARAM_RANGES, applyJiggle } from './render/Parameters';
 import { PresetManager } from './presets/PresetManager';
 import { AudioMapper } from './audio/AudioMapper';
-import type { VisualParams, AudioMetrics, RenderState, AudioMappingConfig } from './types';
+import type { VisualParams, AudioMetrics, RenderState, AudioMappingConfig, BlendMode } from './types';
 
 export interface AppConfig {
   canvas: HTMLCanvasElement;
@@ -81,6 +81,7 @@ export class App {
       const preset = this.presetManager.loadPreset(lastPreset);
       if (preset !== null) {
         this.setParams(preset.params);
+        this.emanationRate = preset.emanationRate ?? App.DEFAULT_EMANATION_RATE;
         if (preset.audioMappings !== undefined) {
           this.audioMapper.setMappings(preset.audioMappings);
         }
@@ -386,6 +387,13 @@ export class App {
   }
 
   /**
+   * Get blend mode
+   */
+  getBlendMode(): BlendMode {
+    return this.blendMode;
+  }
+
+  /**
    * Set blend mode
    */
   setBlendMode(mode: BlendMode): void {
@@ -472,8 +480,17 @@ export class App {
    * Save current state as a preset
    */
   savePreset(name: string): void {
-    this.presetManager.savePreset(name, this.params, this.audioMapper.getMappings());
+    this.presetManager.savePreset(
+      name,
+      this.params,
+      this.audioMapper.getMappings(),
+      this.emanationRate,
+      this.blendMode
+    );
   }
+
+  // Default emanation rate used when preset doesn't specify one
+  private static readonly DEFAULT_EMANATION_RATE = 30;
 
   /**
    * Load a preset by name
@@ -483,9 +500,10 @@ export class App {
     if (preset === null) return false;
 
     this.setParams(preset.params);
-    if (preset.emanationRate !== undefined) {
-      this.emanationRate = preset.emanationRate;
-    }
+    // Always set emanationRate - use preset value or default
+    this.emanationRate = preset.emanationRate ?? App.DEFAULT_EMANATION_RATE;
+    // Set blendMode from preset or default to 'additive'
+    this.blendMode = preset.blendMode ?? 'additive';
     if (preset.audioMappings !== undefined) {
       this.audioMapper.setMappings(preset.audioMappings);
     }

@@ -179,6 +179,12 @@ export class ParameterInterpolator {
 
     // Update standard interpolations
     this.params.forEach((state) => {
+      // Handle zero duration (snap) - avoid 0/0 = NaN
+      if (state.duration === 0) {
+        state.current = state.target;
+        return;
+      }
+
       const elapsed = now - state.startTime;
       const progress = Math.min(elapsed / state.duration, 1);
 
