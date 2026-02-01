@@ -742,61 +742,49 @@ export class UIController {
 
     const audioAnalyzer = this.audioAnalyzer;
 
-    // Get all button pairs (main UI and panel)
-    const enableBtns = [
-      document.getElementById('audio-enable-btn'),
-      document.getElementById('audio-enable-btn-panel'),
-    ].filter((el): el is HTMLElement => el !== null);
-
-    const tabBtns = [
-      document.getElementById('audio-tab-btn'),
-      document.getElementById('audio-tab-btn-panel'),
-    ].filter((el): el is HTMLElement => el !== null);
-
-    const statusEls = [
-      document.getElementById('audio-status'),
-      document.getElementById('audio-status-panel'),
-    ].filter((el): el is HTMLElement => el !== null);
+    const enableBtn = document.getElementById('audio-enable-btn');
+    const tabBtn = document.getElementById('audio-tab-btn');
+    const status = document.getElementById('audio-status');
 
     // Helper to reset UI state
     const resetAudioUI = (): void => {
-      enableBtns.forEach((btn) => {
-        btn.textContent = 'Enable Mic/Device';
-        btn.style.background = '#0af';
-      });
-      tabBtns.forEach((btn) => {
-        btn.textContent = 'Capture Tab Audio';
-        btn.style.background = '#a0f';
-      });
-      statusEls.forEach((status) => {
+      if (enableBtn !== null) {
+        enableBtn.textContent = 'Enable Mic/Device';
+        enableBtn.style.background = '#0af';
+      }
+      if (tabBtn !== null) {
+        tabBtn.textContent = 'Capture Tab Audio';
+        tabBtn.style.background = '#a0f';
+      }
+      if (status !== null) {
         status.textContent = 'Audio: Disabled';
         status.style.color = '#888';
-      });
+      }
     };
 
     // Helper to set active state
     const setActiveUI = (mode: string, isTab: boolean): void => {
       if (isTab) {
-        tabBtns.forEach((btn) => {
-          btn.textContent = 'Stop Tab Capture';
-          btn.style.background = '#f44';
-        });
-        enableBtns.forEach((btn) => {
-          btn.style.background = '#555';
-        });
+        if (tabBtn !== null) {
+          tabBtn.textContent = 'Stop Tab Capture';
+          tabBtn.style.background = '#f44';
+        }
+        if (enableBtn !== null) {
+          enableBtn.style.background = '#555';
+        }
       } else {
-        enableBtns.forEach((btn) => {
-          btn.textContent = 'Disable Audio';
-          btn.style.background = '#f44';
-        });
-        tabBtns.forEach((btn) => {
-          btn.style.background = '#555';
-        });
+        if (enableBtn !== null) {
+          enableBtn.textContent = 'Disable Audio';
+          enableBtn.style.background = '#f44';
+        }
+        if (tabBtn !== null) {
+          tabBtn.style.background = '#555';
+        }
       }
-      statusEls.forEach((status) => {
+      if (status !== null) {
         status.textContent = `Audio: ${mode}${isTab ? ' (Tab)' : ''}`;
         status.style.color = audioAnalyzer.isStereoMode ? '#0f0' : '#ff0';
-      });
+      }
     };
 
     // Listen for tab audio ending (user stopped sharing)
@@ -804,9 +792,9 @@ export class UIController {
       resetAudioUI();
     });
 
-    // Mic/Device button handlers
-    enableBtns.forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    // Mic/Device button handler
+    if (enableBtn !== null) {
+      enableBtn.addEventListener('click', async () => {
         if (audioAnalyzer.isEnabled) {
           audioAnalyzer.disableAudio();
           resetAudioUI();
@@ -821,11 +809,11 @@ export class UIController {
           }
         }
       });
-    });
+    }
 
-    // Tab capture button handlers
-    tabBtns.forEach((btn) => {
-      btn.addEventListener('click', async () => {
+    // Tab capture button handler
+    if (tabBtn !== null) {
+      tabBtn.addEventListener('click', async () => {
         if (audioAnalyzer.isEnabled) {
           audioAnalyzer.disableAudio();
           resetAudioUI();
@@ -840,7 +828,7 @@ export class UIController {
           }
         }
       });
-    });
+    }
 
     // Audio reactive toggle
     const reactiveToggle = document.getElementById('audio-reactive-enabled') as HTMLInputElement | null;
