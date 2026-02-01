@@ -21,6 +21,7 @@ import type { App } from '../App';
 import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
+import { parseNumericValue, calculateExpandedRange } from './valueUtils';
 
 export interface JiggleSettings {
   enabled: Record<keyof VisualParams, boolean>;
@@ -259,9 +260,9 @@ export class UIController {
 
     element.addEventListener('blur', () => {
       const text = element.textContent?.trim() ?? '';
-      const numValue = parseFloat(text.replace(/[^0-9.-]/g, ''));
+      const numValue = parseNumericValue(text);
 
-      if (!isNaN(numValue)) {
+      if (numValue !== null) {
         // Expand slider range if value exceeds current limits
         this.expandSliderRangeIfNeeded(paramName, numValue);
 
@@ -294,18 +295,17 @@ export class UIController {
   ): void {
     element.addEventListener('blur', () => {
       const text = element.textContent?.trim() ?? '';
-      const numValue = parseFloat(text.replace(/[^0-9.-]/g, ''));
+      const numValue = parseNumericValue(text);
 
-      if (!isNaN(numValue)) {
+      if (numValue !== null) {
         // Expand slider range if needed
         const min = parseFloat(slider.min);
         const max = parseFloat(slider.max);
+        const expanded = calculateExpandedRange(numValue, min, max);
 
-        if (numValue < min) {
-          slider.min = String(numValue - Math.abs(numValue) * 0.1);
-        }
-        if (numValue > max) {
-          slider.max = String(numValue + Math.abs(numValue) * 0.1);
+        if (expanded !== null) {
+          slider.min = String(expanded.min);
+          slider.max = String(expanded.max);
         }
 
         slider.value = String(numValue);
@@ -332,33 +332,20 @@ export class UIController {
 
     const currentMin = parseFloat(slider.min);
     const currentMax = parseFloat(slider.max);
-    let needsUpdate = false;
-    let newMin = currentMin;
-    let newMax = currentMax;
 
-    // Check if value exceeds current range
-    if (value < currentMin) {
-      // Expand min with some headroom (10% below the value)
-      newMin = value - Math.abs(value) * 0.1;
-      needsUpdate = true;
-    }
-    if (value > currentMax) {
-      // Expand max with some headroom (10% above the value)
-      newMax = value + Math.abs(value) * 0.1;
-      needsUpdate = true;
-    }
+    const expanded = calculateExpandedRange(value, currentMin, currentMax);
 
-    if (needsUpdate) {
+    if (expanded !== null) {
       // Update slider attributes
-      slider.min = String(newMin);
-      slider.max = String(newMax);
+      slider.min = String(expanded.min);
+      slider.max = String(expanded.max);
 
       // Update curve settings to match new range
       const currentSettings = this.curveMapper.getSettings(paramName);
       this.curveMapper.setSettings(paramName, {
         ...currentSettings,
-        min: newMin,
-        max: newMax,
+        min: expanded.min,
+        max: expanded.max,
       });
     }
   }
