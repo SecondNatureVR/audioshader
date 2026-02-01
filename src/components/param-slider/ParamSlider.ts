@@ -2,6 +2,7 @@ import { LitElement, html, css, PropertyValues } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
 import { parseNumericValue, calculateExpandedRange } from '../../ui/valueUtils';
 import { VALUE_FORMATTERS, type ValueFormatter } from '../editable-value/EditableValue';
+import { getParamLabel } from '../../config/paramLabels';
 import type { ParamChangeEventDetail, CurveEditRequestEventDetail } from '../types';
 
 /**
@@ -190,10 +191,17 @@ export class ParamSlider extends LitElement {
     }
   }
 
+  /**
+   * Get display label - uses explicit label or derives from paramName
+   */
+  private get displayLabel(): string {
+    return this.label || getParamLabel(this.paramName);
+  }
+
   render() {
     return html`
       <label>
-        ${this.label}
+        ${this.displayLabel}
         ${this.showCurveBtn ? html`
           <span class="curve-btn" @click=${this.handleCurveClick} title="Edit curve">~</span>
         ` : ''}
