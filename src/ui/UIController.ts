@@ -262,6 +262,9 @@ export class UIController {
       const numValue = parseFloat(text.replace(/[^0-9.-]/g, ''));
 
       if (!isNaN(numValue)) {
+        // Expand slider range if value exceeds current limits
+        this.expandSliderRangeIfNeeded(paramName, numValue);
+
         this.app.setParam(paramName as keyof VisualParams, numValue);
         this.updateSliderFromValue(paramName, numValue);
       }
@@ -274,6 +277,47 @@ export class UIController {
         element.blur();
       }
     });
+  }
+
+  /**
+   * Expand slider range if the given value exceeds current min/max
+   * Also updates curve settings to match
+   */
+  private expandSliderRangeIfNeeded(paramName: string, value: number): void {
+    const slider = this.sliders.get(paramName);
+    if (slider === null || slider === undefined) return;
+
+    const currentMin = parseFloat(slider.min);
+    const currentMax = parseFloat(slider.max);
+    let needsUpdate = false;
+    let newMin = currentMin;
+    let newMax = currentMax;
+
+    // Check if value exceeds current range
+    if (value < currentMin) {
+      // Expand min with some headroom (10% below the value)
+      newMin = value - Math.abs(value) * 0.1;
+      needsUpdate = true;
+    }
+    if (value > currentMax) {
+      // Expand max with some headroom (10% above the value)
+      newMax = value + Math.abs(value) * 0.1;
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      // Update slider attributes
+      slider.min = String(newMin);
+      slider.max = String(newMax);
+
+      // Update curve settings to match new range
+      const currentSettings = this.curveMapper.getSettings(paramName);
+      this.curveMapper.setSettings(paramName, {
+        ...currentSettings,
+        min: newMin,
+        max: newMax,
+      });
+    }
   }
 
   /**
