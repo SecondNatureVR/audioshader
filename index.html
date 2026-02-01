@@ -91,6 +91,10 @@
             <span class="hotkey-key">H</span>
             <span class="hotkey-desc">Toggle UI</span>
         </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">M</span>
+            <span class="hotkey-desc">Audio Mapping Panel</span>
+        </div>
     </div>
 
     <!-- Status Indicators -->
@@ -489,6 +493,23 @@
     <!-- Audio Mapping Panel (Hidden by default, toggle with M key) -->
     <div id="audio-mapping-panel">
         <h4>Audio Mapping</h4>
+
+        <!-- Audio Input Controls -->
+        <div id="audio-input-controls" style="background: rgba(20, 20, 20, 0.5); border: 1px solid #444; border-radius: 4px; padding: 8px; margin-bottom: 10px;">
+            <h5 style="margin: 0 0 6px 0; font-size: 9px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; border-bottom: 1px solid #333; padding-bottom: 4px;">Audio Input</h5>
+            <select id="audio-device-select-panel" style="width: 100%; font-size: 9px; padding: 3px; margin-bottom: 4px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
+                <option value="">Select audio device...</option>
+            </select>
+            <button id="audio-enable-btn-panel" style="width: 100%; font-size: 9px; padding: 4px; margin-bottom: 4px; background: #0af; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Enable Mic/Device</button>
+            <button id="audio-tab-btn-panel" style="width: 100%; font-size: 9px; padding: 4px; margin-bottom: 4px; background: #a0f; color: #fff; border: none; border-radius: 3px; cursor: pointer;">Capture Tab Audio</button>
+            <div id="audio-status-panel" style="font-size: 8px; color: #888; margin-bottom: 4px;">Audio: Disabled</div>
+            <div class="audio-reactive-toggle" style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                <input type="checkbox" id="audio-reactive-enabled" checked style="cursor: pointer;">
+                <label for="audio-reactive-enabled" style="font-size: 9px; color: #bbb; cursor: pointer; margin: 0;">Audio Reactive Mode</label>
+            </div>
+        </div>
+
+        <!-- Audio Metrics Visualization -->
         <div id="audio-metrics-visualization">
             <h5>Audio Metrics</h5>
             <table class="metrics-table" id="audio-metrics-table">
@@ -535,8 +556,24 @@
                         <td class="metric-value">0.000</td>
                         <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
                     </tr>
+                    <tr data-metric="presence">
+                        <td class="metric-name">Presence</td>
+                        <td class="metric-value">0.000</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-current"></div></div></td>
+                    </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Parameter Mapping Controls -->
+        <div id="audio-mapping-content" style="margin-top: 10px;">
+            <h5>Parameter Mappings</h5>
+            <div style="font-size: 8px; color: #888; margin-bottom: 8px;">
+                Enable audio reactivity for visual parameters. Each parameter can be mapped to an audio metric.
+            </div>
+            <div id="parameter-mappings-container">
+                <!-- Will be populated dynamically -->
+            </div>
         </div>
     </div>
 

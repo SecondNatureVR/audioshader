@@ -9,7 +9,7 @@ import { ParameterInterpolator } from './render/ParameterInterpolator';
 import { createDefaultParams, PARAM_RANGES, applyJiggle } from './render/Parameters';
 import { PresetManager } from './presets/PresetManager';
 import { AudioMapper } from './audio/AudioMapper';
-import type { VisualParams, AudioMetrics, RenderState } from './types';
+import type { VisualParams, AudioMetrics, RenderState, AudioMappingConfig } from './types';
 
 export interface AppConfig {
   canvas: HTMLCanvasElement;
@@ -295,6 +295,20 @@ export class App {
    */
   setAudioMetrics(metrics: AudioMetrics | null): void {
     this.audioMetrics = metrics;
+  }
+
+  /**
+   * Enable/disable audio reactive mode
+   */
+  setAudioReactiveEnabled(enabled: boolean): void {
+    this.audioMapper.setEnabled(enabled);
+  }
+
+  /**
+   * Set audio mapping configuration for a parameter
+   */
+  setAudioMapping(param: keyof VisualParams, config: Partial<AudioMappingConfig>): void {
+    this.audioMapper.setMapping(param, config);
   }
 
   /**
