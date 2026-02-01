@@ -194,8 +194,10 @@ export class UIController {
       this.setupEditableValue(valueDisplay, paramName);
     }
 
-    // Setup curve button
-    const curveBtn = slider.parentElement?.querySelector('.curve-btn');
+    // Setup curve button - it's in the label which is a sibling of control-row
+    // Structure: .control-group > label > .curve-btn, .control-group > .control-row > input
+    const controlGroup = slider.closest('.control-group');
+    const curveBtn = controlGroup?.querySelector('.curve-btn');
     if (curveBtn !== undefined && curveBtn !== null) {
       curveBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -222,6 +224,16 @@ export class UIController {
       }
       this.config.onEmanationRateChange?.(rate);
     });
+
+    // Setup curve button for emanation rate
+    const controlGroup = slider.closest('.control-group');
+    const curveBtn = controlGroup?.querySelector('.curve-btn');
+    if (curveBtn !== undefined && curveBtn !== null) {
+      curveBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.openCurveEditor('emanationRate');
+      });
+    }
   }
 
   /**

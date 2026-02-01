@@ -170,12 +170,13 @@
                     <option value="">Default Device</option>
                 </select>
             </div>
-            <button id="audio-enable-btn" style="width: 100%; padding: 6px; margin-top: 6px; background: #0a0; border: none; color: #fff; cursor: pointer; border-radius: 3px;">
-                Enable Audio
+            <button id="audio-enable-btn" style="width: 100%; padding: 6px; margin-top: 6px; background: #0af; border: none; color: #fff; cursor: pointer; border-radius: 3px;">
+                Enable Mic/Device
             </button>
-            <button id="audio-tab-btn" style="width: 100%; padding: 6px; margin-top: 6px; background: #a0a; border: none; color: #fff; cursor: pointer; border-radius: 3px;">
+            <button id="audio-tab-btn" style="width: 100%; padding: 6px; margin-top: 6px; background: #a0f; border: none; color: #fff; cursor: pointer; border-radius: 3px;">
                 Capture Tab Audio
             </button>
+            <div id="audio-status" style="font-size: 9px; color: #888; margin-top: 6px;">Audio: Disabled</div>
         </div>
 
         <!-- Preset Management -->
@@ -243,32 +244,36 @@
         <div class="section-header">
             <span>Appearance</span>
         </div>
-        <div class="control-group">
-            <label>Hue <span class="curve-btn" data-param="hue" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="hue-slider" min="0" max="360" value="180">
-                <span class="value" id="hue-value" contenteditable="true">180&deg;</span>
+        <div class="two-column">
+            <div class="control-group">
+                <label>Hue <span class="curve-btn" data-param="hue" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="hue-slider" min="0" max="360" value="180">
+                    <span class="value" id="hue-value" contenteditable="true">180&deg;</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Scale <span class="curve-btn" data-param="scale" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="scale-slider" min="0.05" max="1" step="0.01" value="0.5">
+                    <span class="value" id="scale-value" contenteditable="true">0.50</span>
+                </div>
             </div>
         </div>
-        <div class="control-group">
-            <label>Scale <span class="curve-btn" data-param="scale" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="scale-slider" min="0.05" max="1" step="0.01" value="0.5">
-                <span class="value" id="scale-value" contenteditable="true">0.50</span>
+        <div class="two-column">
+            <div class="control-group">
+                <label>Fill Size <span class="curve-btn" data-param="fillSize" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="fill-size-slider" min="0" max="100" value="0">
+                    <span class="value" id="fill-size-value" contenteditable="true">0.00</span>
+                </div>
             </div>
-        </div>
-        <div class="control-group">
-            <label>Fill Size <span class="curve-btn" data-param="fillSize" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="fill-size-slider" min="0" max="100" value="0">
-                <span class="value" id="fill-size-value" contenteditable="true">0.00</span>
-            </div>
-        </div>
-        <div class="control-group">
-            <label>Fill Opacity <span class="curve-btn" data-param="fillOpacity" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="fill-opacity-slider" min="0" max="100" value="60">
-                <span class="value" id="fill-opacity-value" contenteditable="true">0.60</span>
+            <div class="control-group">
+                <label>Fill Opacity <span class="curve-btn" data-param="fillOpacity" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="fill-opacity-slider" min="0" max="100" value="60">
+                    <span class="value" id="fill-opacity-value" contenteditable="true">0.60</span>
+                </div>
             </div>
         </div>
         <div class="control-group">
@@ -319,32 +324,36 @@
         <div class="section-header">
             <span>Filters</span>
         </div>
-        <div class="control-group">
-            <label>Noise Amount <span class="curve-btn" data-param="noiseAmount" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="noise-amount-slider" min="0" max="100" value="0">
-                <span class="value" id="noise-amount-value" contenteditable="true">0.00</span>
+        <div class="two-column">
+            <div class="control-group">
+                <label>Noise Amount <span class="curve-btn" data-param="noiseAmount" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="noise-amount-slider" min="0" max="100" value="0">
+                    <span class="value" id="noise-amount-value" contenteditable="true">0.00</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Noise Rate <span class="curve-btn" data-param="noiseRate" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="noise-rate-slider" min="0" max="100" value="0">
+                    <span class="value" id="noise-rate-value" contenteditable="true">0.00</span>
+                </div>
             </div>
         </div>
-        <div class="control-group">
-            <label>Noise Rate <span class="curve-btn" data-param="noiseRate" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="noise-rate-slider" min="0" max="100" value="0">
-                <span class="value" id="noise-rate-value" contenteditable="true">0.00</span>
+        <div class="two-column">
+            <div class="control-group">
+                <label>Blur Amount <span class="curve-btn" data-param="blurAmount" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="blur-amount-slider" min="0" max="100" value="0">
+                    <span class="value" id="blur-amount-value" contenteditable="true">0.00</span>
+                </div>
             </div>
-        </div>
-        <div class="control-group">
-            <label>Blur Amount <span class="curve-btn" data-param="blurAmount" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="blur-amount-slider" min="0" max="100" value="0">
-                <span class="value" id="blur-amount-value" contenteditable="true">0.00</span>
-            </div>
-        </div>
-        <div class="control-group">
-            <label>Blur Rate <span class="curve-btn" data-param="blurRate" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="blur-rate-slider" min="0" max="100" value="0">
-                <span class="value" id="blur-rate-value" contenteditable="true">0.00</span>
+            <div class="control-group">
+                <label>Blur Rate <span class="curve-btn" data-param="blurRate" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="blur-rate-slider" min="0" max="100" value="0">
+                    <span class="value" id="blur-rate-value" contenteditable="true">0.00</span>
+                </div>
             </div>
         </div>
 
@@ -352,18 +361,20 @@
         <div class="section-header">
             <span>Rotation</span>
         </div>
-        <div class="control-group">
-            <label>Manual Rotation <span class="curve-btn" data-param="rotation" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="rotation-slider" min="0" max="360" value="0">
-                <span class="value" id="rotation-value" contenteditable="true">0&deg;</span>
+        <div class="two-column">
+            <div class="control-group">
+                <label>Manual <span class="curve-btn" data-param="rotation" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="rotation-slider" min="0" max="360" value="0">
+                    <span class="value" id="rotation-value" contenteditable="true">0&deg;</span>
+                </div>
             </div>
-        </div>
-        <div class="control-group">
-            <label>Auto Rotation Speed <span class="curve-btn" data-param="autoRotationSpeed" title="Edit curve">~</span></label>
-            <div class="control-row">
-                <input type="range" id="auto-rotation-speed-slider" min="0" max="200" value="50">
-                <span class="value" id="auto-rotation-speed-value" contenteditable="true">15.0&deg;</span>
+            <div class="control-group">
+                <label>Auto (deg/s) <span class="curve-btn" data-param="autoRotationSpeed" title="Edit curve">~</span></label>
+                <div class="control-row">
+                    <input type="range" id="auto-rotation-speed-slider" min="0" max="200" value="50">
+                    <span class="value" id="auto-rotation-speed-value" contenteditable="true">15.0&deg;</span>
+                </div>
             </div>
         </div>
 
@@ -388,7 +399,7 @@
             <button id="jiggle-btn" style="flex: 1; padding: 6px; background: #a0a; border: none; color: #fff; cursor: pointer; border-radius: 3px;">Jiggle</button>
         </div>
         <div class="control-group">
-            <label>Jiggle Amount</label>
+            <label>Jiggle Amount <span class="curve-btn" data-param="jiggleAmount" title="Edit curve">~</span></label>
             <div class="control-row">
                 <input type="range" id="jiggle-amount-slider" min="0" max="100" value="30">
                 <span class="value" id="jiggle-amount-value">30%</span>
