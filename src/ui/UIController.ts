@@ -740,8 +740,8 @@ export class UIController {
   private setupAudioControls(): void {
     if (this.audioAnalyzer === null) return;
 
-    const enableBtn = document.getElementById('enable-audio-btn');
-    const tabBtn = document.getElementById('capture-tab-btn');
+    const enableBtn = document.getElementById('audio-enable-btn');
+    const tabBtn = document.getElementById('audio-tab-btn');
     const status = document.getElementById('audio-status');
     const audioAnalyzer = this.audioAnalyzer;
 
