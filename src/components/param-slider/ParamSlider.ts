@@ -184,7 +184,8 @@ export class ParamSlider extends LitElement {
 
   protected updated(changedProperties: PropertyValues): void {
     // When external value changes and we're not editing, update display
-    if (changedProperties.has('value') && !this.isEditing) {
+    // Only update if component is connected to DOM
+    if (changedProperties.has('value') && !this.isEditing && this.isConnected) {
       if (this.valueDisplayEl) {
         this.valueDisplayEl.textContent = this.formatValue(this.value);
       }
@@ -304,6 +305,11 @@ export class ParamSlider extends LitElement {
    * Set slider position directly (called by UIController after curve mapping)
    */
   setSliderPosition(position: number): void {
+    // Only update if component is connected to DOM
+    if (!this.isConnected) {
+      return;
+    }
+    
     this.sliderValue = position;
     if (this.sliderEl) {
       this.sliderEl.value = String(position);

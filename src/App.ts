@@ -6,7 +6,7 @@
 import { Renderer, type RenderOptions } from './render/Renderer';
 import { loadAllShaders } from './render/shaders';
 import { ParameterInterpolator } from './render/ParameterInterpolator';
-import { createDefaultParams, PARAM_RANGES, applyJiggle } from './render/Parameters';
+import { createDefaultParams, PARAM_RANGES, applyJiggle, randomizeParams } from './render/Parameters';
 import { PresetManager } from './presets/PresetManager';
 import { AudioMapper } from './audio/AudioMapper';
 import type { VisualParams, AudioMetrics, RenderState, AudioMappingConfig, BlendMode } from './types';
@@ -418,7 +418,6 @@ export class App {
    * Randomize all parameters
    */
   randomize(): void {
-    const { randomizeParams } = require('./render/Parameters');
     const newParams = randomizeParams();
     this.setParams(newParams);
   }

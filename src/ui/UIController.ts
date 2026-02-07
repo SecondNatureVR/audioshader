@@ -64,6 +64,9 @@ export class UIController {
   private sliders: Map<string, HTMLInputElement> = new Map();
   private valueDisplays: Map<string, HTMLElement> = new Map();
 
+  // Track if device select handler has been set up
+  private deviceSelectHandlerSetup: boolean = false;
+
   // Curve editor state
   private curveMapper: CurveMapper;
   private currentCurveParam: string | null = null;
@@ -112,7 +115,12 @@ export class UIController {
     this.setupCollapsibleSections();
     this.setupRecorders();
     this.setupKeyboardShortcuts();
-    this.updateAllSliders();
+    
+    // Defer slider updates until after components are connected to DOM
+    // Use setTimeout to ensure Lit components are fully upgraded and connected
+    setTimeout(() => {
+      this.updateAllSliders();
+    }, 0);
   }
 
   /**
@@ -510,14 +518,30 @@ export class UIController {
    */
   private updateParamSliderComponents(params: VisualParams): void {
     const components = document.querySelectorAll<ParamSlider>('param-slider');
-    components.forEach((component) => {
+    components.forEach(async (component) => {
+      // Check if component is connected to DOM before updating
+      // This prevents Lit errors when components aren't ready yet
+      if (!component.isConnected) {
+        return;
+      }
+
       const paramName = component.paramName as keyof VisualParams;
       if (paramName in params) {
         const value = params[paramName];
-        component.value = value;
-        // Update slider position using curve mapping
-        const sliderValue = this.paramToSliderValue(paramName, value);
-        component.setSliderPosition(sliderValue);
+        
+        // Wait for component to finish any pending updates before modifying
+        // This prevents "no parentNode" errors from Lit
+        try {
+          await component.updateComplete;
+          component.value = value;
+          // Update slider position using curve mapping
+          const sliderValue = this.paramToSliderValue(paramName, value);
+          component.setSliderPosition(sliderValue);
+        } catch (err: unknown) {
+          // Component might not be fully initialized yet, skip silently
+          // This can happen during initial page load
+          console.debug(`Skipping update for ${paramName} - component not ready:`, err);
+        }
       }
     });
   }
@@ -1104,11 +1128,14 @@ export class UIController {
         deviceSelect.appendChild(option);
       });
 
-      // Setup change handler to use selected device when enabling audio
-      deviceSelect.addEventListener('change', () => {
-        // Device selection will be used on next enableAudio call
-        // The selected deviceId is read in the enableAudio handler
-      });
+      // Setup change handler only once to avoid duplicate listeners
+      if (!this.deviceSelectHandlerSetup) {
+        deviceSelect.addEventListener('change', () => {
+          // Device selection will be used on next enableAudio call
+          // The selected deviceId is read in the enableAudio handler
+        });
+        this.deviceSelectHandlerSetup = true;
+      }
     } catch (err: unknown) {
       console.warn('Failed to enumerate audio devices:', err);
       // Non-fatal: device dropdown will remain empty or show default
@@ -1674,13 +1701,20 @@ export class UIController {
 
       // Update each metric row
       for (const [name, value] of Object.entries(metrics)) {
+        // Skip invalid metric names
+        if (typeof name !== 'string' || name.length === 0) continue;
+        
         const row = document.querySelector(`[data-metric="${name}"]`);
         if (row === null) continue;
 
         // Update text value
         const valueCell = row.querySelector('.metric-value');
         if (valueCell !== null) {
-          valueCell.textContent = typeof value === 'number' ? value.toFixed(3) : String(value);
+          try {
+            valueCell.textContent = typeof value === 'number' ? value.toFixed(3) : String(value);
+          } catch (err: unknown) {
+            console.warn(`Failed to update metric value for ${name}:`, err);
+          }
         }
 
         // Get min/max from AudioAnalyzer if available
@@ -1692,8 +1726,9 @@ export class UIController {
               analyzerMapping.name as 'audioAmp' | 'bandEnergy' | 'harshness' | 'mud' | 'compression' | 'collision' | 'coherence' | 'phaseRisk' | 'stereoWidth',
               analyzerMapping.index
             );
-          } catch {
+          } catch (err: unknown) {
             // Use defaults if getMinMax fails
+            console.debug(`Failed to get min/max for metric ${name}:`, err);
           }
         }
 
@@ -1733,48 +1768,58 @@ export class UIController {
    * Update the visualization bars for audio-mapped parameters
    */
   private updateMappingBars(metrics: AudioMetrics): void {
-    const audioMapper = this.app.getAudioMapper();
-    const mappableParams: Array<keyof VisualParams> = [
-      'spikiness', 'spikeFrequency', 'spikeSharpness', 'hue', 'scale',
-      'fillSize', 'fillOpacity', 'blendOpacity', 'expansionFactor',
-      'fadeAmount', 'hueShiftAmount', 'rotation', 'autoRotationSpeed',
-      'noiseAmount', 'noiseRate', 'blurAmount', 'blurRate', 'jiggleAmount',
-    ];
+    try {
+      const audioMapper = this.app.getAudioMapper();
+      const mappableParams: Array<keyof VisualParams> = [
+        'spikiness', 'spikeFrequency', 'spikeSharpness', 'hue', 'scale',
+        'fillSize', 'fillOpacity', 'blendOpacity', 'expansionFactor',
+        'fadeAmount', 'hueShiftAmount', 'rotation', 'autoRotationSpeed',
+        'noiseAmount', 'noiseRate', 'blurAmount', 'blurRate', 'jiggleAmount',
+      ];
 
-    for (const param of mappableParams) {
-      const mapping = audioMapper.getMapping(param);
-      if (mapping === undefined) continue;
+      for (const param of mappableParams) {
+        try {
+          const mapping = audioMapper.getMapping(param);
+          if (mapping === undefined) continue;
 
-      const bar = document.getElementById(`mapping-${param}-bar`);
-      const valueDisplay = document.getElementById(`mapping-${param}-value`);
+          const bar = document.getElementById(`mapping-${param}-bar`);
+          const valueDisplay = document.getElementById(`mapping-${param}-value`);
 
-      // Get the current metric value
-      const metricValue = metrics[mapping.source] ?? 0;
-      // Apply sensitivity to get the effective value
-      const effectiveValue = Math.min(1, metricValue * mapping.sensitivity);
+          // Get the current metric value
+          const metricValue = metrics[mapping.source] ?? 0;
+          // Apply sensitivity to get the effective value
+          const effectiveValue = Math.min(1, metricValue * mapping.sensitivity);
 
-      if (bar !== null) {
-        // Map to percentage (0-100%)
-        const barWidth = Math.max(0, Math.min(100, effectiveValue * 100));
-        bar.style.width = `${barWidth}%`;
+          if (bar !== null) {
+            // Map to percentage (0-100%)
+            const barWidth = Math.max(0, Math.min(100, effectiveValue * 100));
+            bar.style.width = `${barWidth}%`;
 
-        // Color based on whether mapping is enabled
-        if (mapping.enabled) {
-          bar.style.background = 'linear-gradient(90deg, #0af, #0fa)';
-        } else {
-          bar.style.background = '#555';
+            // Color based on whether mapping is enabled
+            if (mapping.enabled) {
+              bar.style.background = 'linear-gradient(90deg, #0af, #0fa)';
+            } else {
+              bar.style.background = '#555';
+            }
+          }
+
+          if (valueDisplay !== null) {
+            valueDisplay.textContent = effectiveValue.toFixed(2);
+            // Highlight when active
+            if (mapping.enabled && effectiveValue > 0.1) {
+              valueDisplay.style.color = '#0af';
+            } else {
+              valueDisplay.style.color = '#888';
+            }
+          }
+        } catch (err: unknown) {
+          // Log but continue processing other params
+          console.debug(`Error updating mapping bar for ${param}:`, err);
         }
       }
-
-      if (valueDisplay !== null) {
-        valueDisplay.textContent = effectiveValue.toFixed(2);
-        // Highlight when active
-        if (mapping.enabled && effectiveValue > 0.1) {
-          valueDisplay.style.color = '#0af';
-        } else {
-          valueDisplay.style.color = '#888';
-        }
-      }
+    } catch (err: unknown) {
+      // Log but don't crash - this runs every frame
+      console.debug('Error in updateMappingBars:', err);
     }
   }
 

@@ -49,12 +49,17 @@ async function init(): Promise<void> {
 
   // Audio metrics update loop (runs alongside render loop)
   setInterval(() => {
-    if (audioAnalyzer.isEnabled) {
-      const metrics = audioAnalyzer.getMetrics();
-      if (metrics !== null) {
-        app.setAudioMetrics(metrics);
-        ui.updateAudioMetrics(metrics);
+    try {
+      if (audioAnalyzer.isEnabled) {
+        const metrics = audioAnalyzer.getMetrics();
+        if (metrics !== null) {
+          app.setAudioMetrics(metrics);
+          ui.updateAudioMetrics(metrics);
+        }
       }
+    } catch (error: unknown) {
+      // Log error but don't crash the app
+      console.error('Error in audio metrics update loop:', error);
     }
   }, 1000 / 60); // 60fps audio updates
 
