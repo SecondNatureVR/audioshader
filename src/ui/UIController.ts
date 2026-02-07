@@ -1012,40 +1012,52 @@ export class UIController {
 
     // Mic/Device button handler
     if (enableBtn !== null) {
-      enableBtn.addEventListener('click', () => {
+      enableBtn.addEventListener('click', async () => {
         if (audioAnalyzer.isEnabled) {
           audioAnalyzer.disableAudio();
           resetAudioUI();
         } else {
-          audioAnalyzer.enableAudio()
-            .then(() => {
-              const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
-              setActiveUI(mode, false);
-            })
-            .catch((err: unknown) => {
-              console.error('Failed to enable audio:', err);
-              alert('Failed to enable audio: ' + (err instanceof Error ? err.message : String(err)));
-            });
+          try {
+            // Get selected device from dropdown (if any)
+            const deviceSelect = document.getElementById('audio-device-select') as HTMLSelectElement | null;
+            const selectedDeviceId = deviceSelect !== null && deviceSelect.value !== '' && deviceSelect.value !== 'default'
+              ? deviceSelect.value
+              : null;
+
+            // Only request permission and enumerate devices when user explicitly clicks mic button
+            // This prevents double permission prompt when using tab capture
+            await audioAnalyzer.enableAudio(selectedDeviceId);
+            const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
+            setActiveUI(mode, false);
+            
+            // Populate device dropdown after successful mic enable
+            // This allows users to see available devices and switch between them
+            await this.populateAudioDevices();
+          } catch (err: unknown) {
+            console.error('Failed to enable audio:', err);
+            alert('Failed to enable audio: ' + (err instanceof Error ? err.message : String(err)));
+          }
         }
       });
     }
 
     // Tab capture button handler
     if (tabBtn !== null) {
-      tabBtn.addEventListener('click', () => {
+      tabBtn.addEventListener('click', async () => {
         if (audioAnalyzer.isEnabled) {
           audioAnalyzer.disableAudio();
           resetAudioUI();
         } else {
-          audioAnalyzer.enableTabAudio()
-            .then(() => {
-              const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
-              setActiveUI(mode, true);
-            })
-            .catch((err: unknown) => {
-              console.error('Failed to capture tab audio:', err);
-              alert('Failed to capture tab audio: ' + (err instanceof Error ? err.message : String(err)));
-            });
+          try {
+            // Tab capture uses getDisplayMedia, NOT getUserMedia
+            // Do NOT call getAudioDevices() here to avoid double permission prompt
+            await audioAnalyzer.enableTabAudio();
+            const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
+            setActiveUI(mode, true);
+          } catch (err: unknown) {
+            console.error('Failed to capture tab audio:', err);
+            alert('Failed to capture tab audio: ' + (err instanceof Error ? err.message : String(err)));
+          }
         }
       });
     }
@@ -1060,6 +1072,47 @@ export class UIController {
 
     // Generate parameter mapping UI
     this.generateParameterMappingsUI();
+  }
+
+  /**
+   * Populate audio device dropdown (only called after user enables mic)
+   * This is deferred to avoid permission prompts on page load
+   */
+  private async populateAudioDevices(): Promise<void> {
+    if (this.audioAnalyzer === null) return;
+
+    const deviceSelect = document.getElementById('audio-device-select') as HTMLSelectElement | null;
+    if (deviceSelect === null) return;
+
+    try {
+      // Only enumerate devices after permission is granted (via enableAudio)
+      // Pass requestPermission: false since we already have permission
+      const devices = await this.audioAnalyzer.getAudioDevices(false);
+      
+      // Clear existing options except the first "Default" option
+      const defaultOption = deviceSelect.options[0];
+      deviceSelect.innerHTML = '';
+      if (defaultOption !== undefined) {
+        deviceSelect.appendChild(defaultOption);
+      }
+
+      // Add device options
+      devices.forEach((device) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label;
+        deviceSelect.appendChild(option);
+      });
+
+      // Setup change handler to use selected device when enabling audio
+      deviceSelect.addEventListener('change', () => {
+        // Device selection will be used on next enableAudio call
+        // The selected deviceId is read in the enableAudio handler
+      });
+    } catch (err: unknown) {
+      console.warn('Failed to enumerate audio devices:', err);
+      // Non-fatal: device dropdown will remain empty or show default
+    }
   }
 
   /**
