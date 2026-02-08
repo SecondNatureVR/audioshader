@@ -9,34 +9,52 @@
 <body>
     <canvas id="canvas"></canvas>
 
-    <!-- Curve Editor Overlay -->
-    <div id="curve-editor-overlay" class="curve-editor-overlay">
-        <div class="curve-editor">
+    <!-- Curve Editor Drawer -->
+    <div id="curve-editor-drawer" class="curve-editor-drawer">
+        <div class="curve-editor-content">
             <div class="curve-editor-header">
-                <div class="curve-editor-title" id="curve-editor-title">Parameter Curve Editor</div>
-                <button class="curve-editor-close" id="curve-editor-close">&times;</button>
+                <div class="curve-editor-title" id="curve-editor-title">Curve</div>
+                <button class="curve-editor-close" id="curve-editor-close" title="Close">×</button>
             </div>
+            
+            <!-- Parameter Value Slider (matches other sliders) -->
+            <div class="control-group" id="curve-param-slider-container" style="display: none;">
+                <label id="curve-param-label"></label>
+                <div class="control-row">
+                    <input type="range" id="curve-param-slider" min="0" max="100" step="0.01" value="50">
+                    <span class="value" id="curve-param-value" contenteditable="true">0.00</span>
+                </div>
+            </div>
+            
+            <!-- Compact Curve Canvas -->
             <div class="curve-canvas-container">
                 <canvas id="curve-canvas" class="curve-canvas"></canvas>
             </div>
+            
+            <!-- Compact Controls -->
             <div class="curve-controls">
-                <div class="curve-control-group">
-                    <label>Min Value</label>
-                    <input type="number" id="curve-min" step="any" value="0">
+                <div class="control-group" style="margin-bottom: 6px;">
+                    <label style="font-size: 9px;">Min</label>
+                    <input type="number" id="curve-min" step="any" value="0" style="width: 100%; padding: 3px 6px; font-size: 9px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
                 </div>
-                <div class="curve-control-group">
-                    <label>Max Value</label>
-                    <input type="number" id="curve-max" step="any" value="1">
+                <div class="control-group" style="margin-bottom: 6px;">
+                    <label style="font-size: 9px;">Max</label>
+                    <input type="number" id="curve-max" step="any" value="1" style="width: 100%; padding: 3px 6px; font-size: 9px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
                 </div>
             </div>
-            <div class="curve-power-slider">
-                <label>Curve Power (exponent): <span id="curve-power-value">1.0</span></label>
-                <input type="range" id="curve-power" min="0.1" max="5" step="0.1" value="1.0">
+            
+            <!-- Power Slider (matches other sliders) -->
+            <div class="control-group" style="margin-bottom: 6px;">
+                <label style="font-size: 9px;">Power</label>
+                <div class="control-row">
+                    <input type="range" id="curve-power" min="0.1" max="5" step="0.1" value="1.0">
+                    <span class="value" id="curve-power-value">1.0</span>
+                </div>
             </div>
+            
+            <!-- Compact Actions -->
             <div class="curve-actions">
-                <button class="curve-btn-action" id="curve-reset">Reset</button>
-                <button class="curve-btn-action" id="curve-apply">Apply</button>
-                <button class="curve-btn-action curve-btn-primary" id="curve-close">Done</button>
+                <button class="curve-btn-action" id="curve-reset" style="font-size: 9px; padding: 4px 8px;">Reset</button>
             </div>
         </div>
     </div>

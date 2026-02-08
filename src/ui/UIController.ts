@@ -58,7 +58,8 @@ export class UIController {
   // DOM element references
   private devToolbox: HTMLElement | null = null;
   private hotkeyLegend: HTMLElement | null = null;
-  private curveEditorOverlay: HTMLElement | null = null;
+  private curveEditorDrawer: HTMLElement | null = null;
+  private currentCurveControlGroup: HTMLElement | null = null;
 
   // Slider references
   private sliders: Map<string, HTMLInputElement> = new Map();
@@ -129,7 +130,7 @@ export class UIController {
   private cacheElements(): void {
     this.devToolbox = document.getElementById('dev-toolbox');
     this.hotkeyLegend = document.getElementById('hotkey-legend');
-    this.curveEditorOverlay = document.getElementById('curve-editor-overlay');
+    this.curveEditorDrawer = document.getElementById('curve-editor-drawer');
   }
 
   /**
@@ -539,6 +540,28 @@ export class UIController {
         return RotationSpeedMapping.speedToSlider(paramValue, settings.min, settings.max);
       default:
         return reverseMapValueToSlider(paramValue, settings);
+    }
+  }
+
+  /**
+   * Format parameter value for display (used by curve editor)
+   */
+  private formatParamValue(paramName: string, value: number): string {
+    switch (paramName) {
+      case 'hue':
+      case 'rotation':
+        return `${Math.round(value)}°`;
+      case 'autoRotationSpeed':
+        return `${value.toFixed(1)}°`;
+      case 'expansionFactor':
+        return value.toFixed(4);
+      case 'fadeAmount':
+      case 'hueShiftAmount':
+        return value.toFixed(3);
+      case 'spikeFrequency':
+        return value.toFixed(1);
+      default:
+        return value.toFixed(2);
     }
   }
 
@@ -1346,35 +1369,45 @@ export class UIController {
   }
 
   /**
-   * Setup curve editor modal
+   * Setup curve editor drawer
    */
   private setupCurveEditor(): void {
-    const overlay = this.curveEditorOverlay;
-    if (overlay === null) return;
+    const drawer = this.curveEditorDrawer;
+    if (drawer === null) return;
 
     const closeBtn = document.getElementById('curve-editor-close');
-    const doneBtn = document.getElementById('curve-close');
-    const applyBtn = document.getElementById('curve-apply');
     const resetBtn = document.getElementById('curve-reset');
     const minInput = document.getElementById('curve-min') as HTMLInputElement | null;
     const maxInput = document.getElementById('curve-max') as HTMLInputElement | null;
     const powerSlider = document.getElementById('curve-power') as HTMLInputElement | null;
     const powerValue = document.getElementById('curve-power-value');
+    const paramSlider = document.getElementById('curve-param-slider') as HTMLInputElement | null;
+    const paramValue = document.getElementById('curve-param-value');
+    const paramSliderContainer = document.getElementById('curve-param-slider-container');
 
-    // Close handlers
+    // Close handler
     const closeCurve = (): void => {
-      overlay.classList.remove('active');
+      drawer.classList.remove('active');
+      drawer.style.display = 'none';
       this.currentCurveParam = null;
+      if (this.currentCurveControlGroup !== null) {
+        this.currentCurveControlGroup = null;
+      }
+      if (paramSliderContainer !== null) {
+        paramSliderContainer.style.display = 'none';
+      }
     };
 
     if (closeBtn !== null) closeBtn.addEventListener('click', closeCurve);
-    if (doneBtn !== null) doneBtn.addEventListener('click', closeCurve);
 
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) closeCurve();
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawer.classList.contains('active')) {
+        closeCurve();
+      }
     });
 
-    // Apply handler
+    // Apply handler (auto-applies on change, no separate Apply button needed)
     const applyCurve = (): void => {
       if (this.currentCurveParam === null) return;
       if (minInput === null || maxInput === null || powerSlider === null) return;
@@ -1398,19 +1431,110 @@ export class UIController {
         // Legacy HTML slider - update slider position
         this.updateSliderFromValue(this.currentCurveParam, currentValue);
       }
+      
+      // Update param slider in drawer if visible
+      if (paramSlider !== null && paramValue !== null && this.currentCurveParam !== null) {
+        const normalizedSliderValue = this.paramToSliderValue(this.currentCurveParam, currentValue);
+        const sliderMin = parseFloat(paramSlider.min) || 0;
+        const sliderMax = parseFloat(paramSlider.max) || 100;
+        const rawSliderValue = sliderMin + (normalizedSliderValue / 100) * (sliderMax - sliderMin);
+        paramSlider.value = String(rawSliderValue);
+        paramValue.textContent = this.formatParamValue(this.currentCurveParam, currentValue);
+      }
     };
 
-    if (applyBtn !== null) applyBtn.addEventListener('click', applyCurve);
+    // Auto-apply on input changes
     if (minInput !== null) minInput.addEventListener('input', applyCurve);
     if (maxInput !== null) maxInput.addEventListener('input', applyCurve);
 
-    if (powerSlider !== null) {
+    if (powerSlider !== null && powerValue !== null) {
+      // Setup editable value display for power slider
+      powerValue.setAttribute('contenteditable', 'true');
+      
       powerSlider.addEventListener('input', (e) => {
         const value = parseFloat((e.target as HTMLInputElement).value);
-        if (powerValue !== null) {
-          powerValue.textContent = value.toFixed(2);
-        }
+        powerValue.textContent = value.toFixed(2);
         applyCurve();
+      });
+      
+      // Setup direct input for power value
+      powerValue.addEventListener('blur', () => {
+        const text = powerValue.textContent?.trim() ?? '';
+        const numValue = parseNumericValue(text);
+        
+        if (numValue !== null && powerSlider !== null) {
+          // Clamp to slider range
+          const min = parseFloat(powerSlider.min) || 0.1;
+          const max = parseFloat(powerSlider.max) || 5;
+          const clampedValue = Math.max(min, Math.min(max, numValue));
+          powerSlider.value = String(clampedValue);
+          powerValue.textContent = clampedValue.toFixed(2);
+          applyCurve();
+        } else {
+          // Invalid input - reset to current slider value
+          const currentValue = parseFloat(powerSlider?.value || '1.0');
+          powerValue.textContent = currentValue.toFixed(2);
+        }
+      });
+      
+      powerValue.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          powerValue.blur();
+        }
+      });
+    }
+    
+    // Setup parameter slider in drawer
+    if (paramSlider !== null && paramValue !== null) {
+      paramSlider.addEventListener('input', (e) => {
+        if (this.currentCurveParam === null) return;
+        const target = e.target as HTMLInputElement;
+        const rawSliderValue = parseFloat(target.value);
+        
+        // Normalize slider value to 0-100 range for curve mapping
+        const sliderMin = parseFloat(target.min) || 0;
+        const sliderMax = parseFloat(target.max) || 100;
+        const normalizedSliderValue = sliderMin === sliderMax 
+          ? 50
+          : ((rawSliderValue - sliderMin) / (sliderMax - sliderMin)) * 100;
+        
+        const paramValueNum = this.sliderToParamValue(this.currentCurveParam, normalizedSliderValue);
+        
+        this.app.setParam(this.currentCurveParam as keyof VisualParams, paramValueNum, true);
+        paramValue.textContent = this.formatParamValue(this.currentCurveParam, paramValueNum);
+        this.config.onParamChange?.(this.currentCurveParam as keyof VisualParams, paramValueNum);
+      });
+      
+      // Setup editable value for param slider
+      paramValue.addEventListener('blur', () => {
+        if (this.currentCurveParam === null) return;
+        const text = paramValue.textContent?.trim() ?? '';
+        const numValue = parseNumericValue(text);
+        
+        if (numValue !== null) {
+          this.expandSliderRangeIfNeeded(this.currentCurveParam, numValue);
+          this.app.setParam(this.currentCurveParam as keyof VisualParams, numValue, true);
+          
+          // Update slider position (normalized to 0-100, then denormalized to HTML range)
+          const normalizedSliderValue = this.paramToSliderValue(this.currentCurveParam, numValue);
+          const sliderMin = parseFloat(paramSlider.min) || 0;
+          const sliderMax = parseFloat(paramSlider.max) || 100;
+          const rawSliderValue = sliderMin + (normalizedSliderValue / 100) * (sliderMax - sliderMin);
+          paramSlider.value = String(rawSliderValue);
+          paramValue.textContent = this.formatParamValue(this.currentCurveParam, numValue);
+          applyCurve(); // Update curve settings if range expanded
+        } else {
+          const currentValue = this.app.getParam(this.currentCurveParam as keyof VisualParams);
+          paramValue.textContent = this.formatParamValue(this.currentCurveParam, currentValue);
+        }
+      });
+      
+      paramValue.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          paramValue.blur();
+        }
       });
     }
 
@@ -1433,29 +1557,160 @@ export class UIController {
   }
 
   /**
-   * Open curve editor for a parameter
+   * Open curve editor drawer for a parameter
+   * Toggles closed if already open for the same parameter
    */
   private openCurveEditor(paramName: string): void {
-    if (this.curveEditorOverlay === null) return;
+    if (this.curveEditorDrawer === null) {
+      console.error('Curve editor drawer element not found');
+      return;
+    }
+
+    // If drawer is already open for this parameter, close it
+    if (this.curveEditorDrawer.classList.contains('active') && this.currentCurveParam === paramName) {
+      this.curveEditorDrawer.classList.remove('active');
+      this.curveEditorDrawer.style.display = 'none';
+      this.currentCurveParam = null;
+      const paramSliderContainer = document.getElementById('curve-param-slider-container');
+      if (paramSliderContainer !== null) {
+        paramSliderContainer.style.display = 'none';
+      }
+      return;
+    }
 
     this.currentCurveParam = paramName;
 
-    const settings = this.curveMapper.getSettings(paramName) ?? getParamDefaultSettings(paramName as keyof VisualParams);
-    if (settings === null) return;
+    // Get settings - try curve mapper first, then fall back to defaults
+    // Note: getParamDefaultSettings accepts string, not just VisualParams keys
+    const settings = this.curveMapper.getSettings(paramName) ?? getParamDefaultSettings(paramName);
+    if (settings === null) {
+      console.warn(`No curve settings found for parameter: ${paramName}`);
+      return;
+    }
+
+    // Find the control group or element that triggered this
+    // For ParamSlider components, find the component itself (curve button is in shadow DOM)
+    // For regular HTML sliders, find the curve button with data-param attribute
+    let controlGroup: HTMLElement | null = null;
+    let positioningElement: HTMLElement | null = null;
+    
+    // Try finding ParamSlider component first
+    const paramSliderComponent = document.querySelector(`param-slider[param-name="${paramName}"]`) as HTMLElement | null;
+    if (paramSliderComponent !== null) {
+      // Try to find parent control-group, but if not found, use the component itself
+      controlGroup = paramSliderComponent.closest('.control-group') as HTMLElement | null;
+      positioningElement = controlGroup ?? paramSliderComponent;
+    }
+    
+    // If not found, try finding regular curve button
+    if (positioningElement === null) {
+      const curveBtn = document.querySelector(`.curve-btn[data-param="${paramName}"]`);
+      controlGroup = curveBtn?.closest('.control-group') as HTMLElement | null;
+      positioningElement = controlGroup;
+    }
+    
+    this.currentCurveControlGroup = controlGroup;
 
     const title = document.getElementById('curve-editor-title');
     const minInput = document.getElementById('curve-min') as HTMLInputElement | null;
     const maxInput = document.getElementById('curve-max') as HTMLInputElement | null;
     const powerSlider = document.getElementById('curve-power') as HTMLInputElement | null;
     const powerValue = document.getElementById('curve-power-value');
+    const paramSlider = document.getElementById('curve-param-slider') as HTMLInputElement | null;
+    const paramValue = document.getElementById('curve-param-value');
+    const paramLabel = document.getElementById('curve-param-label');
+    const paramSliderContainer = document.getElementById('curve-param-slider-container');
 
-    if (title !== null) title.textContent = `Curve Editor: ${getParamLabel(paramName)}`;
+    if (title !== null) title.textContent = getParamLabel(paramName);
     if (minInput !== null) minInput.value = String(settings.min);
     if (maxInput !== null) maxInput.value = String(settings.max);
     if (powerSlider !== null) powerSlider.value = String(settings.power);
     if (powerValue !== null) powerValue.textContent = settings.power.toFixed(2);
 
-    this.curveEditorOverlay.classList.add('active');
+    // Setup parameter slider in drawer
+    if (paramSlider !== null && paramValue !== null && paramLabel !== null && paramSliderContainer !== null) {
+      paramLabel.textContent = getParamLabel(paramName);
+      // Get current value - handle emanationRate separately since it's not in VisualParams
+      let currentValue: number;
+      if (paramName === 'emanationRate') {
+        currentValue = this.app.getEmanationRate();
+      } else {
+        currentValue = this.app.getParam(paramName as keyof VisualParams);
+      }
+      
+      // Get HTML slider range if it exists, otherwise use 0-100
+      const htmlSlider = this.sliders.get(paramName);
+      if (htmlSlider !== undefined && htmlSlider !== null) {
+        const sliderMin = parseFloat(htmlSlider.min) || 0;
+        const sliderMax = parseFloat(htmlSlider.max) || 100;
+        paramSlider.min = String(sliderMin);
+        paramSlider.max = String(sliderMax);
+      } else {
+        paramSlider.min = '0';
+        paramSlider.max = '100';
+      }
+      
+      // Calculate slider position (normalized to 0-100, then denormalized to HTML range)
+      const normalizedSliderValue = this.paramToSliderValue(paramName, currentValue);
+      const sliderMin = parseFloat(paramSlider.min) || 0;
+      const sliderMax = parseFloat(paramSlider.max) || 100;
+      const rawSliderValue = sliderMin + (normalizedSliderValue / 100) * (sliderMax - sliderMin);
+      paramSlider.value = String(rawSliderValue);
+      paramValue.textContent = this.formatParamValue(paramName, currentValue);
+      paramSliderContainer.style.display = 'block';
+    }
+
+    // Position drawer to the left of control group/element if found
+    if (positioningElement !== null) {
+      const rect = positioningElement.getBoundingClientRect();
+      // Position drawer to the left of the control group
+      // Drawer width is 280px, so position it just to the left (with small gap)
+      const drawerLeft = Math.max(0, rect.left - 285); // 5px gap
+      this.curveEditorDrawer.style.left = `${drawerLeft}px`;
+      
+      // Calculate drawer height estimate (approximate based on content)
+      const estimatedDrawerHeight = 350; // Approximate height of drawer content
+      const viewportHeight = window.innerHeight;
+      const padding = 10; // Padding from edges
+      
+      // Calculate ideal top position
+      let drawerTop = rect.top;
+      
+      // If drawer would extend beyond bottom, adjust top position
+      if (drawerTop + estimatedDrawerHeight > viewportHeight - padding) {
+        // Position drawer so it fits within viewport
+        drawerTop = Math.max(padding, viewportHeight - estimatedDrawerHeight - padding);
+      }
+      
+      // Ensure drawer doesn't go above viewport
+      drawerTop = Math.max(padding, drawerTop);
+      
+      this.curveEditorDrawer.style.top = `${drawerTop}px`;
+      this.curveEditorDrawer.style.height = 'auto';
+      const maxHeight = viewportHeight - drawerTop - padding;
+      this.curveEditorDrawer.style.maxHeight = `${maxHeight}px`;
+      
+      // Set content max-height to match
+      const content = this.curveEditorDrawer.querySelector('.curve-editor-content') as HTMLElement;
+      if (content !== null) {
+        content.style.maxHeight = `${maxHeight}px`;
+      }
+    } else {
+      // Fallback: position at top left
+      this.curveEditorDrawer.style.left = '0px';
+      this.curveEditorDrawer.style.top = '10px';
+      this.curveEditorDrawer.style.height = 'auto';
+      const maxHeight = Math.min(window.innerHeight - 20, 500);
+      this.curveEditorDrawer.style.maxHeight = `${maxHeight}px`;
+      const content = this.curveEditorDrawer.querySelector('.curve-editor-content') as HTMLElement;
+      if (content !== null) {
+        content.style.maxHeight = `${maxHeight}px`;
+      }
+    }
+
+    // Make drawer visible
+    this.curveEditorDrawer.style.display = 'block';
+    this.curveEditorDrawer.classList.add('active');
     this.drawCurve();
   }
 
