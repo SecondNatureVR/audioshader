@@ -38,7 +38,6 @@ export class App {
   private dilationFrozen: boolean = false;
 
   private blendMode: BlendMode = 'additive';
-  private emanationRate: number = 2.0;  // Match lucas.html default
   private lastCaptureTime: number = 0;
   private totalRotation: number = 0;
 
@@ -80,8 +79,12 @@ export class App {
     if (lastPreset !== null) {
       const preset = this.presetManager.loadPreset(lastPreset);
       if (preset !== null) {
-        this.setParams(preset.params);
-        this.emanationRate = preset.emanationRate ?? App.DEFAULT_EMANATION_RATE;
+        // Migrate old presets: merge emanationRate into params
+        const paramsWithRate = { ...preset.params };
+        if (paramsWithRate.emanationRate === undefined || paramsWithRate.emanationRate === 2.0) {
+          paramsWithRate.emanationRate = preset.emanationRate ?? App.DEFAULT_EMANATION_RATE;
+        }
+        this.setParams(paramsWithRate);
         if (preset.audioMappings !== undefined) {
           this.audioMapper.setMappings(preset.audioMappings);
         }
@@ -191,7 +194,7 @@ export class App {
    */
   private render(): void {
     const now = this.renderState.time;
-    const captureInterval = 1 / this.emanationRate;
+    const captureInterval = 1 / this.params.emanationRate;
     const shouldCaptureShape = now - this.lastCaptureTime >= captureInterval;
 
     if (shouldCaptureShape) {
@@ -216,7 +219,7 @@ export class App {
       shouldCaptureShape,
       fadeAmount: this.params.fadeAmount,
       hueShiftAmount: this.params.hueShiftAmount,
-      emanationRate: this.emanationRate,
+      emanationRate: this.params.emanationRate,
       noiseAmount: this.params.noiseAmount,
       noiseRate: this.params.noiseRate,
       blurAmount: this.params.blurAmount,
@@ -401,17 +404,17 @@ export class App {
   }
 
   /**
-   * Get emanation rate
+   * Get emanation rate (convenience — same as getParam('emanationRate'))
    */
   getEmanationRate(): number {
-    return this.emanationRate;
+    return this.params.emanationRate;
   }
 
   /**
-   * Set emanation rate
+   * Set emanation rate (convenience — same as setParam('emanationRate', rate, true))
    */
   setEmanationRate(rate: number): void {
-    this.emanationRate = rate;
+    this.setParam('emanationRate', rate, true);
   }
 
   /**
@@ -483,7 +486,7 @@ export class App {
       name,
       this.params,
       this.audioMapper.getMappings(),
-      this.emanationRate,
+      undefined,
       this.blendMode
     );
   }
@@ -498,9 +501,13 @@ export class App {
     const preset = this.presetManager.loadPreset(name);
     if (preset === null) return false;
 
-    this.setParams(preset.params);
-    // Always set emanationRate - use preset value or default
-    this.emanationRate = preset.emanationRate ?? App.DEFAULT_EMANATION_RATE;
+    // Migrate old presets: if emanationRate is on the preset root (old format), merge into params
+    const paramsWithRate = { ...preset.params };
+    if (paramsWithRate.emanationRate === undefined || paramsWithRate.emanationRate === 2.0) {
+      // Use legacy field if present, otherwise default
+      paramsWithRate.emanationRate = preset.emanationRate ?? App.DEFAULT_EMANATION_RATE;
+    }
+    this.setParams(paramsWithRate);
     // Set blendMode from preset or default to 'additive'
     this.blendMode = preset.blendMode ?? 'additive';
     if (preset.audioMappings !== undefined) {

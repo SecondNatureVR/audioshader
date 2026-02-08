@@ -14,7 +14,7 @@ import type { VisualParams } from '../types';
  * Display labels for all parameters
  * Keys are internal param names, values are human-readable labels
  */
-export const PARAM_LABELS: Record<keyof VisualParams | 'emanationRate', string> = {
+export const PARAM_LABELS: Record<keyof VisualParams, string> = {
   // Shape parameters
   spikiness: 'Spikiness',
   spikeFrequency: 'Spike Frequency',

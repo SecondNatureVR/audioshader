@@ -54,6 +54,7 @@ function convertRawPreset(raw: RawPreset): VisualParams {
     blurRate: raw.blurRate ?? 0,
     autoRotationSpeed: raw.autoRotationSpeed ?? 0,
     jiggleAmount: raw.jiggleAmount ?? 0.3,
+    emanationRate: raw.emanationRate ?? 30,
   };
 }
 

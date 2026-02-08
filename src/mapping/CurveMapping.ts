@@ -28,7 +28,7 @@ export function getDefaultCurveSettings(): CurveSettings {
  * Parameter-specific default curve settings
  * These define the natural ranges and response curves for each parameter
  */
-export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilationSpeed' | 'emanationRate', Omit<CurveSettings, 'type'>>> = {
+export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilationSpeed', Omit<CurveSettings, 'type'>>> = {
   // Shape parameters (0-1 range, linear)
   spikiness: { min: 0, max: 1, power: 1.0 },
   spikeSharpness: { min: 0, max: 1, power: 1.0 },
@@ -472,6 +472,7 @@ export function formatParamValue(paramName: string, value: number): string {
     case 'hueShiftAmount':
       return value.toFixed(3);
     case 'spikeFrequency':
+    case 'emanationRate':
       return value.toFixed(1);
     default:
       return value.toFixed(2);

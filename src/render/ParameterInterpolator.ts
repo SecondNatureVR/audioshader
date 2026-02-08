@@ -22,6 +22,15 @@ interface SpringInterpolationState {
   damping: number;
 }
 
+/**
+ * Per-parameter interpolation duration overrides.
+ * Parameters listed here use a custom duration instead of the global default.
+ * A duration of 0 means the parameter snaps instantly (no interpolation).
+ */
+const PARAM_DURATION_OVERRIDES: Record<string, number> = {
+  emanationRate: 0,  // Timing parameter — snaps instantly
+};
+
 export class ParameterInterpolator {
   private params: Map<string, StandardInterpolationState> = new Map();
   private springParams: Map<string, SpringInterpolationState> = new Map();
@@ -143,7 +152,9 @@ export class ParameterInterpolator {
     }
 
     const currentValue = this.getCurrent(paramName) ?? targetValue;
-    const finalDuration = duration ?? this._defaultDuration;
+    // Use per-parameter override if set, otherwise explicit duration, otherwise global default
+    const overrideDuration = PARAM_DURATION_OVERRIDES[paramName];
+    const finalDuration = overrideDuration ?? duration ?? this._defaultDuration;
     const finalEasing = easing ?? this._defaultEasing;
 
     if (useSpring || (this._useSpringForRotation && paramName === 'rotation')) {

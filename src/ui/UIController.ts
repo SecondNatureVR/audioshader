@@ -285,11 +285,9 @@ export class UIController {
   /**
    * Setup emanation rate slider
    *
-   * emanationRate is handled separately from VisualParams because:
-   * 1. It's a timing parameter (shapes/second), not a visual appearance parameter
-   * 2. It doesn't need smooth interpolation - rate changes are instant
-   * 3. It doesn't need curve mapping - slider maps directly 1:1 to rate
-   * 4. Presets store it as a separate field, not part of params
+   * emanationRate is now part of VisualParams but uses instant interpolation
+   * (duration=0 via ParameterInterpolator overrides). This setup is kept
+   * separate because the HTML slider uses a legacy layout.
    */
   private setupEmanationRateSlider(): void {
     const slider = document.getElementById('emanation-rate-slider') as HTMLInputElement | null;
@@ -300,7 +298,7 @@ export class UIController {
     slider.addEventListener('input', (e) => {
       const target = e.target as HTMLInputElement;
       const rate = parseFloat(target.value);
-      this.app.setEmanationRate(rate);
+      this.app.setParam('emanationRate', rate, true);
       if (valueDisplay !== null) {
         valueDisplay.textContent = rate.toFixed(1);
       }
@@ -313,7 +311,7 @@ export class UIController {
         valueDisplay,
         slider,
         (rate) => {
-          this.app.setEmanationRate(rate);
+          this.app.setParam('emanationRate', rate, true);
           this.config.onEmanationRateChange?.(rate);
         },
         (v) => v.toFixed(1)
@@ -1517,13 +1515,7 @@ export class UIController {
     // Setup parameter slider in drawer
     if (paramSlider !== null && paramValue !== null && paramLabel !== null && paramSliderContainer !== null) {
       paramLabel.textContent = getParamLabel(paramName);
-      // Get current value - handle emanationRate separately since it's not in VisualParams
-      let currentValue: number;
-      if (paramName === 'emanationRate') {
-        currentValue = this.app.getEmanationRate();
-      } else {
-        currentValue = this.app.getParam(paramName as keyof VisualParams);
-      }
+      const currentValue = this.app.getParam(paramName as keyof VisualParams);
       
       // Get HTML slider range if it exists, otherwise use 0-100
       const htmlSlider = this.sliders.get(paramName);

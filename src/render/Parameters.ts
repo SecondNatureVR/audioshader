@@ -32,6 +32,9 @@ export const DEFAULT_PARAMS: VisualParams = {
 
   // Jiggle effect
   jiggleAmount: 0,
+
+  // Timing
+  emanationRate: 2.0,  // Match lucas.html default
 };
 
 /**
@@ -63,6 +66,7 @@ export const PARAM_RANGES: Record<keyof VisualParams, ParamRange> = {
   blurAmount: { min: 0, max: 1, step: 0.01, default: 0 },
   blurRate: { min: 0, max: 10000, step: 0.1, default: 0 },
   jiggleAmount: { min: 0, max: 1, step: 0.01, default: 0 },
+  emanationRate: { min: 2, max: 200, step: 1, default: 2.0 },
 };
 
 /**
@@ -107,6 +111,9 @@ export function randomizeParams(): VisualParams {
   params.hueShiftAmount = Math.random() * 0.5;
   params.fadeAmount = Math.random() * 5;
   params.autoRotationSpeed = (Math.random() - 0.5) * 360;
+
+  // Randomize timing
+  params.emanationRate = 2 + Math.random() * 198;
 
   return params;
 }

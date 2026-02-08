@@ -38,6 +38,9 @@ export interface VisualParams {
 
   // Jiggle effect
   jiggleAmount: number;
+
+  // Timing
+  emanationRate: number;  // Shapes per second (instant, no interpolation)
 }
 
 // Audio metrics from the analyzer
@@ -80,6 +83,7 @@ export interface Preset {
   name: string;
   params: VisualParams;
   blendMode?: BlendMode | undefined;
+  /** @deprecated Use params.emanationRate instead. Kept for migration of old presets. */
   emanationRate?: number | undefined;
   audioMappings?: AudioMappings | undefined;
   createdAt?: string | undefined;

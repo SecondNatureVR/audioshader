@@ -87,4 +87,39 @@ describe('ParameterInterpolator', () => {
       expect(interpolator.isInterpolating('unknown')).toBe(false);
     });
   });
+
+  describe('per-parameter duration overrides', () => {
+    it('should snap emanationRate instantly (duration=0 override)', () => {
+      // Set an initial value
+      interpolator.snapTo('emanationRate', 10);
+      expect(interpolator.getCurrent('emanationRate')).toBe(10);
+
+      // Set a new target — should snap instantly because emanationRate has duration=0
+      interpolator.setTarget('emanationRate', 100);
+      interpolator.update();
+
+      expect(interpolator.getCurrent('emanationRate')).toBe(100);
+    });
+
+    it('should interpolate normal params over time (no override)', () => {
+      interpolator.snapTo('spikiness', 0);
+      interpolator.setTarget('spikiness', 1.0);
+      interpolator.update();
+
+      // Should NOT have reached target yet (default duration is 0.5s)
+      const current = interpolator.getCurrent('spikiness');
+      expect(current).not.toBeNull();
+      expect(current!).toBeLessThan(1.0);
+      expect(current!).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should still allow explicit immediate for any param', () => {
+      interpolator.snapTo('hue', 0);
+      // Explicit duration=0 overrides default
+      interpolator.setTarget('hue', 180, 0);
+      interpolator.update();
+
+      expect(interpolator.getCurrent('hue')).toBe(180);
+    });
+  });
 });
