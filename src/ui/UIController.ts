@@ -16,6 +16,7 @@ import type { App } from '../App';
 import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
 import { AudioMapper, ALL_MAPPABLE_PARAMS, createDefaultSlot, DEFAULT_AUDIO_SOURCES } from '../audio/AudioMapper';
 import { PARAM_RANGES } from '../render/Parameters';
+import { AudioRadarChart } from './AudioRadarChart';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateAdjustedRange } from './valueUtils';
@@ -60,6 +61,8 @@ export class UIController {
   private modulationDrawer: HTMLElement | null = null;
   private currentModParam: string | null = null;
   private modLiveUpdateId: number | null = null;
+  private radarChart: AudioRadarChart | null = null;
+  private activeMappingsCounter = 0;
   private currentCurveControlGroup: HTMLElement | null = null;
 
   // Slider references
@@ -115,6 +118,8 @@ export class UIController {
     this.setupAudioControls();
     this.setupCurveEditor();
     this.setupModulationDrawer();
+    this.setupRadarChart();
+    this.setupMPanelRandomization();
     this.setupCollapsibleSections();
     this.setupRecorders();
     this.setupKeyboardShortcuts();
@@ -1541,6 +1546,128 @@ export class UIController {
     }
   }
 
+  // ── Radar chart ─────────────────────────────────────────────────
+
+  /**
+   * Initialize the radar chart on the M-panel canvas
+   */
+  private setupRadarChart(): void {
+    const canvas = document.getElementById('audio-radar-canvas') as HTMLCanvasElement | null;
+    if (canvas !== null) {
+      try {
+        this.radarChart = new AudioRadarChart(canvas);
+      } catch (err) {
+        console.warn('Failed to initialize radar chart:', err);
+      }
+    }
+  }
+
+  // ── M-panel randomization ─────────────────────────────────────
+
+  /**
+   * Wire up the M-panel randomization buttons
+   */
+  private setupMPanelRandomization(): void {
+    const randomizeMappingsBtn = document.getElementById('randomize-mappings-btn');
+    const randomizeValuesBtn = document.getElementById('randomize-values-btn');
+
+    randomizeMappingsBtn?.addEventListener('click', () => {
+      this.randomizeAllMappings();
+    });
+
+    randomizeValuesBtn?.addEventListener('click', () => {
+      this.randomizeAllValues();
+    });
+  }
+
+  /**
+   * Randomize which metrics map to which params (random source + enable/disable)
+   */
+  private randomizeAllMappings(): void {
+    const audioMapper = this.app.getAudioMapper();
+    const metrics = AudioMapper.getAvailableMetrics();
+
+    for (const param of ALL_MAPPABLE_PARAMS) {
+      const range = PARAM_RANGES[param];
+      const enabled = Math.random() < 0.4; // ~40% enabled
+      const source = metrics[Math.floor(Math.random() * metrics.length)] ?? 'rms';
+
+      audioMapper.updatePrimarySlot(param, {
+        source,
+        amount: 0.2 + Math.random() * 0.8,
+        smoothing: 0.3 + Math.random() * 0.6,
+        invert: Math.random() > 0.7,
+        curve: 0.5 + Math.random() * 2.5,
+        rangeMin: range.min,
+        rangeMax: range.max,
+      });
+      audioMapper.updateModulation(param, { enabled });
+    }
+
+    this.updateAllAudioButtonStates();
+    this.generateParameterMappingsUI();
+  }
+
+  /**
+   * Randomize modulation values but keep current source pairings
+   */
+  private randomizeAllValues(): void {
+    const audioMapper = this.app.getAudioMapper();
+
+    for (const param of ALL_MAPPABLE_PARAMS) {
+      const mod = audioMapper.getModulation(param);
+      if (mod === undefined || !mod.enabled) continue;
+
+      const range = PARAM_RANGES[param];
+      audioMapper.updatePrimarySlot(param, {
+        amount: 0.2 + Math.random() * 0.8,
+        smoothing: 0.3 + Math.random() * 0.6,
+        invert: Math.random() > 0.7,
+        curve: 0.5 + Math.random() * 2.5,
+        rangeMin: range.min,
+        rangeMax: range.max,
+      });
+    }
+
+    this.generateParameterMappingsUI();
+  }
+
+  // ── Active mappings overview ──────────────────────────────────
+
+  /**
+   * Update the active mappings overview in the M-panel
+   */
+  private updateActiveMappingsOverview(): void {
+    const container = document.getElementById('active-mappings-container');
+    if (container === null) return;
+
+    const audioMapper = this.app.getAudioMapper();
+    const lines: string[] = [];
+
+    for (const param of ALL_MAPPABLE_PARAMS) {
+      const mod = audioMapper.getModulation(param);
+      if (mod === undefined || !mod.enabled) continue;
+      const slot = mod.slots[0];
+      if (slot === undefined) continue;
+
+      const label = getParamLabel(param);
+      const sourceLabel = AudioMapper.getMetricLabel(slot.source);
+      const amountPct = Math.round(slot.amount * 100);
+      lines.push(
+        `<div style="display:flex;gap:4px;margin-bottom:2px;">` +
+        `<span style="color:#0af;width:80px;overflow:hidden;text-overflow:ellipsis;">${label}</span>` +
+        `<span style="color:#888;">← ${sourceLabel} (${amountPct}%)</span>` +
+        `</div>`
+      );
+    }
+
+    if (lines.length === 0) {
+      container.innerHTML = '<div style="color:#555;font-style:italic;">No active mappings</div>';
+    } else {
+      container.innerHTML = lines.join('');
+    }
+  }
+
   // ── Modulation drawer ───────────────────────────────────────────
 
   /**
@@ -2398,6 +2525,9 @@ export class UIController {
         coherence: { name: 'coherence' },
         stereoWidth: { name: 'stereoWidth', index: 1 }, // Use mid band
         phaseRisk: { name: 'phaseRisk' },
+        lowImbalance: { name: 'lowImbalance' },
+        emptiness: { name: 'emptiness' },
+        panPosition: { name: 'panPosition', index: 0 }, // Use low band
       };
 
       // Update each metric row
@@ -2463,6 +2593,17 @@ export class UIController {
 
     // Update mapping bars for each parameter
     this.updateMappingBars(metrics);
+
+    // Update radar chart
+    if (this.radarChart !== null) {
+      this.radarChart.update(metrics);
+    }
+
+    // Update active mappings overview (throttled — every 10th call)
+    this.activeMappingsCounter = (this.activeMappingsCounter + 1) % 10;
+    if (this.activeMappingsCounter === 0) {
+      this.updateActiveMappingsOverview();
+    }
   }
 
   /**

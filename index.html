@@ -614,12 +614,23 @@
 
     <!-- Audio Mapping Panel (Hidden by default, toggle with M key) -->
     <div id="audio-mapping-panel">
-        <h4>Audio Mapping</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="margin: 0;">Audio Mapping</h4>
+            <div style="display: flex; gap: 4px;">
+                <button id="randomize-mappings-btn" class="curve-btn-action" style="font-size: 8px; padding: 3px 6px; opacity: 0.6;" title="Randomize which metrics map to which params">Rnd Map</button>
+                <button id="randomize-values-btn" class="curve-btn-action" style="font-size: 8px; padding: 3px 6px; opacity: 0.6;" title="Randomize modulation values (keep current sources)">Rnd Val</button>
+            </div>
+        </div>
 
         <!-- Audio Reactive Toggle -->
         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
             <input type="checkbox" id="audio-reactive-enabled" checked style="cursor: pointer;">
             <label for="audio-reactive-enabled" style="font-size: 10px; color: #bbb; cursor: pointer; margin: 0;">Audio Reactive Mode</label>
+        </div>
+
+        <!-- Audio Radar Chart -->
+        <div style="text-align: center; margin-bottom: 10px;">
+            <canvas id="audio-radar-canvas" width="200" height="200" style="display: block; margin: 0 auto; background: rgba(0,0,0,0.3); border-radius: 4px;"></canvas>
         </div>
 
         <!-- Audio Metrics Visualization -->
@@ -707,15 +718,41 @@
                         <td class="metric-range">0-1</td>
                         <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
                     </tr>
+                    <tr data-metric="lowImbalance">
+                        <td class="metric-name">Low Imbalance</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="emptiness">
+                        <td class="metric-name">Emptiness</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
+                    <tr data-metric="panPosition">
+                        <td class="metric-name">Pan Position</td>
+                        <td class="metric-value">0.000</td>
+                        <td class="metric-range">0-1</td>
+                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
+                    </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Active Mappings Overview -->
+        <div id="active-mappings-overview" style="margin-top: 10px;">
+            <h5>Active Mappings</h5>
+            <div id="active-mappings-container" style="font-size: 8px; color: #bbb;">
+                <!-- Populated dynamically -->
+            </div>
         </div>
 
         <!-- Parameter Mapping Controls -->
         <div id="audio-mapping-content" style="margin-top: 10px;">
             <h5>Parameter Mappings</h5>
             <div style="font-size: 8px; color: #888; margin-bottom: 8px;">
-                Enable audio reactivity for visual parameters. Each parameter can be mapped to an audio metric.
+                Enable audio reactivity for visual parameters. Click the A button on any slider to open the modulation drawer.
             </div>
             <div id="parameter-mappings-container">
                 <!-- Will be populated dynamically -->
