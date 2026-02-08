@@ -44,22 +44,28 @@ void main() {
 
     vec4 history;
     if (distFromCenter < centerRadius) {
-        // At center: sample neighboring pixels and average them
-        // Sample 8 neighboring pixels in a ring around center
-        float sampleRadius = 0.003; // Slightly larger radius for neighbors
+        // At center: sample neighboring pixels and average them for display
+        // Sample neighbors from positions OUTSIDE the center radius to avoid sampling black
+        // Use a radius that's definitely outside centerRadius to get actual color values
+        float neighborRadius = centerRadius * 2.5; // Sample from ring outside center
         vec4 neighborSum = vec4(0.0);
         float neighborCount = 0.0;
 
-        // Sample neighbors in 8 directions
+        // Sample neighbors in 8 directions from positions outside center
         for (float angle = 0.0; angle < 6.28318; angle += 0.785398) { // 8 directions (2*PI/8)
-            vec2 neighborDir = vec2(cos(angle), sin(angle)) * sampleRadius;
-            vec2 neighborUV = sampleUV + neighborDir;
+            vec2 neighborDir = vec2(cos(angle), sin(angle)) * neighborRadius;
+            vec2 neighborUV = uv + neighborDir; // Sample from current UV, not scaled sampleUV
             vec4 neighbor = texture2D(u_history, neighborUV);
-            neighborSum += neighbor;
-            neighborCount += 1.0;
+            
+            // Only use neighbors that are outside the center region (to avoid black)
+            float neighborDist = length(neighborUV - center);
+            if (neighborDist > centerRadius) {
+                neighborSum += neighbor;
+                neighborCount += 1.0;
+            }
         }
 
-        // Use average of neighbors, or black if no valid neighbors
+        // Use average of valid neighbors, or black if no valid neighbors
         history = neighborCount > 0.0 ? neighborSum / neighborCount : vec4(0.0, 0.0, 0.0, 0.0);
     } else {
         // Check if we're sampling from the center region (prevent center pixels from propagating outward)
@@ -68,6 +74,7 @@ void main() {
 
         if (sampleDistFromCenter < centerRadius) {
             // If sampling from center, use black/transparent to prevent propagation
+            // This prevents center pixels (even with averaged neighbors) from propagating outward
             history = vec4(0.0, 0.0, 0.0, 0.0);
         } else {
             // Normal sampling
