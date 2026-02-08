@@ -1,6 +1,6 @@
 import { LitElement, html, css, PropertyValues } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
-import { parseNumericValue, calculateExpandedRange } from '../../ui/valueUtils';
+import { parseNumericValue } from '../../ui/valueUtils';
 import { VALUE_FORMATTERS, type ValueFormatter } from '../editable-value/EditableValue';
 import { getParamLabel } from '../../config/paramLabels';
 import type { ParamChangeEventDetail, CurveEditRequestEventDetail } from '../types';
@@ -239,16 +239,22 @@ export class ParamSlider extends LitElement {
     const target = e.target as HTMLInputElement;
     this.sliderValue = parseFloat(target.value);
 
-    this.dispatchEvent(new CustomEvent<ParamChangeEventDetail>('param-change', {
-      bubbles: true,
-      composed: true,
-      detail: {
-        paramName: this.paramName,
-        value: this.sliderValue,
-        sliderValue: this.sliderValue,
-        source: 'slider',
-      },
-    }));
+    // Dispatch event asynchronously to avoid blocking Lit's update cycle
+    // This prevents "no parentNode" errors when component updates during slider movement
+    void Promise.resolve().then(() => {
+      if (this.isConnected) {
+        this.dispatchEvent(new CustomEvent<ParamChangeEventDetail>('param-change', {
+          bubbles: true,
+          composed: true,
+          detail: {
+            paramName: this.paramName,
+            value: this.sliderValue,
+            sliderValue: this.sliderValue,
+            source: 'slider',
+          },
+        }));
+      }
+    });
   }
 
   private handleValueFocus(): void {
@@ -256,18 +262,26 @@ export class ParamSlider extends LitElement {
   }
 
   private handleValueBlur(e: FocusEvent): void {
-    this.isEditing = false;
     const target = e.target as HTMLElement;
     const text = target.textContent?.trim() ?? '';
     const numValue = parseNumericValue(text);
 
     if (numValue !== null) {
-      // Check if range needs expansion (will be handled by parent)
-      const expanded = calculateExpandedRange(numValue, this.min, this.max);
-      if (expanded !== null) {
-        this.min = expanded.min;
-        this.max = expanded.max;
+      // Range expansion is handled by UIController via expandSliderRangeIfNeeded()
+      // The HTML slider should always stay 0-100, only the curve mapping range expands
+      // Do NOT update this.min/max here - that would break the curve mapping which assumes 0-100
+
+      // Update component's value immediately so display shows the new value
+      // This ensures the display updates right away, before async processing
+      this.value = numValue;
+      
+      // Update display immediately to show the exact entered value
+      if (this.valueDisplayEl) {
+        this.valueDisplayEl.textContent = this.formatValue(this.value);
       }
+      
+      // Mark as not editing AFTER updating value and display
+      this.isEditing = false;
 
       this.dispatchEvent(new CustomEvent<ParamChangeEventDetail>('param-change', {
         bubbles: true,
@@ -279,10 +293,11 @@ export class ParamSlider extends LitElement {
           source: 'input',
         },
       }));
+    } else {
+      // Invalid input - reset display to formatted current value
+      this.isEditing = false;
+      target.textContent = this.formatValue(this.value);
     }
-
-    // Reset display to formatted current value
-    target.textContent = this.formatValue(this.value);
   }
 
   private handleValueKeydown(e: KeyboardEvent): void {

@@ -16,30 +16,32 @@ export function parseNumericValue(text: string): number | null {
 /**
  * Calculate new range bounds when a value exceeds current limits
  * Returns null if no expansion is needed, otherwise returns { min, max }
- * Expansion adds 10% headroom beyond the value
+ * Only adjusts the boundary (min or max) that the value is closer to
  */
 export function calculateExpandedRange(
   value: number,
   currentMin: number,
   currentMax: number
 ): { min: number; max: number } | null {
-  let needsExpansion = false;
-  let newMin = currentMin;
-  let newMax = currentMax;
-
-  if (value < currentMin) {
-    // Expand min with 10% headroom below the value
-    newMin = value - Math.abs(value) * 0.1;
-    needsExpansion = true;
+  // If value is within range, no expansion needed
+  if (value >= currentMin && value <= currentMax) {
+    return null;
   }
 
-  if (value > currentMax) {
-    // Expand max with 10% headroom above the value
-    newMax = value + Math.abs(value) * 0.1;
-    needsExpansion = true;
-  }
+  // Calculate distances to min and max
+  const distanceToMin = Math.abs(value - currentMin);
+  const distanceToMax = Math.abs(value - currentMax);
 
-  return needsExpansion ? { min: newMin, max: newMax } : null;
+  // Determine which boundary is closer
+  const adjustMin = distanceToMin <= distanceToMax;
+
+  if (adjustMin) {
+    // Value is closer to min, adjust min to match value
+    return { min: value, max: currentMax };
+  } else {
+    // Value is closer to max, adjust max to match value
+    return { min: currentMin, max: value };
+  }
 }
 
 /**

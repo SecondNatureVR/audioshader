@@ -141,18 +141,35 @@ export class UIController {
     document.addEventListener('param-change', (e: CustomEvent<ParamChangeEventDetail>) => {
       const { paramName, value, source } = e.detail;
 
-      // Apply curve mapping for slider input, use direct value for direct input
-      const paramValue = source === 'slider'
-        ? this.sliderToParamValue(paramName, value)
-        : value;
-
-      // Expand curve range if needed (for direct input)
-      if (source === 'input') {
+      let paramValue: number;
+      
+      if (source === 'slider') {
+        // Slider input: apply curve mapping to convert slider position to parameter value
+        paramValue = this.sliderToParamValue(paramName, value);
+      } else {
+        // Direct input: use the exact value entered by user
+        paramValue = value;
+        
+        // Expand curve range if needed (after setting the exact value)
+        // This ensures the range includes the value, but we keep the exact value
         this.expandSliderRangeIfNeeded(paramName, paramValue);
       }
 
-      this.app.setParam(paramName as keyof VisualParams, paramValue);
-      this.updateValueDisplay(paramName, paramValue);
+      // Set the parameter to the exact value (not expanded)
+      // Use immediate=true for direct input to avoid interpolation delay
+      // For slider input, use immediate=false to allow smooth interpolation
+      const immediate = source === 'input';
+      this.app.setParam(paramName as keyof VisualParams, paramValue, immediate);
+      
+      // For ParamSlider components, update the component's value and slider position
+      // This ensures the display shows the correct value and slider position matches the range
+      if (this.isParamSliderComponent(paramName)) {
+        void this.updateSingleParamSliderComponent(paramName, paramValue);
+      } else {
+        // Legacy HTML sliders - update value display
+        this.updateValueDisplay(paramName, paramValue);
+      }
+      
       this.config.onParamChange?.(paramName as keyof VisualParams, paramValue);
     });
 
@@ -224,8 +241,18 @@ export class UIController {
 
     slider.addEventListener('input', (e) => {
       const target = e.target as HTMLInputElement;
-      const sliderValue = parseFloat(target.value);
-      const paramValue = this.sliderToParamValue(paramName, sliderValue);
+      const rawSliderValue = parseFloat(target.value);
+      
+      // Normalize slider value to 0-100 range for curve mapping
+      // HTML sliders may have different min/max (e.g., min=2, max=20)
+      // but curve mapping functions always expect 0-100
+      const sliderMin = parseFloat(target.min) || 0;
+      const sliderMax = parseFloat(target.max) || 100;
+      const normalizedSliderValue = sliderMin === sliderMax 
+        ? 50 // Avoid division by zero
+        : ((rawSliderValue - sliderMin) / (sliderMax - sliderMin)) * 100;
+      
+      const paramValue = this.sliderToParamValue(paramName, normalizedSliderValue);
 
       this.app.setParam(paramName as keyof VisualParams, paramValue);
       this.updateValueDisplay(paramName, paramValue);
@@ -327,10 +354,17 @@ export class UIController {
         // Expand slider range if value exceeds current limits
         this.expandSliderRangeIfNeeded(paramName, numValue);
 
-        this.app.setParam(paramName as keyof VisualParams, numValue);
+        // Set parameter with immediate=true for direct input (no interpolation delay)
+        // This ensures the value is set immediately and getParam() returns the exact value
+        this.app.setParam(paramName as keyof VisualParams, numValue, true);
         this.updateSliderFromValue(paramName, numValue);
+        
+        // Display the exact value that was entered (not getParam which might have timing issues)
+        this.updateValueDisplay(paramName, numValue);
+      } else {
+        // Invalid input - reset display to current parameter value
+        this.updateValueDisplay(paramName, this.app.getParam(paramName as keyof VisualParams));
       }
-      this.updateValueDisplay(paramName, this.app.getParam(paramName as keyof VisualParams));
     });
 
     element.addEventListener('keydown', (e) => {
@@ -416,17 +450,43 @@ export class UIController {
     // Special mappings for certain parameters
     switch (paramName) {
       case 'expansionFactor':
+        // Use curve settings if they differ from DilationMapping defaults (allows range expansion)
+        // Otherwise fall back to DilationMapping for backward compatibility
+        if (settings.min !== DilationMapping.MIN || settings.max !== DilationMapping.MAX) {
+          return mapSliderToValue(sliderValue, settings);
+        }
         return DilationMapping.sliderToFactor(sliderValue);
       case 'fadeAmount':
+        // Use curve settings if they differ from FadeMapping defaults (allows range expansion)
+        // Default: min=0, max=5, power=0.333
+        if (settings.min !== 0 || settings.max !== 5 || settings.power !== 0.333) {
+          return mapSliderToValue(sliderValue, settings);
+        }
         return FadeMapping.sliderToAmount(sliderValue);
       case 'noiseAmount':
       case 'blurAmount':
+        // Use curve settings if they differ from EffectAmountMapping defaults (allows range expansion)
+        // Default: min=0, max=1, power=0.25
+        if (settings.min !== 0 || settings.max !== 1 || settings.power !== 0.25) {
+          return mapSliderToValue(sliderValue, settings);
+        }
         return EffectAmountMapping.sliderToAmount(sliderValue);
       case 'noiseRate':
       case 'blurRate':
+        // Use curve settings if they differ from EffectRateMapping defaults (allows range expansion)
+        // Default: min=0, max=10, power=0.333
+        if (settings.min !== 0 || settings.max !== 10 || settings.power !== 0.333) {
+          return mapSliderToValue(sliderValue, settings);
+        }
         return EffectRateMapping.sliderToRate(sliderValue);
       case 'autoRotationSpeed':
-        return RotationSpeedMapping.sliderToSpeed(sliderValue);
+        // Use curve settings if they differ from RotationSpeedMapping defaults (allows range expansion)
+        // Default: min=-360, max=360, power=1.0
+        // RotationSpeedMapping uses default params, so we need to pass them explicitly
+        if (settings.min !== -360 || settings.max !== 360 || settings.power !== 1.0) {
+          return mapSliderToValue(sliderValue, settings);
+        }
+        return RotationSpeedMapping.sliderToSpeed(sliderValue, settings.min, settings.max);
       default:
         return mapSliderToValue(sliderValue, settings);
     }
@@ -440,17 +500,43 @@ export class UIController {
 
     switch (paramName) {
       case 'expansionFactor':
+        // Use curve settings if they differ from DilationMapping defaults (allows range expansion)
+        // Otherwise fall back to DilationMapping for backward compatibility
+        if (settings.min !== DilationMapping.MIN || settings.max !== DilationMapping.MAX) {
+          return reverseMapValueToSlider(paramValue, settings);
+        }
         return DilationMapping.factorToSlider(paramValue);
       case 'fadeAmount':
+        // Use curve settings if they differ from FadeMapping defaults (allows range expansion)
+        // Default: min=0, max=5, power=0.333
+        if (settings.min !== 0 || settings.max !== 5 || settings.power !== 0.333) {
+          return reverseMapValueToSlider(paramValue, settings);
+        }
         return FadeMapping.amountToSlider(paramValue);
       case 'noiseAmount':
       case 'blurAmount':
+        // Use curve settings if they differ from EffectAmountMapping defaults (allows range expansion)
+        // Default: min=0, max=1, power=0.25
+        if (settings.min !== 0 || settings.max !== 1 || settings.power !== 0.25) {
+          return reverseMapValueToSlider(paramValue, settings);
+        }
         return EffectAmountMapping.amountToSlider(paramValue);
       case 'noiseRate':
       case 'blurRate':
+        // Use curve settings if they differ from EffectRateMapping defaults (allows range expansion)
+        // Default: min=0, max=10, power=0.333
+        if (settings.min !== 0 || settings.max !== 10 || settings.power !== 0.333) {
+          return reverseMapValueToSlider(paramValue, settings);
+        }
         return EffectRateMapping.rateToSlider(paramValue);
       case 'autoRotationSpeed':
-        return RotationSpeedMapping.speedToSlider(paramValue);
+        // Use curve settings if they differ from RotationSpeedMapping defaults (allows range expansion)
+        // Default: min=-360, max=360, power=1.0
+        // RotationSpeedMapping uses default params, so we need to pass them explicitly
+        if (settings.min !== -360 || settings.max !== 360 || settings.power !== 1.0) {
+          return reverseMapValueToSlider(paramValue, settings);
+        }
+        return RotationSpeedMapping.speedToSlider(paramValue, settings.min, settings.max);
       default:
         return reverseMapValueToSlider(paramValue, settings);
     }
@@ -494,8 +580,25 @@ export class UIController {
     const slider = this.sliders.get(paramName);
     if (slider === null || slider === undefined) return;
 
-    const sliderValue = this.paramToSliderValue(paramName, value);
-    slider.value = String(sliderValue);
+    // Convert parameter value to normalized 0-100 slider position
+    const normalizedSliderValue = this.paramToSliderValue(paramName, value);
+    
+    // Denormalize to HTML slider's actual min/max range
+    const sliderMin = parseFloat(slider.min) || 0;
+    const sliderMax = parseFloat(slider.max) || 100;
+    const rawSliderValue = sliderMin === sliderMax
+      ? sliderMin
+      : sliderMin + (normalizedSliderValue / 100) * (sliderMax - sliderMin);
+    
+    slider.value = String(rawSliderValue);
+  }
+
+  /**
+   * Check if a parameter uses a ParamSlider component
+   */
+  private isParamSliderComponent(paramName: string): boolean {
+    const component = document.querySelector<ParamSlider>(`param-slider[param-name="${paramName}"]`);
+    return component !== null;
   }
 
   /**
@@ -505,45 +608,71 @@ export class UIController {
     const params = this.app.getParams();
 
     for (const [name, value] of Object.entries(params)) {
-      this.updateSliderFromValue(name, value);
-      this.updateValueDisplay(name, value);
+      // Only update legacy HTML sliders, not ParamSlider components
+      if (!this.isParamSliderComponent(name)) {
+        this.updateSliderFromValue(name, value);
+        this.updateValueDisplay(name, value);
+      }
     }
 
-    // Update param-slider components
+    // Update param-slider components separately
     this.updateParamSliderComponents(params);
   }
 
   /**
+   * Update a single ParamSlider component with a new value
+   * Used after direct input or range expansion to sync component state
+   */
+  private async updateSingleParamSliderComponent(paramName: string, value: number): Promise<void> {
+    const component = document.querySelector<ParamSlider>(`param-slider[param-name="${paramName}"]`);
+    if (component === null || !component.isConnected) {
+      return;
+    }
+
+    try {
+      // Wait for component to finish any pending updates
+      await component.updateComplete;
+      
+      // Only update if value actually changed to avoid unnecessary updates
+      // This prevents overwriting the value that was just set in handleValueBlur
+      if (Math.abs(component.value - value) > 0.0001) {
+        // Update the component's value property
+        component.value = value;
+        await component.updateComplete;
+      }
+      
+      // Always recalculate slider position using updated curve mapping (after range expansion)
+      // This ensures the slider position matches the new range even if value didn't change
+      const sliderValue = this.paramToSliderValue(paramName, value);
+      component.setSliderPosition(sliderValue);
+    } catch (err: unknown) {
+      // Component might not be fully initialized yet, skip silently
+      console.debug(`Skipping update for ${paramName} - component not ready:`, err);
+    }
+  }
+
+  /**
    * Update param-slider components with current values
+   * Only updates when component is ready and not currently being manipulated by user
    */
   private updateParamSliderComponents(params: VisualParams): void {
     const components = document.querySelectorAll<ParamSlider>('param-slider');
-    components.forEach(async (component) => {
+    // Use for...of instead of forEach to properly handle async operations
+    for (const component of components) {
       // Check if component is connected to DOM before updating
       // This prevents Lit errors when components aren't ready yet
       if (!component.isConnected) {
-        return;
+        continue;
       }
 
       const paramName = component.paramName as keyof VisualParams;
       if (paramName in params) {
         const value = params[paramName];
         
-        // Wait for component to finish any pending updates before modifying
-        // This prevents "no parentNode" errors from Lit
-        try {
-          await component.updateComplete;
-          component.value = value;
-          // Update slider position using curve mapping
-          const sliderValue = this.paramToSliderValue(paramName, value);
-          component.setSliderPosition(sliderValue);
-        } catch (err: unknown) {
-          // Component might not be fully initialized yet, skip silently
-          // This can happen during initial page load
-          console.debug(`Skipping update for ${paramName} - component not ready:`, err);
-        }
+        // Update component asynchronously to avoid blocking
+        void this.updateSingleParamSliderComponent(paramName, value);
       }
-    });
+    }
   }
 
   /**
@@ -1036,53 +1165,57 @@ export class UIController {
 
     // Mic/Device button handler
     if (enableBtn !== null) {
-      enableBtn.addEventListener('click', async () => {
-        if (audioAnalyzer.isEnabled) {
-          audioAnalyzer.disableAudio();
-          resetAudioUI();
-        } else {
-          try {
-            // Get selected device from dropdown (if any)
-            const deviceSelect = document.getElementById('audio-device-select') as HTMLSelectElement | null;
-            const selectedDeviceId = deviceSelect !== null && deviceSelect.value !== '' && deviceSelect.value !== 'default'
-              ? deviceSelect.value
-              : null;
+      enableBtn.addEventListener('click', () => {
+        void (async (): Promise<void> => {
+          if (audioAnalyzer.isEnabled) {
+            audioAnalyzer.disableAudio();
+            resetAudioUI();
+          } else {
+            try {
+              // Get selected device from dropdown (if any)
+              const deviceSelect = document.getElementById('audio-device-select') as HTMLSelectElement | null;
+              const selectedDeviceId = deviceSelect !== null && deviceSelect.value !== '' && deviceSelect.value !== 'default'
+                ? deviceSelect.value
+                : null;
 
-            // Only request permission and enumerate devices when user explicitly clicks mic button
-            // This prevents double permission prompt when using tab capture
-            await audioAnalyzer.enableAudio(selectedDeviceId);
-            const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
-            setActiveUI(mode, false);
-            
-            // Populate device dropdown after successful mic enable
-            // This allows users to see available devices and switch between them
-            await this.populateAudioDevices();
-          } catch (err: unknown) {
-            console.error('Failed to enable audio:', err);
-            alert('Failed to enable audio: ' + (err instanceof Error ? err.message : String(err)));
+              // Only request permission and enumerate devices when user explicitly clicks mic button
+              // This prevents double permission prompt when using tab capture
+              await audioAnalyzer.enableAudio(selectedDeviceId);
+              const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
+              setActiveUI(mode, false);
+              
+              // Populate device dropdown after successful mic enable
+              // This allows users to see available devices and switch between them
+              await this.populateAudioDevices();
+            } catch (err: unknown) {
+              console.error('Failed to enable audio:', err);
+              alert('Failed to enable audio: ' + (err instanceof Error ? err.message : String(err)));
+            }
           }
-        }
+        })();
       });
     }
 
     // Tab capture button handler
     if (tabBtn !== null) {
-      tabBtn.addEventListener('click', async () => {
-        if (audioAnalyzer.isEnabled) {
-          audioAnalyzer.disableAudio();
-          resetAudioUI();
-        } else {
-          try {
-            // Tab capture uses getDisplayMedia, NOT getUserMedia
-            // Do NOT call getAudioDevices() here to avoid double permission prompt
-            await audioAnalyzer.enableTabAudio();
-            const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
-            setActiveUI(mode, true);
-          } catch (err: unknown) {
-            console.error('Failed to capture tab audio:', err);
-            alert('Failed to capture tab audio: ' + (err instanceof Error ? err.message : String(err)));
+      tabBtn.addEventListener('click', () => {
+        void (async (): Promise<void> => {
+          if (audioAnalyzer.isEnabled) {
+            audioAnalyzer.disableAudio();
+            resetAudioUI();
+          } else {
+            try {
+              // Tab capture uses getDisplayMedia, NOT getUserMedia
+              // Do NOT call getAudioDevices() here to avoid double permission prompt
+              await audioAnalyzer.enableTabAudio();
+              const mode = audioAnalyzer.isStereoMode ? 'STEREO' : 'MONO';
+              setActiveUI(mode, true);
+            } catch (err: unknown) {
+              console.error('Failed to capture tab audio:', err);
+              alert('Failed to capture tab audio: ' + (err instanceof Error ? err.message : String(err)));
+            }
           }
-        }
+        })();
       });
     }
 
@@ -1255,6 +1388,16 @@ export class UIController {
 
       this.curveMapper.setSettings(this.currentCurveParam, settings);
       this.drawCurve();
+      
+      // After updating curve settings, recalculate slider position for this parameter
+      // This ensures the slider position matches the new range
+      const currentValue = this.app.getParam(this.currentCurveParam as keyof VisualParams);
+      if (this.isParamSliderComponent(this.currentCurveParam)) {
+        void this.updateSingleParamSliderComponent(this.currentCurveParam, currentValue);
+      } else {
+        // Legacy HTML slider - update slider position
+        this.updateSliderFromValue(this.currentCurveParam, currentValue);
+      }
     };
 
     if (applyBtn !== null) applyBtn.addEventListener('click', applyCurve);
