@@ -3,7 +3,7 @@ import { customElement, property, state, query } from 'lit/decorators.js';
 import { parseNumericValue } from '../../ui/valueUtils';
 import { VALUE_FORMATTERS, type ValueFormatter } from '../editable-value/EditableValue';
 import { getParamLabel } from '../../config/paramLabels';
-import type { ParamChangeEventDetail, CurveEditRequestEventDetail } from '../types';
+import type { ParamChangeEventDetail, CurveEditRequestEventDetail, AudioToggleRequestEventDetail } from '../types';
 
 /**
  * Parameter slider component with editable value display and curve button
@@ -56,6 +56,14 @@ export class ParamSlider extends LitElement {
   /** Show curve edit button */
   @property({ type: Boolean, attribute: 'show-curve-btn' })
   showCurveBtn = true;
+
+  /** Show audio toggle button */
+  @property({ type: Boolean, attribute: 'show-audio-btn' })
+  showAudioBtn = true;
+
+  /** Whether audio mapping is active for this parameter */
+  @property({ type: Boolean, attribute: 'audio-active' })
+  audioActive = false;
 
   /** Value display format */
   @property({ type: String })
@@ -115,6 +123,40 @@ export class ParamSlider extends LitElement {
 
     .curve-btn:hover {
       background: #444;
+      border-color: #0af;
+      color: #0af;
+    }
+
+    .audio-btn {
+      display: none;
+      width: 18px;
+      height: 18px;
+      margin-left: 4px;
+      cursor: pointer;
+      background: #333;
+      border: 1px solid #555;
+      border-radius: 3px;
+      color: #888;
+      font-size: 11px;
+      line-height: 16px;
+      text-align: center;
+      font-weight: bold;
+      font-family: monospace;
+    }
+
+    :host(:hover) .audio-btn {
+      display: inline-block;
+    }
+
+    .audio-btn:hover {
+      background: #444;
+      border-color: #0af;
+      color: #0af;
+    }
+
+    .audio-btn.active {
+      display: inline-block;
+      background: rgba(0, 170, 255, 0.15);
       border-color: #0af;
       color: #0af;
     }
@@ -211,6 +253,13 @@ export class ParamSlider extends LitElement {
         ${this.displayLabel}
         ${this.showCurveBtn ? html`
           <span class="curve-btn" @click=${this.handleCurveClick} title="Edit curve">~</span>
+        ` : ''}
+        ${this.showAudioBtn ? html`
+          <span
+            class="audio-btn ${this.audioActive ? 'active' : ''}"
+            @click=${this.handleAudioClick}
+            title="${this.audioActive ? 'Audio mapping active — click to configure' : 'Configure audio mapping'}"
+          >A</span>
         ` : ''}
       </label>
       <div class="control-row">
@@ -315,6 +364,15 @@ export class ParamSlider extends LitElement {
   private handleCurveClick(e: Event): void {
     e.stopPropagation();
     this.dispatchEvent(new CustomEvent<CurveEditRequestEventDetail>('curve-edit-request', {
+      bubbles: true,
+      composed: true,
+      detail: { paramName: this.paramName },
+    }));
+  }
+
+  private handleAudioClick(e: Event): void {
+    e.stopPropagation();
+    this.dispatchEvent(new CustomEvent<AudioToggleRequestEventDetail>('audio-toggle-request', {
       bubbles: true,
       composed: true,
       detail: { paramName: this.paramName },

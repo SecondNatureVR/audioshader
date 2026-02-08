@@ -14,12 +14,12 @@ import {
 } from '../mapping/CurveMapping';
 import type { App } from '../App';
 import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
-import { AudioMapper } from '../audio/AudioMapper';
+import { AudioMapper, ALL_MAPPABLE_PARAMS } from '../audio/AudioMapper';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateAdjustedRange } from './valueUtils';
 import { getParamLabel } from '../config/paramLabels';
-import type { ParamChangeEventDetail, CurveEditRequestEventDetail } from '../components/types';
+import type { ParamChangeEventDetail, CurveEditRequestEventDetail, AudioToggleRequestEventDetail } from '../components/types';
 import type { ParamSlider } from '../components/param-slider/ParamSlider';
 
 export interface JiggleSettings {
@@ -118,6 +118,7 @@ export class UIController {
     // Use setTimeout to ensure Lit components are fully upgraded and connected
     setTimeout(() => {
       this.updateAllSliders();
+      this.updateAllAudioButtonStates();
     }, 0);
   }
 
@@ -183,6 +184,11 @@ export class UIController {
     // Listen for curve-edit-request events from <param-slider> components
     document.addEventListener('curve-edit-request', (e: CustomEvent<CurveEditRequestEventDetail>) => {
       this.openCurveEditor(e.detail.paramName);
+    });
+
+    // Listen for audio-toggle-request events from <param-slider> components
+    document.addEventListener('audio-toggle-request', (e: CustomEvent<AudioToggleRequestEventDetail>) => {
+      this.handleAudioToggle(e.detail.paramName);
     });
   }
 
@@ -281,6 +287,9 @@ export class UIController {
         this.openCurveEditor(paramName);
       });
     }
+
+    // Add audio toggle button programmatically (after the curve button)
+    this.addAudioToggleButton(controlGroup, paramName);
   }
 
   /**
@@ -328,6 +337,9 @@ export class UIController {
         this.openCurveEditor('emanationRate');
       });
     }
+
+    // Add audio toggle button
+    this.addAudioToggleButton(controlGroup, 'emanationRate');
   }
 
   /**
@@ -654,6 +666,7 @@ export class UIController {
       this.updateEmanationRateSlider();
       this.updateBlendModeSelect();
       this.updateStatusIndicators();
+      this.updateAllAudioButtonStates();
       this.config.onPresetLoad?.(name);
     }
   }
@@ -1448,6 +1461,91 @@ export class UIController {
       });
     }
   }
+
+  // ── Audio toggle buttons ────────────────────────────────────────
+
+  /**
+   * Programmatically add an audio toggle button to a legacy control group.
+   * Inserted into the label element, after any existing curve button.
+   */
+  private addAudioToggleButton(controlGroup: Element | null | undefined, paramName: string): void {
+    if (controlGroup === null || controlGroup === undefined) return;
+    const label = controlGroup.querySelector('label');
+    if (label === null) return;
+
+    const audioBtn = document.createElement('span');
+    audioBtn.className = 'audio-btn';
+    audioBtn.dataset['param'] = paramName;
+    audioBtn.title = 'Configure audio mapping';
+    audioBtn.textContent = 'A';
+    label.appendChild(audioBtn);
+
+    audioBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.handleAudioToggle(paramName);
+    });
+
+    // Check initial active state
+    const audioMapper = this.app.getAudioMapper();
+    const mod = audioMapper.getModulation(paramName as keyof VisualParams);
+    if (mod?.enabled === true) {
+      audioBtn.classList.add('active');
+    }
+  }
+
+  /**
+   * Handle audio toggle button click.
+   * For now, toggles the audio mapping enabled/disabled.
+   * Phase 3 will open a modulation drawer instead.
+   */
+  private handleAudioToggle(paramName: string): void {
+    const audioMapper = this.app.getAudioMapper();
+    const param = paramName as keyof VisualParams;
+    const mod = audioMapper.getModulation(param);
+    const newEnabled = !(mod?.enabled ?? false);
+
+    this.app.updateAudioModulation(param, { enabled: newEnabled });
+
+    // Update button visual state across all instances
+    this.updateAudioButtonState(paramName, newEnabled);
+  }
+
+  /**
+   * Update the visual state of audio toggle buttons for a parameter.
+   * Handles both ParamSlider components and legacy HTML buttons.
+   */
+  private updateAudioButtonState(paramName: string, active: boolean): void {
+    // Update ParamSlider component
+    const component = document.querySelector<ParamSlider>(`param-slider[param-name="${paramName}"]`);
+    if (component !== null) {
+      component.audioActive = active;
+    }
+
+    // Update legacy HTML audio buttons
+    const legacyBtns = document.querySelectorAll<HTMLElement>(`.audio-btn[data-param="${paramName}"]`);
+    legacyBtns.forEach((btn) => {
+      if (active) {
+        btn.classList.add('active');
+        btn.title = 'Audio mapping active — click to configure';
+      } else {
+        btn.classList.remove('active');
+        btn.title = 'Configure audio mapping';
+      }
+    });
+  }
+
+  /**
+   * Refresh all audio toggle button states from the current AudioMapper state.
+   */
+  updateAllAudioButtonStates(): void {
+    const audioMapper = this.app.getAudioMapper();
+    for (const paramName of ALL_MAPPABLE_PARAMS) {
+      const mod = audioMapper.getModulation(paramName);
+      this.updateAudioButtonState(paramName, mod?.enabled ?? false);
+    }
+  }
+
+  // ── Curve editor ───────────────────────────────────────────────
 
   /**
    * Open curve editor drawer for a parameter

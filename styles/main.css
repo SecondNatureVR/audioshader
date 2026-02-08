@@ -692,6 +692,42 @@ input[type="range"]::-moz-range-thumb {
     color: #0af;
 }
 
+/* Audio mapping toggle button - shown alongside curve button */
+.audio-btn {
+    display: none;
+    width: 18px;
+    height: 18px;
+    margin-left: 4px;
+    cursor: pointer;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: #888;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+    font-weight: bold;
+    font-family: monospace;
+    user-select: none;
+}
+
+.control-group:hover .audio-btn {
+    display: inline-block;
+}
+
+.audio-btn:hover {
+    background: #444;
+    border-color: #0af;
+    color: #0af;
+}
+
+.audio-btn.active {
+    display: inline-block;
+    background: rgba(0, 170, 255, 0.15);
+    border-color: #0af;
+    color: #0af;
+}
+
 /* Curve Editor Drawer - slides out from left (no animation) */
 .curve-editor-drawer {
     position: fixed;
