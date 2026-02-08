@@ -14,6 +14,7 @@ import {
 } from '../mapping/CurveMapping';
 import type { App } from '../App';
 import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
+import { AudioMapper } from '../audio/AudioMapper';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateAdjustedRange } from './valueUtils';
@@ -1194,22 +1195,27 @@ export class UIController {
       'spikiness', 'spikeFrequency', 'spikeSharpness',
       'scale', 'hue', 'fillSize', 'fillOpacity',
       'autoRotationSpeed', 'hueShiftAmount', 'blendOpacity',
+      'expansionFactor', 'fadeAmount', 'noiseAmount', 'noiseRate',
+      'blurAmount', 'blurRate', 'jiggleAmount', 'emanationRate',
+      'rotation',
     ];
 
-    // All available audio sources matching lucas.html
-    const audioSources = [
+    // All available audio sources (now 15 total)
+    const audioSources: Array<keyof AudioMetrics> = [
       'rms', 'bass', 'mid', 'high', 'presence', 'harshness',
       'mud', 'compression', 'collision', 'coherence', 'stereoWidth', 'phaseRisk',
+      'lowImbalance', 'emptiness', 'panPosition',
     ];
 
     // Get current mappings from AudioMapper
     const audioMapper = this.app.getAudioMapper();
 
     container.innerHTML = mappableParams.map((param) => {
-      const mapping = audioMapper.getMapping(param);
-      const currentSource = mapping?.source ?? 'rms';
-      const currentEnabled = mapping?.enabled ?? false;
-      const currentSensitivity = (mapping?.sensitivity ?? 1.0) * 100;
+      const mod = audioMapper.getModulation(param);
+      const slot = mod?.slots[0];
+      const currentSource = slot?.source ?? 'rms';
+      const currentEnabled = mod?.enabled ?? false;
+      const currentAmount = (slot?.amount ?? 0.5) * 100;
 
       return `
       <div class="mapping-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 3px;">
@@ -1220,9 +1226,9 @@ export class UIController {
         </div>
         <span id="mapping-${param}-value" style="font-size: 8px; color: #888; width: 35px; text-align: right;">0.00</span>
         <select id="mapping-${param}-source" data-param="${param}" style="font-size: 8px; padding: 2px; background: #333; color: #eee; border: 1px solid #555; border-radius: 2px; width: 70px;">
-          ${audioSources.map((src) => `<option value="${src}" ${src === currentSource ? 'selected' : ''}>${src}</option>`).join('')}
+          ${audioSources.map((src) => `<option value="${src}" ${src === currentSource ? 'selected' : ''}>${AudioMapper.getMetricLabel(src)}</option>`).join('')}
         </select>
-        <input type="range" id="mapping-${param}-sensitivity" data-param="${param}" min="0" max="200" value="${currentSensitivity}" style="width: 50px;">
+        <input type="range" id="mapping-${param}-amount" data-param="${param}" min="0" max="100" value="${currentAmount}" style="width: 50px;">
       </div>
     `;
     }).join('');
@@ -1231,23 +1237,25 @@ export class UIController {
     mappableParams.forEach((param) => {
       const checkbox = document.getElementById(`mapping-${param}-enabled`) as HTMLInputElement | null;
       const sourceSelect = document.getElementById(`mapping-${param}-source`) as HTMLSelectElement | null;
-      const sensitivitySlider = document.getElementById(`mapping-${param}-sensitivity`) as HTMLInputElement | null;
+      const amountSlider = document.getElementById(`mapping-${param}-amount`) as HTMLInputElement | null;
 
       if (checkbox !== null) {
         checkbox.addEventListener('change', () => {
-          this.app.setAudioMapping(param, { enabled: checkbox.checked });
+          this.app.updateAudioModulation(param, { enabled: checkbox.checked });
         });
       }
 
       if (sourceSelect !== null) {
         sourceSelect.addEventListener('change', () => {
-          this.app.setAudioMapping(param, { source: sourceSelect.value as keyof AudioMetrics });
+          const audioMapperInner = this.app.getAudioMapper();
+          audioMapperInner.updatePrimarySlot(param, { source: sourceSelect.value as keyof AudioMetrics });
         });
       }
 
-      if (sensitivitySlider !== null) {
-        sensitivitySlider.addEventListener('input', () => {
-          this.app.setAudioMapping(param, { sensitivity: parseFloat(sensitivitySlider.value) / 100 });
+      if (amountSlider !== null) {
+        amountSlider.addEventListener('input', () => {
+          const audioMapperInner = this.app.getAudioMapper();
+          audioMapperInner.updatePrimarySlot(param, { amount: parseFloat(amountSlider.value) / 100 });
         });
       }
     });
@@ -2052,28 +2060,29 @@ export class UIController {
         'fillSize', 'fillOpacity', 'blendOpacity', 'expansionFactor',
         'fadeAmount', 'hueShiftAmount', 'rotation', 'autoRotationSpeed',
         'noiseAmount', 'noiseRate', 'blurAmount', 'blurRate', 'jiggleAmount',
+        'emanationRate',
       ];
 
       for (const param of mappableParams) {
         try {
-          const mapping = audioMapper.getMapping(param);
-          if (mapping === undefined) continue;
+          const mod = audioMapper.getModulation(param);
+          if (mod === undefined) continue;
+
+          const slot = mod.slots[0];
+          if (slot === undefined) continue;
 
           const bar = document.getElementById(`mapping-${param}-bar`);
           const valueDisplay = document.getElementById(`mapping-${param}-value`);
 
-          // Get the current metric value
-          const metricValue = metrics[mapping.source] ?? 0;
-          // Apply sensitivity to get the effective value
-          const effectiveValue = Math.min(1, metricValue * mapping.sensitivity);
+          // Get the current metric value and apply amount (depth)
+          const metricValue = metrics[slot.source] ?? 0;
+          const effectiveValue = Math.min(1, metricValue * slot.amount);
 
           if (bar !== null) {
-            // Map to percentage (0-100%)
             const barWidth = Math.max(0, Math.min(100, effectiveValue * 100));
             bar.style.width = `${barWidth}%`;
 
-            // Color based on whether mapping is enabled
-            if (mapping.enabled) {
+            if (mod.enabled) {
               bar.style.background = 'linear-gradient(90deg, #0af, #0fa)';
             } else {
               bar.style.background = '#555';
@@ -2082,20 +2091,17 @@ export class UIController {
 
           if (valueDisplay !== null) {
             valueDisplay.textContent = effectiveValue.toFixed(2);
-            // Highlight when active
-            if (mapping.enabled && effectiveValue > 0.1) {
+            if (mod.enabled && effectiveValue > 0.1) {
               valueDisplay.style.color = '#0af';
             } else {
               valueDisplay.style.color = '#888';
             }
           }
         } catch (err: unknown) {
-          // Log but continue processing other params
           console.debug(`Error updating mapping bar for ${param}:`, err);
         }
       }
     } catch (err: unknown) {
-      // Log but don't crash - this runs every frame
       console.debug('Error in updateMappingBars:', err);
     }
   }

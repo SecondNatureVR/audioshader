@@ -9,7 +9,7 @@ import { ParameterInterpolator } from './render/ParameterInterpolator';
 import { createDefaultParams, PARAM_RANGES, applyJiggle, randomizeParams } from './render/Parameters';
 import { PresetManager } from './presets/PresetManager';
 import { AudioMapper } from './audio/AudioMapper';
-import type { VisualParams, AudioMetrics, RenderState, AudioMappingConfig, BlendMode } from './types';
+import type { VisualParams, AudioMetrics, RenderState, ParameterModulation, BlendMode } from './types';
 
 export interface AppConfig {
   canvas: HTMLCanvasElement;
@@ -312,10 +312,17 @@ export class App {
   }
 
   /**
-   * Set audio mapping configuration for a parameter
+   * Set audio modulation configuration for a parameter
    */
-  setAudioMapping(param: keyof VisualParams, config: Partial<AudioMappingConfig>): void {
-    this.audioMapper.setMapping(param, config);
+  setAudioModulation(param: keyof VisualParams, mod: ParameterModulation): void {
+    this.audioMapper.setModulation(param, mod);
+  }
+
+  /**
+   * Partially update audio modulation for a parameter
+   */
+  updateAudioModulation(param: keyof VisualParams, partial: Partial<ParameterModulation>): void {
+    this.audioMapper.updateModulation(param, partial);
   }
 
   /**

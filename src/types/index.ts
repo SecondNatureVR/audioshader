@@ -57,10 +57,37 @@ export interface AudioMetrics {
   coherence: number;
   stereoWidth: number;
   phaseRisk: number;
+  // Previously hidden metrics — now exposed for modulation routing
+  lowImbalance: number;    // deviation from ideal bass ratio, detects bass drops vs sparse sections
+  emptiness: number;       // fraction of silent frequency bins, detects breakdowns/intros
+  panPosition: number;     // L/R panning average (stereo only), detects stereo movement
 }
 
-// Audio mapping configuration for a single parameter
-export interface AudioMappingConfig {
+/** Single modulation source slot (mod-matrix ready) */
+export interface ModulationSlot {
+  source: keyof AudioMetrics;
+  amount: number;        // 0-1, depth of modulation
+  smoothing: number;     // 0-0.99, EMA smoothing factor
+  invert: boolean;
+  curve: number;         // power curve shaping the response (1.0 = linear)
+  rangeMin: number;      // output range min (parameter space)
+  rangeMax: number;      // output range max (parameter space)
+}
+
+/** Per-parameter modulation configuration */
+export interface ParameterModulation {
+  enabled: boolean;
+  slots: ModulationSlot[];  // Multiple sources summed (mod matrix ready)
+}
+
+// Complete audio mapping for all parameters (slot-based)
+export type AudioMappings = Partial<Record<keyof VisualParams, ParameterModulation>>;
+
+/**
+ * @deprecated Legacy flat mapping config — kept for preset migration only.
+ * New code should use ModulationSlot / ParameterModulation.
+ */
+export interface LegacyAudioMappingConfig {
   enabled: boolean;
   source: keyof AudioMetrics;
   sensitivity: number;
@@ -72,8 +99,8 @@ export interface AudioMappingConfig {
   maxValue: number;
 }
 
-// Complete audio mapping for all parameters
-export type AudioMappings = Partial<Record<keyof VisualParams, AudioMappingConfig>>;
+/** @deprecated Use AudioMappings instead */
+export type LegacyAudioMappings = Partial<Record<keyof VisualParams, LegacyAudioMappingConfig>>;
 
 // Blend mode for compositing
 export type BlendMode = 'additive' | 'alpha' | 'multiply' | 'screen' | 'overlay';
@@ -86,6 +113,8 @@ export interface Preset {
   /** @deprecated Use params.emanationRate instead. Kept for migration of old presets. */
   emanationRate?: number | undefined;
   audioMappings?: AudioMappings | undefined;
+  /** @deprecated Old flat-config format. Kept for migration of old presets. */
+  legacyAudioMappings?: LegacyAudioMappings | undefined;
   createdAt?: string | undefined;
   updatedAt?: string | undefined;
 }

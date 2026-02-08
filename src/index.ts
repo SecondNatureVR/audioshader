@@ -8,8 +8,11 @@
 export type {
   VisualParams,
   AudioMetrics,
-  AudioMappingConfig,
+  ModulationSlot,
+  ParameterModulation,
   AudioMappings,
+  LegacyAudioMappingConfig,
+  LegacyAudioMappings,
   Preset,
   RenderState,
   BlendMode,
@@ -36,7 +39,15 @@ export type { ShaderSources } from './render/shaders';
 
 // Audio
 export { AudioAnalyzer } from './audio/AudioAnalyzer';
-export { AudioMapper, createDefaultMappingConfig, DEFAULT_AUDIO_SOURCES } from './audio/AudioMapper';
+export {
+  AudioMapper,
+  createDefaultSlot,
+  createDefaultModulation,
+  migrateLegacyMapping,
+  migrateLegacyMappings,
+  DEFAULT_AUDIO_SOURCES,
+  ALL_MAPPABLE_PARAMS,
+} from './audio/AudioMapper';
 
 // Presets
 export { PresetManager } from './presets/PresetManager';

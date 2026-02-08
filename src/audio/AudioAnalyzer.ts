@@ -529,7 +529,7 @@ export class AudioAnalyzer {
     this.updateMinMax();
     this._normalizedMetrics = this.normalizeMetrics();
 
-    // Return metrics in the expected format
+    // Return metrics in the expected format (all 15 metrics exposed)
     return {
       rms: this.smoothedMetrics.audioAmp,
       bass: this.smoothedMetrics.bandEnergy[0],
@@ -543,6 +543,10 @@ export class AudioAnalyzer {
       coherence: this.smoothedMetrics.coherence,
       stereoWidth: (this.smoothedMetrics.stereoWidth[0] + this.smoothedMetrics.stereoWidth[1] + this.smoothedMetrics.stereoWidth[2]) / 3,
       phaseRisk: this.smoothedMetrics.phaseRisk,
+      // Previously hidden metrics — now exposed for modulation routing
+      lowImbalance: this.smoothedMetrics.lowImbalance,
+      emptiness: this.smoothedMetrics.emptiness,
+      panPosition: (this.smoothedMetrics.panPosition[0] + this.smoothedMetrics.panPosition[1] + this.smoothedMetrics.panPosition[2]) / 3,
     };
   }
 
