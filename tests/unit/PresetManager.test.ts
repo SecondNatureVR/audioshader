@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PresetManager } from '../../src/presets/PresetManager';
 import { createDefaultParams } from '../../src/render/Parameters';
-import type { VisualParams } from '../../src/types';
+import type { VisualParams, LegacyAudioMappings, AudioMappings, ParameterModulation } from '../../src/types';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -311,6 +311,94 @@ describe('PresetManager', () => {
 
       // Should have migrated emanationRate from defaults
       expect(vhs?.emanationRate).toBe(300);
+    });
+  });
+
+  describe('audio mapping migration', () => {
+    it('migrateAudioMappingsIfNeeded should detect legacy format', () => {
+      const legacy: LegacyAudioMappings = {
+        spikiness: {
+          enabled: true,
+          source: 'collision',
+          sensitivity: 0.6,
+          smoothing: 0.5,
+          multiplier: 1,
+          offset: 0,
+          invert: false,
+          minValue: 0,
+          maxValue: 1,
+        },
+      };
+
+      const result = PresetManager.migrateAudioMappingsIfNeeded(legacy);
+      expect(result).not.toBeNull();
+      expect(result!.spikiness).toBeDefined();
+      expect(result!.spikiness!.enabled).toBe(true);
+      expect(result!.spikiness!.slots).toHaveLength(1);
+      expect(result!.spikiness!.slots[0]!.source).toBe('collision');
+      expect(result!.spikiness!.slots[0]!.amount).toBe(0.6);
+    });
+
+    it('migrateAudioMappingsIfNeeded should return null for new format', () => {
+      const newFormat: AudioMappings = {
+        spikiness: {
+          enabled: true,
+          slots: [{
+            source: 'collision',
+            amount: 0.5,
+            smoothing: 0.5,
+            invert: false,
+            curve: 1.0,
+            rangeMin: 0,
+            rangeMax: 1,
+          }],
+        },
+      };
+
+      const result = PresetManager.migrateAudioMappingsIfNeeded(newFormat);
+      expect(result).toBeNull();
+    });
+
+    it('migrateAudioMappingsIfNeeded should return null for empty mappings', () => {
+      const result = PresetManager.migrateAudioMappingsIfNeeded({});
+      expect(result).toBeNull();
+    });
+
+    it('should auto-migrate legacy audio mappings on load from storage', () => {
+      const storedPresets: Record<string, unknown> = {
+        TestPreset: {
+          name: 'TestPreset',
+          params: createDefaultParams(),
+          audioMappings: {
+            scale: {
+              enabled: true,
+              source: 'bass',
+              sensitivity: 0.8,
+              smoothing: 0.3,
+              multiplier: 1.0,
+              offset: 0,
+              invert: false,
+              minValue: 0,
+              maxValue: 1,
+            },
+          },
+        },
+      };
+
+      localStorageMock.setItem('audioshader_presets', JSON.stringify(storedPresets));
+
+      const manager = new PresetManager();
+      const preset = manager.getPreset('TestPreset');
+      expect(preset).not.toBeNull();
+      expect(preset!.audioMappings).toBeDefined();
+
+      // Should have been migrated to new slot format
+      const scaleMod = preset!.audioMappings!.scale as ParameterModulation;
+      expect(scaleMod).toBeDefined();
+      expect(scaleMod.enabled).toBe(true);
+      expect(scaleMod.slots).toHaveLength(1);
+      expect(scaleMod.slots[0]!.source).toBe('bass');
+      expect(scaleMod.slots[0]!.amount).toBe(0.8);
     });
   });
 });

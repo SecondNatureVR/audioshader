@@ -3,9 +3,10 @@
  * Handles saving, loading, import/export of visual presets
  */
 
-import type { VisualParams, AudioMappings, Preset, BlendMode } from '../types';
+import type { VisualParams, AudioMappings, Preset, BlendMode, LegacyAudioMappings } from '../types';
 import { DEFAULT_PARAMS } from '../render/Parameters';
 import { getDefaultPresetsMap, migrateOldLocalStorage, getDefaultEmanationRate, getDefaultBlendMode } from './defaultPresets';
+import { migrateLegacyMappings } from '../audio/AudioMapper';
 
 const STORAGE_KEY = 'audioshader_presets';
 const CURRENT_PRESET_KEY = 'audioshader_current_preset';
@@ -32,7 +33,7 @@ export class PresetManager {
         const data = JSON.parse(stored) as Record<string, Preset>;
         this.presets = new Map(Object.entries(data));
 
-        // Migrate: add missing emanationRate and blendMode from defaults
+        // Migrate: add missing emanationRate, blendMode, and audio mappings from defaults
         let needsSave = false;
         for (const [name, preset] of this.presets) {
           if (preset.emanationRate === undefined) {
@@ -46,6 +47,14 @@ export class PresetManager {
             const defaultMode = getDefaultBlendMode(name);
             if (defaultMode !== undefined) {
               preset.blendMode = defaultMode;
+              needsSave = true;
+            }
+          }
+          // Migrate legacy flat AudioMappingConfig to slot-based ParameterModulation
+          if (preset.audioMappings !== undefined) {
+            const migrated = PresetManager.migrateAudioMappingsIfNeeded(preset.audioMappings as AudioMappings | LegacyAudioMappings);
+            if (migrated !== null) {
+              preset.audioMappings = migrated;
               needsSave = true;
             }
           }
@@ -404,5 +413,25 @@ export class PresetManager {
     }
 
     return added;
+  }
+
+  /**
+   * Check if audio mappings are in legacy format and migrate if needed.
+   * Returns migrated AudioMappings or null if already in new format.
+   */
+  static migrateAudioMappingsIfNeeded(
+    mappings: AudioMappings | LegacyAudioMappings
+  ): AudioMappings | null {
+    // Check if it's legacy format by looking at the first non-undefined entry
+    const firstEntry = Object.values(mappings).find((v) => v !== undefined && v !== null);
+    if (firstEntry === undefined || firstEntry === null) return null;
+
+    // Legacy format has 'sensitivity' field; new format has 'slots' field
+    if ('sensitivity' in firstEntry) {
+      return migrateLegacyMappings(mappings as LegacyAudioMappings);
+    }
+
+    // Already new format
+    return null;
   }
 }
