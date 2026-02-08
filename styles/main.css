@@ -731,33 +731,30 @@ input[type="range"]::-moz-range-thumb {
 /* Modulation Config Drawer */
 .modulation-drawer {
     position: fixed;
-    top: 0;
-    left: 0;
+    right: 330px;
+    top: 10px;
     width: 280px;
-    height: auto;
-    max-height: 80vh;
+    max-height: 85vh;
     z-index: 10001;
     pointer-events: none;
-    transform: translateX(-100%);
     visibility: hidden;
     display: none;
+    transition: visibility 0.1s;
 }
 
 .modulation-drawer.active {
-    transform: translateX(0);
     pointer-events: auto;
     visibility: visible;
 }
 
 .modulation-drawer-content {
     background: rgba(20, 20, 20, 0.98);
-    border-right: 1px solid #444;
-    height: 100%;
-    max-height: 100%;
+    border: 1px solid #444;
     padding: 10px;
+    max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
-    border-radius: 0 6px 6px 0;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    border-radius: 6px;
 }
 
 .modulation-drawer-header {
@@ -767,6 +764,14 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 8px;
     padding-bottom: 4px;
     border-bottom: 1px solid #333;
+    cursor: grab;
+    user-select: none;
+}
+.modulation-drawer-header:active {
+    cursor: grabbing;
+}
+.modulation-drawer-header .modulation-drawer-close {
+    cursor: pointer;
 }
 
 .modulation-drawer-title {
@@ -852,21 +857,68 @@ input[type="range"]::-moz-range-thumb {
 .mod-slot-mute[aria-pressed="true"] { color: #f84; }
 .mod-slot-solo[aria-pressed="true"] { color: #8f8; }
 
-/* Route rows in M-panel */
-.mod-route-row {
+/* Route rows in M-panel – compact, consistent in all modes */
+.mod-route-row-wrap {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 6px;
-    margin-bottom: 3px;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    padding: 2px 6px;
+    margin-bottom: 2px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 3px;
     cursor: pointer;
     font-size: 9px;
+    line-height: 1.2;
 }
 
-.mod-route-row:hover {
+.mod-route-row-wrap:hover {
     background: rgba(0, 170, 255, 0.08);
+}
+
+.mod-route-main {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+    min-height: 20px;
+}
+
+.mod-route-extra {
+    width: 100%;
+    min-width: 0;
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mod-route-waveform-label {
+    display: block;
+    font-size: 8px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+/* LFO waveform: full width, same height as one row (routes list + modulation drawer) */
+.mod-route-waveform-fullwidth,
+.mod-slot-waveform-wrap .mod-slot-waveform {
+    display: block;
+    width: 100%;
+    height: 20px;
+    box-sizing: border-box;
+}
+
+.mod-slot-waveform-wrap {
+    width: 100%;
+    min-width: 0;
+}
+
+.mod-route-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .mod-route-source {
@@ -911,6 +963,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .mod-route-remove {
+    margin-left: auto;
+    flex-shrink: 0;
     background: none;
     border: none;
     color: #555;
@@ -926,7 +980,8 @@ input[type="range"]::-moz-range-thumb {
 
 .mod-route-lock,
 .mod-route-mute,
-.mod-route-solo {
+.mod-route-solo,
+.mod-route-expand {
     background: none;
     border: none;
     color: #555;
@@ -937,18 +992,75 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 2px;
     min-width: 18px;
 }
+.mod-route-expand { font-size: 8px; min-width: 14px; }
 .mod-route-lock:hover,
 .mod-route-mute:hover,
-.mod-route-solo:hover {
+.mod-route-solo:hover,
+.mod-route-expand:hover {
     color: #888;
     background: rgba(255, 255, 255, 0.06);
 }
 .mod-route-lock[aria-pressed="true"] { color: #0af; }
 .mod-route-mute[aria-pressed="true"] { color: #f84; }
 .mod-route-solo[aria-pressed="true"] { color: #8f8; }
-.mod-route-row.mod-route-muted .mod-route-source,
-.mod-route-row.mod-route-muted .mod-route-target { opacity: 0.6; }
-.mod-route-row.mod-route-solo { background: rgba(0, 170, 255, 0.06); }
+.mod-route-row-wrap.mod-route-muted .mod-route-source,
+.mod-route-row-wrap.mod-route-muted .mod-route-target { opacity: 0.6; }
+.mod-route-row-wrap.mod-route-solo { background: rgba(0, 170, 255, 0.06); }
+
+#active-routes-container {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* M-panel search and all-actions */
+.routes-search-input:focus {
+    outline: none;
+    border-color: #0af;
+}
+
+/* Logic-style "all" toggles: icon buttons with pressed state */
+.mod-routes-all-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.mod-all-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 22px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid #333;
+    border-radius: 3px;
+    color: #888;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.mod-all-toggle span {
+    line-height: 1;
+}
+
+.mod-all-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #aaa;
+    border-color: #444;
+}
+
+.mod-all-toggle[aria-pressed="true"] {
+    background: rgba(0, 170, 255, 0.2);
+    border-color: #0af;
+    color: #0af;
+}
+
+.mod-all-toggle[aria-pressed="true"]:hover {
+    background: rgba(0, 170, 255, 0.25);
+}
 
 /* Add route inline form */
 .mod-add-route-form {

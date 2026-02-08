@@ -560,6 +560,13 @@
             <div class="mod-section-toggle" id="routes-section-toggle">
                 <h5 style="margin:0;">Active Routes <span id="active-routes-count" style="color:#555;">(0)</span></h5>
             </div>
+            <input type="text" id="routes-search" class="routes-search-input" placeholder="Filter routes..." title="Search by param or metric name" style="width:100%;margin-bottom:6px;padding:4px 8px;font-size:9px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:3px;box-sizing:border-box;">
+            <div class="mod-routes-all-actions" role="group" aria-label="Apply to all routes">
+                <button type="button" id="routes-all-lock" class="mod-all-toggle" title="Lock all / Unlock all" aria-pressed="false"><span aria-hidden="true">&#128274;</span></button>
+                <button type="button" id="routes-all-mute" class="mod-all-toggle" title="Mute all / Unmute all" aria-pressed="false"><span aria-hidden="true">M</span></button>
+                <button type="button" id="routes-all-solo" class="mod-all-toggle" title="Solo all / Unsolo all" aria-pressed="false"><span aria-hidden="true">S</span></button>
+                <button type="button" id="routes-all-expand" class="mod-all-toggle" title="Expand all / Collapse all" aria-pressed="false"><span aria-hidden="true">&gt;</span></button>
+            </div>
             <div id="active-routes-container" style="font-size: 9px;">
                 <!-- Populated dynamically by updateActiveMappingsOverview -->
             </div>

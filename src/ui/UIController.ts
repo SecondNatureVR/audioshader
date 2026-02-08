@@ -59,10 +59,18 @@ export class UIController {
   private hotkeyLegend: HTMLElement | null = null;
   private curveEditorDrawer: HTMLElement | null = null;
   private modulationDrawer: HTMLElement | null = null;
+  private modDrawerDrag: { startX: number; startY: number; startLeft: number; startTop: number } | null = null;
   private currentModParam: string | null = null;
   private modLiveUpdateId: number | null = null;
   private modLiveValueHistory: number[] = [];
   private static readonly MOD_LIVE_HISTORY_MAX = 120; // ~2s at 60fps
+  /** Per-slot LFO waveform: key = `${param}_${slotIndex}`, value = last N normalized samples (0-1) over same time window */
+  private modWaveformHistory: Map<string, number[]> = new Map();
+  private routesSearchFilter: string = '';
+  private mappingPanelLiveUpdateId: number | null = null;
+  /** Keys 'param_slotIndex' for route rows that are expanded; preserved across re-renders */
+  private expandedRouteKeys: Set<string> = new Set();
+  private static readonly MOD_WAVEFORM_SAMPLES = 60; // 1s at 60fps — same normalization time window for all
   private radarChart: AudioRadarChart | null = null;
   private activeMappingsCounter = 0;
   private currentCurveControlGroup: HTMLElement | null = null;
@@ -1262,6 +1270,61 @@ export class UIController {
       if (addRouteForm !== null) addRouteForm.style.display = 'none';
     });
 
+    // Search filter for routes
+    const routesSearchInput = document.getElementById('routes-search') as HTMLInputElement | null;
+    if (routesSearchInput !== null) {
+      routesSearchInput.addEventListener('input', () => {
+        this.routesSearchFilter = routesSearchInput.value;
+        this.updateActiveMappingsOverview();
+      });
+    }
+
+    // All-actions: Logic-style toggle buttons (state = "all" applied)
+    const audioMapperRef = () => this.app.getAudioMapper();
+    const routesAllLock = document.getElementById('routes-all-lock');
+    const routesAllMute = document.getElementById('routes-all-mute');
+    const routesAllSolo = document.getElementById('routes-all-solo');
+    const routesAllExpand = document.getElementById('routes-all-expand');
+
+    routesAllLock?.addEventListener('click', () => {
+      const mapper = audioMapperRef();
+      const routes = mapper.getActiveRoutes();
+      const allLocked = routes.length > 0 && routes.every(({ param, slotIndex }) => mapper.getSlot(param, slotIndex)?.locked === true);
+      routes.forEach(({ param, slotIndex }) => {
+        mapper.updateSlot(param, slotIndex, { locked: !allLocked });
+      });
+      this.refreshModUI();
+    });
+    routesAllMute?.addEventListener('click', () => {
+      const mapper = audioMapperRef();
+      const routes = mapper.getActiveRoutes();
+      const allMuted = routes.length > 0 && routes.every(({ param, slotIndex }) => mapper.getSlot(param, slotIndex)?.muted === true);
+      routes.forEach(({ param, slotIndex }) => {
+        mapper.updateSlot(param, slotIndex, { muted: !allMuted });
+      });
+      this.refreshModUI();
+    });
+    routesAllSolo?.addEventListener('click', () => {
+      const mapper = audioMapperRef();
+      const routes = mapper.getActiveRoutes();
+      const allSolo = routes.length > 0 && routes.every(({ param, slotIndex }) => mapper.getSlot(param, slotIndex)?.solo === true);
+      routes.forEach(({ param, slotIndex }) => {
+        mapper.updateSlot(param, slotIndex, { solo: !allSolo });
+      });
+      this.refreshModUI();
+    });
+    routesAllExpand?.addEventListener('click', () => {
+      const routes = audioMapperRef().getActiveRoutes();
+      const keys = new Set(routes.map(({ param, slotIndex }) => `${param}_${slotIndex}`));
+      const allExpanded = keys.size > 0 && [...keys].every((k) => this.expandedRouteKeys.has(k));
+      if (allExpanded) {
+        this.expandedRouteKeys.clear();
+      } else {
+        keys.forEach((k) => this.expandedRouteKeys.add(k));
+      }
+      this.updateActiveMappingsOverview();
+    });
+
     addRouteConfirm?.addEventListener('click', (e) => {
       e.preventDefault();
       if (addRouteSource === null || addRouteTarget === null) return;
@@ -1287,8 +1350,33 @@ export class UIController {
         const muteBtn = targetEl.closest?.('.mod-route-mute') as HTMLButtonElement | null;
         const soloBtn = targetEl.closest?.('.mod-route-solo') as HTMLButtonElement | null;
         const removeBtn = targetEl.closest?.('.mod-route-remove') as HTMLButtonElement | null;
+        const expandBtn = targetEl.closest?.('.mod-route-expand') as HTMLButtonElement | null;
         const audioMapper = this.app.getAudioMapper();
 
+        if (expandBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const row = expandBtn.closest?.('.mod-route-row-wrap') as HTMLElement | null;
+          const paramName = expandBtn.dataset['param'];
+          const slotIdx = expandBtn.dataset['slotIndex'];
+          if (row !== null && paramName !== undefined && slotIdx !== undefined) {
+            const rowKey = `${paramName}_${slotIdx}`;
+            const isExpanded = this.expandedRouteKeys.has(rowKey);
+            if (isExpanded) {
+              this.expandedRouteKeys.delete(rowKey);
+            } else {
+              this.expandedRouteKeys.add(rowKey);
+            }
+            const nowExpanded = !isExpanded;
+            row.dataset['expanded'] = String(nowExpanded);
+            const extra = row.querySelector<HTMLElement>('.mod-route-extra');
+            if (extra !== null) extra.style.display = nowExpanded ? 'block' : 'none';
+            expandBtn.setAttribute('aria-expanded', String(nowExpanded));
+            expandBtn.innerHTML = nowExpanded ? 'v' : '>';
+            this.updateAllActionsState();
+          }
+          return;
+        }
         if (lockBtn) {
           e.preventDefault();
           e.stopPropagation();
@@ -1737,41 +1825,107 @@ export class UIController {
 
     const audioMapper = this.app.getAudioMapper();
     const routes = audioMapper.getActiveRoutes();
+    const q = this.routesSearchFilter.trim().toLowerCase();
+
+    const filtered = q === ''
+      ? routes
+      : routes.filter(({ param, slot }) => {
+          const sourceLabel = AudioMapper.getMetricLabel(slot.source).toLowerCase();
+          const targetLabel = getParamLabel(param).toLowerCase();
+          const paramLower = param.toLowerCase();
+          return paramLower.includes(q) || targetLabel.includes(q) || sourceLabel.includes(q);
+        });
 
     if (countEl !== null) {
-      countEl.textContent = `(${routes.length})`;
+      countEl.textContent = filtered.length === routes.length ? `(${routes.length})` : `(${filtered.length}/${routes.length})`;
     }
 
     if (routes.length === 0) {
       container.innerHTML = '<div style="color:#555;font-style:italic;font-size:9px;">No active routes. Click "A" on any slider or "+ Add Route" below.</div>';
+      this.updateAllActionsState();
       return;
     }
 
-    container.innerHTML = routes.map(({ param, slotIndex, slot }) => {
+    if (filtered.length === 0) {
+      container.innerHTML = '<div style="color:#555;font-style:italic;font-size:9px;">No routes match the filter.</div>';
+      this.updateAllActionsState();
+      return;
+    }
+
+    container.innerHTML = filtered.map(({ param, slotIndex, slot }) => {
       const sourceLabel = AudioMapper.getMetricLabel(slot.source);
       const targetLabel = getParamLabel(param);
       const amountPct = Math.round(slot.amount * 100);
       const locked = slot.locked === true;
       const muted = slot.muted === true;
       const solo = slot.solo === true;
+      const rowKey = `${param}_${slotIndex}`;
+      const isExpanded = this.expandedRouteKeys.has(rowKey);
       const rowClass = ['mod-route-row']
         .concat(locked ? 'mod-route-locked' : [])
         .concat(muted ? 'mod-route-muted' : [])
         .concat(solo ? 'mod-route-solo' : [])
         .join(' ');
-      return `<div class="${rowClass}" data-param="${param}" data-slot-index="${slotIndex}">
-        <button type="button" class="mod-route-lock" data-param="${param}" data-slot-index="${slotIndex}" title="${locked ? 'Unlock (allow random)' : 'Lock (exclude from random)'}" aria-pressed="${locked}">${locked ? '\u{1F512}' : '\u{1F513}'}</button>
-        <button type="button" class="mod-route-mute" data-param="${param}" data-slot-index="${slotIndex}" title="${muted ? 'Unmute' : 'Mute route'}" aria-pressed="${muted}">M</button>
-        <button type="button" class="mod-route-solo" data-param="${param}" data-slot-index="${slotIndex}" title="${solo ? 'Solo off' : 'Solo this route'}" aria-pressed="${solo}">S</button>
-        <span class="mod-route-source">${sourceLabel}</span>
-        <span class="mod-route-arrow">&rarr;</span>
-        <span class="mod-route-target">${targetLabel}</span>
-        <span class="mod-route-amount">${amountPct}%</span>
-        <div class="mod-route-bar" title="Live value"><div class="mod-route-bar-fill"></div></div>
-        <button type="button" class="mod-route-remove" data-param="${param}" data-slot-index="${slotIndex}" title="Remove route">&times;</button>
+      return `<div class="${rowClass} mod-route-row-wrap" data-param="${param}" data-slot-index="${slotIndex}" data-expanded="${isExpanded}">
+        <div class="mod-route-main">
+          <button type="button" class="mod-route-expand" data-param="${param}" data-slot-index="${slotIndex}" title="Expand/collapse details" aria-expanded="${isExpanded}">${isExpanded ? '&#9650;' : '&#9660;'}</button>
+          <button type="button" class="mod-route-lock" data-param="${param}" data-slot-index="${slotIndex}" title="${locked ? 'Unlock (allow random)' : 'Lock (exclude from random)'}" aria-pressed="${locked}">${locked ? '\u{1F512}' : '\u{1F513}'}</button>
+          <button type="button" class="mod-route-mute" data-param="${param}" data-slot-index="${slotIndex}" title="${muted ? 'Unmute' : 'Mute route'}" aria-pressed="${muted}">M</button>
+          <button type="button" class="mod-route-solo" data-param="${param}" data-slot-index="${slotIndex}" title="${solo ? 'Solo off' : 'Solo this route'}" aria-pressed="${solo}">S</button>
+          <span class="mod-route-source">${sourceLabel}</span>
+          <span class="mod-route-arrow">&rarr;</span>
+          <span class="mod-route-target">${targetLabel}</span>
+          <span class="mod-route-amount">${amountPct}%</span>
+          <div class="mod-route-bar" title="Live value"><div class="mod-route-bar-fill"></div></div>
+          <button type="button" class="mod-route-remove" data-param="${param}" data-slot-index="${slotIndex}" title="Remove route">&times;</button>
+        </div>
+        <div class="mod-route-extra" style="display:${isExpanded ? 'block' : 'none'};">
+          <label class="mod-route-waveform-label">LFO (1s)</label>
+          <canvas class="mod-route-waveform mod-route-waveform-fullwidth" data-param="${param}" data-slot-index="${slotIndex}" title="Modulation over last 1s"></canvas>
+        </div>
       </div>`;
     }).join('');
+    this.updateAllActionsState();
     // Clicks handled by delegated listener on active-routes-container (setupMPanel)
+  }
+
+  /**
+   * Update the "all" action toggle buttons to reflect current state (Logic-style: pressed = "all" applied).
+   */
+  private updateAllActionsState(): void {
+    const mapper = this.app.getAudioMapper();
+    const routes = mapper.getActiveRoutes();
+    const lockEl = document.getElementById('routes-all-lock');
+    const muteEl = document.getElementById('routes-all-mute');
+    const soloEl = document.getElementById('routes-all-solo');
+    const expandEl = document.getElementById('routes-all-expand');
+
+    const allLocked = routes.length > 0 && routes.every(({ param, slotIndex }) => mapper.getSlot(param, slotIndex)?.locked === true);
+    const allMuted = routes.length > 0 && routes.every(({ param, slotIndex }) => mapper.getSlot(param, slotIndex)?.muted === true);
+    const allSolo = routes.length > 0 && routes.every(({ param, slotIndex }) => mapper.getSlot(param, slotIndex)?.solo === true);
+    const keys = new Set(routes.map(({ param, slotIndex }) => `${param}_${slotIndex}`));
+    const allExpanded = keys.size > 0 && [...keys].every((k) => this.expandedRouteKeys.has(k));
+
+    if (lockEl !== null) {
+      lockEl.setAttribute('aria-pressed', String(allLocked));
+      lockEl.title = allLocked ? 'Unlock all routes' : 'Lock all routes';
+      const span = lockEl.querySelector('span');
+      if (span !== null) span.textContent = allLocked ? '\u{1F512}' : '\u{1F513}';
+    }
+    if (muteEl !== null) {
+      muteEl.setAttribute('aria-pressed', String(allMuted));
+      muteEl.title = allMuted ? 'Unmute all routes' : 'Mute all routes';
+    }
+    if (soloEl !== null) {
+      soloEl.setAttribute('aria-pressed', String(allSolo));
+      soloEl.title = allSolo ? 'Unsolo all routes' : 'Solo all routes';
+    }
+    if (expandEl !== null) {
+      expandEl.setAttribute('aria-pressed', String(allExpanded));
+      expandEl.title = allExpanded ? 'Collapse all' : 'Expand all';
+      const span = expandEl.querySelector('span');
+      if (span !== null) span.textContent = allExpanded ? '\u{9650}' : '\u{9660}';
+    }
   }
 
   // ── Modulation drawer ───────────────────────────────────────────
@@ -1851,6 +2005,44 @@ export class UIController {
         self.populateModulationDrawer(paramName);
         self.refreshModUI();
       }
+    });
+
+    // Draggable: mousedown on header (not close button) starts drag
+    const drawer = document.getElementById('modulation-drawer');
+    if (drawer !== null) {
+      drawer.addEventListener('mousedown', (e) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest?.('.modulation-drawer-header')) return;
+        if (target.closest?.('.modulation-drawer-close')) return;
+        const rect = drawer.getBoundingClientRect();
+        self.modDrawerDrag = {
+          startX: e.clientX,
+          startY: e.clientY,
+          startLeft: rect.left,
+          startTop: rect.top,
+        };
+      });
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      if (self.modDrawerDrag === null || self.modulationDrawer === null) return;
+      const d = self.modDrawerDrag;
+      const dx = e.clientX - d.startX;
+      const dy = e.clientY - d.startY;
+      let left = d.startLeft + dx;
+      let top = d.startTop + dy;
+      const pad = 8;
+      const maxW = self.modulationDrawer.offsetWidth;
+      const maxH = Math.min(window.innerHeight - pad * 2, window.innerHeight * 0.85);
+      left = Math.max(pad, Math.min(window.innerWidth - maxW - pad, left));
+      top = Math.max(pad, Math.min(window.innerHeight - maxH - pad, top));
+      self.modulationDrawer.style.right = 'auto';
+      self.modulationDrawer.style.left = `${left}px`;
+      self.modulationDrawer.style.top = `${top}px`;
+    });
+
+    document.addEventListener('mouseup', () => {
+      self.modDrawerDrag = null;
     });
   }
 
@@ -1939,6 +2131,10 @@ export class UIController {
             <input type="number" class="mod-slot-range-max" data-slot-index="${index}" step="any" value="${slot.rangeMax}"
               style="width:100%;padding:3px 6px;font-size:9px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:3px;">
           </div>
+        </div>
+        <div class="mod-slot-waveform-wrap" style="margin-top:4px;">
+          <label style="font-size:8px;color:#666;display:block;margin-bottom:2px;">LFO (1s)</label>
+          <canvas class="mod-slot-waveform" data-slot-index="${index}" title="Modulation over last 1s, same time window for all slots"></canvas>
         </div>
       </div>`;
   }
@@ -2270,39 +2466,6 @@ export class UIController {
     this.currentModParam = paramName;
     this.populateModulationDrawer(paramName);
 
-    // Position the drawer similar to curve editor
-    let positioningElement: Element | null = null;
-
-    // Try param-slider component first
-    const component = document.querySelector<ParamSlider>(`param-slider[param-name="${paramName}"]`);
-    if (component !== null) {
-      positioningElement = component;
-    } else {
-      // Legacy: find the control group by slider ID
-      const sliderId = `${this.camelToKebab(paramName)}-slider`;
-      const sliderEl = document.getElementById(sliderId);
-      positioningElement = sliderEl?.closest('.control-group') ?? sliderEl;
-    }
-
-    if (positioningElement !== null) {
-      const rect = positioningElement.getBoundingClientRect();
-      const drawerWidth = 280;
-      const drawerLeft = Math.max(0, rect.left - drawerWidth - 8);
-
-      // Vertical positioning — ensure it fits in viewport
-      const viewportHeight = window.innerHeight;
-      const maxHeight = Math.min(Math.round(viewportHeight * 0.8), viewportHeight - 20);
-      let drawerTop = rect.top;
-      if (drawerTop + maxHeight > viewportHeight - 10) {
-        drawerTop = Math.max(10, viewportHeight - maxHeight - 10);
-      }
-
-      drawer.style.left = `${drawerLeft}px`;
-      drawer.style.top = `${drawerTop}px`;
-      drawer.style.height = 'auto';
-      drawer.style.maxHeight = `${maxHeight}px`;
-    }
-
     drawer.style.display = 'block';
     drawer.classList.add('active');
 
@@ -2320,6 +2483,7 @@ export class UIController {
     drawer.style.display = 'none';
     this.currentModParam = null;
     this.modLiveValueHistory = [];
+    this.modWaveformHistory.clear();
     this.stopModLiveUpdate();
   }
 
@@ -2331,6 +2495,7 @@ export class UIController {
     const update = (): void => {
       if (this.currentModParam === null) return;
       this.updateModLiveViz();
+      this.updateModWaveforms();
       this.updateRouteLiveBars();
       this.modLiveUpdateId = window.requestAnimationFrame(update);
     };
@@ -2345,7 +2510,7 @@ export class UIController {
     const metrics = this.audioAnalyzer?.getMetrics?.() ?? null;
     if (metrics === null) return;
     const audioMapper = this.app.getAudioMapper();
-    document.querySelectorAll<HTMLElement>('.mod-route-row').forEach((row) => {
+    document.querySelectorAll<HTMLElement>('.mod-route-row-wrap').forEach((row) => {
       const paramName = row.dataset['param'] as keyof VisualParams | undefined;
       const slotIndex = parseInt(row.dataset['slotIndex'] ?? '0', 10);
       if (paramName === undefined) return;
@@ -2356,6 +2521,76 @@ export class UIController {
       const fill = row.querySelector<HTMLElement>('.mod-route-bar-fill');
       if (fill !== null) fill.style.width = `${norm * 100}%`;
     });
+  }
+
+  /**
+   * Record all active routes into waveform history (same 1s window). Call when mapping panel is visible.
+   */
+  private recordRouteWaveformHistory(): void {
+    const metrics = this.audioAnalyzer?.getMetrics?.() ?? null;
+    if (metrics === null) return;
+    const audioMapper = this.app.getAudioMapper();
+    const routes = audioMapper.getActiveRoutes();
+    for (const { param, slotIndex } of routes) {
+      const range = PARAM_RANGES[param];
+      const fullSpan = range.max - range.min;
+      if (fullSpan <= 0) continue;
+      const key = `${param}_${slotIndex}`;
+      let buf = this.modWaveformHistory.get(key);
+      if (buf === undefined) {
+        buf = [];
+        this.modWaveformHistory.set(key, buf);
+      }
+      const value = audioMapper.getSlotOutput(param, slotIndex, metrics);
+      const norm = Math.max(0, Math.min(1, (value - range.min) / fullSpan));
+      buf.push(norm);
+      if (buf.length > UIController.MOD_WAVEFORM_SAMPLES) buf.shift();
+    }
+  }
+
+  /**
+   * Draw LFO waveforms on each route row canvas in the M-panel.
+   */
+  private updateRouteWaveformsPanel(): void {
+    const container = document.getElementById('active-routes-container');
+    if (container === null) return;
+    container.querySelectorAll<HTMLCanvasElement>('.mod-route-waveform').forEach((canvas) => {
+      const param = canvas.dataset['param'] as keyof VisualParams | undefined;
+      const slotIndex = parseInt(canvas.dataset['slotIndex'] ?? '0', 10);
+      if (param === undefined) return;
+      const key = `${param}_${slotIndex}`;
+      const buf = this.modWaveformHistory.get(key) ?? [];
+      this.drawSlotWaveform(canvas, buf);
+    });
+  }
+
+  /**
+   * Start the live update loop when the mapping panel is visible (route bars + LFO waveforms).
+   */
+  private startMappingPanelLiveUpdate(): void {
+    this.stopMappingPanelLiveUpdate();
+    const panel = document.getElementById('audio-mapping-panel');
+    const update = (): void => {
+      if (panel === null || !panel.classList.contains('visible')) {
+        this.mappingPanelLiveUpdateId = null;
+        return;
+      }
+      this.recordRouteWaveformHistory();
+      this.updateRouteLiveBars();
+      this.updateRouteWaveformsPanel();
+      this.mappingPanelLiveUpdateId = window.requestAnimationFrame(update);
+    };
+    this.mappingPanelLiveUpdateId = window.requestAnimationFrame(update);
+  }
+
+  /**
+   * Stop the mapping panel live update loop
+   */
+  private stopMappingPanelLiveUpdate(): void {
+    if (this.mappingPanelLiveUpdateId !== null) {
+      window.cancelAnimationFrame(this.mappingPanelLiveUpdateId);
+      this.mappingPanelLiveUpdateId = null;
+    }
   }
 
   /**
@@ -2413,6 +2648,96 @@ export class UIController {
     if (peakMinEl !== null) peakMinEl.style.left = `${peakMinPct}%`;
     const peakMaxEl = document.getElementById('mod-live-peak-max');
     if (peakMaxEl !== null) peakMaxEl.style.left = `${peakMaxPct}%`;
+  }
+
+  /**
+   * Record slot outputs into waveform history (same 1s time window for all slots) and draw LFO waveforms.
+   */
+  private updateModWaveforms(): void {
+    if (this.currentModParam === null) return;
+    const param = this.currentModParam as keyof VisualParams;
+    const audioMapper = this.app.getAudioMapper();
+    const metrics = this.audioAnalyzer?.getMetrics?.() ?? null;
+    const range = PARAM_RANGES[param];
+    const mod = audioMapper.getModulation(param);
+    const slots = mod?.slots ?? [];
+    const fullSpan = range.max - range.min;
+
+    for (let i = 0; i < slots.length; i++) {
+      const key = `${param}_${i}`;
+      let buf = this.modWaveformHistory.get(key);
+      if (buf === undefined) {
+        buf = [];
+        this.modWaveformHistory.set(key, buf);
+      }
+      if (metrics !== null && fullSpan > 0) {
+        const value = audioMapper.getSlotOutput(param, i, metrics);
+        const norm = Math.max(0, Math.min(1, (value - range.min) / fullSpan));
+        buf.push(norm);
+        if (buf.length > UIController.MOD_WAVEFORM_SAMPLES) {
+          buf.shift();
+        }
+      }
+    }
+
+    const container = document.getElementById('mod-slots-container');
+    if (container === null) return;
+    const canvases = container.querySelectorAll<HTMLCanvasElement>('.mod-slot-waveform');
+    canvases.forEach((canvas) => {
+      const slotIndex = parseInt(canvas.dataset['slotIndex'] ?? '0', 10);
+      const key = `${param}_${slotIndex}`;
+      const buf = this.modWaveformHistory.get(key) ?? [];
+      this.drawSlotWaveform(canvas, buf);
+    });
+  }
+
+  /**
+   * Draw a single slot's LFO waveform (0 = bottom, 1 = top; left = oldest, right = newest).
+   */
+  private drawSlotWaveform(canvas: HTMLCanvasElement, samples: number[]): void {
+    const ctx = canvas.getContext('2d');
+    if (ctx === null) return;
+    // Use display size when canvas is sized by CSS (e.g. route row full-width LFO)
+    const cw = canvas.clientWidth;
+    const ch = canvas.clientHeight;
+    if (cw > 0 && ch > 0 && (canvas.width !== cw || canvas.height !== ch)) {
+      canvas.width = cw;
+      canvas.height = ch;
+    }
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Center line (0.5 = middle of param range)
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(0, h / 2);
+    ctx.lineTo(w, h / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (samples.length < 2) return;
+
+    const n = samples.length;
+    ctx.strokeStyle = 'rgba(0, 200, 255, 0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * w;
+      const y = (1 - samples[i]!) * (h - 2) + 1; // 0 = bottom, 1 = top, 1px inset
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Optional: fill below curve for LFO feel
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0, 170, 255, 0.08)';
+    ctx.fill();
   }
 
   // ── Curve editor ───────────────────────────────────────────────
@@ -2817,8 +3142,13 @@ export class UIController {
   private toggleAudioMappingPanel(): void {
     const panel = document.getElementById('audio-mapping-panel');
     if (panel !== null) {
-      const isHidden = panel.style.display === 'none' || panel.style.display === '';
-      panel.style.display = isHidden ? 'block' : 'none';
+      const willBeVisible = !panel.classList.contains('visible');
+      panel.classList.toggle('visible', willBeVisible);
+      if (willBeVisible) {
+        this.startMappingPanelLiveUpdate();
+      } else {
+        this.stopMappingPanelLiveUpdate();
+      }
     }
   }
 
