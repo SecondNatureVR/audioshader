@@ -182,12 +182,18 @@ export class ParamSlider extends LitElement {
     }
   `;
 
-  protected updated(changedProperties: PropertyValues): void {
-    // When external value changes and we're not editing, update display
-    // Only update if component is connected to DOM
-    if (changedProperties.has('value') && !this.isEditing && this.isConnected) {
-      if (this.valueDisplayEl) {
-        this.valueDisplayEl.textContent = this.formatValue(this.value);
+  protected override updated(_changedProperties: PropertyValues): void {
+    super.updated(_changedProperties);
+    // Imperatively update the value display text.
+    // We CANNOT use a Lit template expression inside the contenteditable span because
+    // contenteditable destroys Lit's internal marker nodes when textContent is set
+    // (by user typing or imperative code), causing "ChildPart has no parentNode" errors.
+    // Instead, we manage the span's text entirely outside of Lit's template system.
+    if (!this.isEditing && this.valueDisplayEl) {
+      const formatted = this.formatValue(this.value);
+      // Only update if text actually changed to avoid cursor jumps during editing
+      if (this.valueDisplayEl.textContent !== formatted) {
+        this.valueDisplayEl.textContent = formatted;
       }
     }
   }
@@ -222,7 +228,7 @@ export class ParamSlider extends LitElement {
           @blur=${this.handleValueBlur}
           @keydown=${this.handleValueKeydown}
           @focus=${this.handleValueFocus}
-        >${this.formatValue(this.value)}</span>
+        ></span>
       </div>
     `;
   }
@@ -239,22 +245,21 @@ export class ParamSlider extends LitElement {
     const target = e.target as HTMLInputElement;
     this.sliderValue = parseFloat(target.value);
 
-    // Dispatch event asynchronously to avoid blocking Lit's update cycle
-    // This prevents "no parentNode" errors when component updates during slider movement
-    void Promise.resolve().then(() => {
-      if (this.isConnected) {
-        this.dispatchEvent(new CustomEvent<ParamChangeEventDetail>('param-change', {
-          bubbles: true,
-          composed: true,
-          detail: {
-            paramName: this.paramName,
-            value: this.sliderValue,
-            sliderValue: this.sliderValue,
-            source: 'slider',
-          },
-        }));
-      }
-    });
+    // Dispatch event synchronously so UIController can set component.value immediately
+    // which triggers updated() to refresh the value display.
+    // This is safe now that we no longer use Lit expressions inside the contenteditable span.
+    if (this.isConnected) {
+      this.dispatchEvent(new CustomEvent<ParamChangeEventDetail>('param-change', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          paramName: this.paramName,
+          value: this.sliderValue,
+          sliderValue: this.sliderValue,
+          source: 'slider',
+        },
+      }));
+    }
   }
 
   private handleValueFocus(): void {
@@ -267,7 +272,7 @@ export class ParamSlider extends LitElement {
     const numValue = parseNumericValue(text);
 
     if (numValue !== null) {
-      // Range expansion is handled by UIController via expandSliderRangeIfNeeded()
+      // Range adjustment is handled by UIController via adjustSliderRange()
       // The HTML slider should always stay 0-100, only the curve mapping range expands
       // Do NOT update this.min/max here - that would break the curve mapping which assumes 0-100
 

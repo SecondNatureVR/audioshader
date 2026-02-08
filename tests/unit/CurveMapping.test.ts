@@ -261,5 +261,148 @@ describe('CurveMapping', () => {
 
       expect(slider).toBeCloseTo(50);
     });
+
+    it('should update settings via setSettings', () => {
+      const mapper = new CurveMapper();
+
+      // Get defaults first
+      const original = mapper.getSettings('spikiness');
+      expect(original.min).toBe(0);
+      expect(original.max).toBe(1);
+
+      // Update min/max (simulating range adjustment)
+      mapper.setSettings('spikiness', { min: 0.2, max: 0.8 });
+
+      const updated = mapper.getSettings('spikiness');
+      expect(updated.min).toBe(0.2);
+      expect(updated.max).toBe(0.8);
+      // Power should be preserved
+      expect(updated.power).toBe(original.power);
+    });
+
+    it('should preserve power when updating min/max only', () => {
+      const mapper = new CurveMapper();
+
+      const original = mapper.getSettings('noiseAmount');
+      expect(original.power).toBe(0.25);
+
+      mapper.setSettings('noiseAmount', { min: 0, max: 5 });
+
+      const updated = mapper.getSettings('noiseAmount');
+      expect(updated.power).toBe(0.25); // power preserved
+      expect(updated.max).toBe(5);
+    });
+
+    it('should produce correct mapping after range expansion', () => {
+      const mapper = new CurveMapper();
+
+      // Default spikiness: 0-1, power 1.0
+      // Expand max to 5
+      mapper.setSettings('spikiness', { max: 5 });
+
+      // Slider 0 should map to 0, slider 100 should map to 5
+      expect(mapper.mapSlider('spikiness', 0)).toBeCloseTo(0);
+      expect(mapper.mapSlider('spikiness', 100)).toBeCloseTo(5);
+      expect(mapper.mapSlider('spikiness', 50)).toBeCloseTo(2.5);
+    });
+
+    it('should produce correct mapping after range contraction', () => {
+      const mapper = new CurveMapper();
+
+      // Default hue: 0-360, power 1.0
+      // Contract max to 180
+      mapper.setSettings('hue', { max: 180 });
+
+      // Slider 0 should map to 0, slider 100 should map to 180
+      expect(mapper.mapSlider('hue', 0)).toBeCloseTo(0);
+      expect(mapper.mapSlider('hue', 100)).toBeCloseTo(180);
+      expect(mapper.mapSlider('hue', 50)).toBeCloseTo(90);
+    });
+
+    it('should produce correct reverse mapping after range adjustment', () => {
+      const mapper = new CurveMapper();
+
+      // Default scale: 0.05-1.0, expand to 0.05-6
+      mapper.setSettings('scale', { max: 6 });
+
+      // Value 6 should map to slider 100, value 0.05 to slider 0
+      expect(mapper.mapToSlider('scale', 6)).toBeCloseTo(100);
+      expect(mapper.mapToSlider('scale', 0.05)).toBeCloseTo(0);
+    });
+
+    it('should round-trip all default parameter types', () => {
+      const mapper = new CurveMapper();
+
+      const paramSliderPairs: Array<{ name: string; sliderVal: number }> = [
+        { name: 'spikiness', sliderVal: 30 },
+        { name: 'spikeFrequency', sliderVal: 60 },
+        { name: 'hue', sliderVal: 75 },
+        { name: 'scale', sliderVal: 50 },
+        { name: 'fillSize', sliderVal: 40 },
+        { name: 'fillOpacity', sliderVal: 80 },
+        { name: 'blendOpacity', sliderVal: 90 },
+        { name: 'noiseAmount', sliderVal: 25 },
+        { name: 'noiseRate', sliderVal: 55 },
+        { name: 'blurAmount', sliderVal: 35 },
+        { name: 'blurRate', sliderVal: 45 },
+        { name: 'fadeAmount', sliderVal: 70 },
+        { name: 'autoRotationSpeed', sliderVal: 65 },
+        { name: 'hueShiftAmount', sliderVal: 20 },
+        { name: 'jiggleAmount', sliderVal: 50 },
+        { name: 'emanationRate', sliderVal: 50 },
+      ];
+
+      for (const { name, sliderVal } of paramSliderPairs) {
+        const value = mapper.mapSlider(name, sliderVal);
+        const backToSlider = mapper.mapToSlider(name, value);
+        expect(backToSlider).toBeCloseTo(sliderVal, 1);
+      }
+    });
+
+    it('should round-trip after range adjustment', () => {
+      const mapper = new CurveMapper();
+
+      // Adjust spikiness range to 0.2-0.8 (contraction)
+      mapper.setSettings('spikiness', { min: 0.2, max: 0.8 });
+
+      // Round trip at various positions
+      for (const sliderVal of [0, 25, 50, 75, 100]) {
+        const value = mapper.mapSlider('spikiness', sliderVal);
+        const backToSlider = mapper.mapToSlider('spikiness', value);
+        expect(backToSlider).toBeCloseTo(sliderVal, 1);
+      }
+    });
+
+    it('should resetSettings to param defaults', () => {
+      const mapper = new CurveMapper();
+
+      // Modify settings
+      mapper.setSettings('hue', { min: 100, max: 200, power: 2.0 });
+      const modified = mapper.getSettings('hue');
+      expect(modified.min).toBe(100);
+      expect(modified.max).toBe(200);
+      expect(modified.power).toBe(2.0);
+
+      // Reset
+      mapper.resetSettings('hue');
+      const reset = mapper.getSettings('hue');
+      expect(reset.min).toBe(0);
+      expect(reset.max).toBe(360);
+      expect(reset.power).toBe(1.0);
+    });
+
+    it('should resetSettings for exponential params to correct defaults', () => {
+      const mapper = new CurveMapper();
+
+      // Modify noiseAmount
+      mapper.setSettings('noiseAmount', { min: -1, max: 10, power: 1.0 });
+
+      // Reset
+      mapper.resetSettings('noiseAmount');
+      const reset = mapper.getSettings('noiseAmount');
+      expect(reset.min).toBe(0);
+      expect(reset.max).toBe(1);
+      expect(reset.power).toBe(0.25);
+    });
   });
 });

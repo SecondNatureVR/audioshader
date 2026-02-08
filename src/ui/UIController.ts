@@ -20,7 +20,7 @@ import type { App } from '../App';
 import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
-import { parseNumericValue, calculateExpandedRange } from './valueUtils';
+import { parseNumericValue, calculateAdjustedRange } from './valueUtils';
 import { getParamLabel } from '../config/paramLabels';
 import type { ParamChangeEventDetail, CurveEditRequestEventDetail } from '../components/types';
 import type { ParamSlider } from '../components/param-slider/ParamSlider';
@@ -153,7 +153,7 @@ export class UIController {
         
         // Expand curve range if needed (after setting the exact value)
         // This ensures the range includes the value, but we keep the exact value
-        this.expandSliderRangeIfNeeded(paramName, paramValue);
+        this.adjustSliderRange(paramName, paramValue);
       }
 
       // Set the parameter to the exact value (not expanded)
@@ -163,9 +163,18 @@ export class UIController {
       this.app.setParam(paramName as keyof VisualParams, paramValue, immediate);
       
       // For ParamSlider components, update the component's value and slider position
-      // This ensures the display shows the correct value and slider position matches the range
+      // Use synchronous update for slider source to keep display in sync during dragging
       if (this.isParamSliderComponent(paramName)) {
-        void this.updateSingleParamSliderComponent(paramName, paramValue);
+        const component = document.querySelector<ParamSlider>(`param-slider[param-name="${paramName}"]`);
+        if (component !== null && component.isConnected) {
+          // Set value synchronously so the display updates immediately
+          component.value = paramValue;
+          if (source !== 'slider') {
+            // For direct input, also recalculate slider position
+            const sliderPos = this.paramToSliderValue(paramName, paramValue);
+            component.setSliderPosition(sliderPos);
+          }
+        }
       } else {
         // Legacy HTML sliders - update value display
         this.updateValueDisplay(paramName, paramValue);
@@ -353,7 +362,7 @@ export class UIController {
 
       if (numValue !== null) {
         // Expand slider range if value exceeds current limits
-        this.expandSliderRangeIfNeeded(paramName, numValue);
+        this.adjustSliderRange(paramName, numValue);
 
         // Set parameter with immediate=true for direct input (no interpolation delay)
         // This ensures the value is set immediately and getParam() returns the exact value
@@ -396,14 +405,14 @@ export class UIController {
       const numValue = parseNumericValue(text);
 
       if (numValue !== null) {
-        // Expand slider range if needed
+        // Adjust slider range: moves closest boundary to the entered value
         const min = parseFloat(slider.min);
         const max = parseFloat(slider.max);
-        const expanded = calculateExpandedRange(numValue, min, max);
+        const adjusted = calculateAdjustedRange(numValue, min, max);
 
-        if (expanded !== null) {
-          slider.min = String(expanded.min);
-          slider.max = String(expanded.max);
+        if (adjusted !== null) {
+          slider.min = String(adjusted.min);
+          slider.max = String(adjusted.max);
         }
 
         slider.value = String(numValue);
@@ -421,23 +430,24 @@ export class UIController {
   }
 
   /**
-   * Expand curve settings range if the given value exceeds current min/max
-   * The slider HTML range stays 0-100, only the curve mapping range is expanded
+   * Adjust curve settings range so the entered value becomes the closest boundary.
+   * Works for both expansion (value outside range) and contraction (value inside range).
+   * The slider HTML range stays 0-100, only the curve mapping range is adjusted.
    */
-  private expandSliderRangeIfNeeded(paramName: string, value: number): void {
+  private adjustSliderRange(paramName: string, value: number): void {
     // Get current curve settings (the actual parameter range)
     const currentSettings = this.curveMapper.getSettings(paramName);
     const currentMin = currentSettings.min;
     const currentMax = currentSettings.max;
 
-    const expanded = calculateExpandedRange(value, currentMin, currentMax);
+    const adjusted = calculateAdjustedRange(value, currentMin, currentMax);
 
-    if (expanded !== null) {
+    if (adjusted !== null) {
       // Update curve settings to match new range
       this.curveMapper.setSettings(paramName, {
         ...currentSettings,
-        min: expanded.min,
-        max: expanded.max,
+        min: adjusted.min,
+        max: adjusted.max,
       });
     }
   }
@@ -1513,7 +1523,7 @@ export class UIController {
         const numValue = parseNumericValue(text);
         
         if (numValue !== null) {
-          this.expandSliderRangeIfNeeded(this.currentCurveParam, numValue);
+          this.adjustSliderRange(this.currentCurveParam, numValue);
           this.app.setParam(this.currentCurveParam as keyof VisualParams, numValue, true);
           
           // Update slider position (normalized to 0-100, then denormalized to HTML range)

@@ -14,34 +14,39 @@ export function parseNumericValue(text: string): number | null {
 }
 
 /**
- * Calculate new range bounds when a value exceeds current limits
- * Returns null if no expansion is needed, otherwise returns { min, max }
- * Only adjusts the boundary (min or max) that the value is closer to
+ * Adjust range bounds so the entered value becomes the closest boundary.
+ * Always returns adjusted bounds — works for both expansion (value outside range)
+ * and contraction (value inside range).
+ * The boundary (min or max) closest to the value is moved to match it.
+ * Returns null only if adjustment would create an invalid range (min >= max).
  */
-export function calculateExpandedRange(
+export function calculateAdjustedRange(
   value: number,
   currentMin: number,
   currentMax: number
 ): { min: number; max: number } | null {
-  // If value is within range, no expansion needed
-  if (value >= currentMin && value <= currentMax) {
-    return null;
-  }
-
   // Calculate distances to min and max
   const distanceToMin = Math.abs(value - currentMin);
   const distanceToMax = Math.abs(value - currentMax);
 
-  // Determine which boundary is closer
+  // Determine which boundary is closer (tie-break: adjust min)
   const adjustMin = distanceToMin <= distanceToMax;
 
+  let newMin = currentMin;
+  let newMax = currentMax;
+
   if (adjustMin) {
-    // Value is closer to min, adjust min to match value
-    return { min: value, max: currentMax };
+    newMin = value;
   } else {
-    // Value is closer to max, adjust max to match value
-    return { min: currentMin, max: value };
+    newMax = value;
   }
+
+  // Guard rail: prevent invalid range (min >= max)
+  if (newMin >= newMax) {
+    return null;
+  }
+
+  return { min: newMin, max: newMax };
 }
 
 /**
