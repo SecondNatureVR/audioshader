@@ -6,12 +6,16 @@ import {
   mapSliderToValue,
   reverseMapToNormalized,
   reverseMapValueToSlider,
+  resolveSliderToParamValue,
+  resolveParamToSliderValue,
+  formatParamValue,
   CurveMapper,
   DilationMapping,
   FadeMapping,
   EffectAmountMapping,
   EffectRateMapping,
   RotationSpeedMapping,
+  type CurveSettings,
 } from '../../src/mapping/CurveMapping';
 
 describe('CurveMapping', () => {
@@ -403,6 +407,267 @@ describe('CurveMapping', () => {
       expect(reset.min).toBe(0);
       expect(reset.max).toBe(1);
       expect(reset.power).toBe(0.25);
+    });
+  });
+
+  describe('resolveSliderToParamValue', () => {
+    describe('generic parameters (no special mapping)', () => {
+      it('should map slider to value using curve settings for spikiness', () => {
+        const settings: CurveSettings = { min: 0, max: 1, power: 1.0, type: 'power' };
+        expect(resolveSliderToParamValue('spikiness', 0, settings)).toBe(0);
+        expect(resolveSliderToParamValue('spikiness', 50, settings)).toBeCloseTo(0.5);
+        expect(resolveSliderToParamValue('spikiness', 100, settings)).toBe(1);
+      });
+
+      it('should map slider to value using curve settings for hue', () => {
+        const settings: CurveSettings = { min: 0, max: 360, power: 1.0, type: 'power' };
+        expect(resolveSliderToParamValue('hue', 50, settings)).toBe(180);
+      });
+
+      it('should apply power curve for non-linear parameters', () => {
+        const settings: CurveSettings = { min: 0, max: 1, power: 2.0, type: 'power' };
+        // 0.5^2 = 0.25
+        expect(resolveSliderToParamValue('unknownParam', 50, settings)).toBeCloseTo(0.25);
+      });
+    });
+
+    describe('special mappings at default settings', () => {
+      it('should use DilationMapping for expansionFactor at defaults', () => {
+        const settings: CurveSettings = { min: 0.5, max: 1.5, power: 1.0, type: 'power' };
+        // DilationMapping.sliderToFactor(100) = 1.0 (center)
+        expect(resolveSliderToParamValue('expansionFactor', 100, settings)).toBeCloseTo(1.0);
+        // DilationMapping.sliderToFactor(0) = 0.5
+        expect(resolveSliderToParamValue('expansionFactor', 0, settings)).toBeCloseTo(0.5);
+        // DilationMapping.sliderToFactor(200) = 1.5
+        expect(resolveSliderToParamValue('expansionFactor', 200, settings)).toBeCloseTo(1.5);
+      });
+
+      it('should use FadeMapping for fadeAmount at defaults', () => {
+        const settings: CurveSettings = { min: 0, max: 5, power: 0.333, type: 'power' };
+        expect(resolveSliderToParamValue('fadeAmount', 0, settings)).toBe(0);
+        expect(resolveSliderToParamValue('fadeAmount', 100, settings)).toBeCloseTo(5, 1);
+      });
+
+      it('should use EffectAmountMapping for noiseAmount at defaults', () => {
+        const settings: CurveSettings = { min: 0, max: 1, power: 0.25, type: 'power' };
+        expect(resolveSliderToParamValue('noiseAmount', 0, settings)).toBe(0);
+        expect(resolveSliderToParamValue('noiseAmount', 100, settings)).toBeCloseTo(1);
+      });
+
+      it('should use EffectAmountMapping for blurAmount at defaults', () => {
+        const settings: CurveSettings = { min: 0, max: 1, power: 0.25, type: 'power' };
+        expect(resolveSliderToParamValue('blurAmount', 50, settings)).toBeCloseTo(
+          EffectAmountMapping.sliderToAmount(50)
+        );
+      });
+
+      it('should use EffectRateMapping for noiseRate at defaults', () => {
+        const settings: CurveSettings = { min: 0, max: 10, power: 0.333, type: 'power' };
+        expect(resolveSliderToParamValue('noiseRate', 50, settings)).toBeCloseTo(
+          EffectRateMapping.sliderToRate(50)
+        );
+      });
+
+      it('should use EffectRateMapping for blurRate at defaults', () => {
+        const settings: CurveSettings = { min: 0, max: 10, power: 0.333, type: 'power' };
+        expect(resolveSliderToParamValue('blurRate', 50, settings)).toBeCloseTo(
+          EffectRateMapping.sliderToRate(50)
+        );
+      });
+
+      it('should use RotationSpeedMapping for autoRotationSpeed at defaults', () => {
+        const settings: CurveSettings = { min: -360, max: 360, power: 1.0, type: 'power' };
+        // slider 50 = speed 0 (center)
+        expect(resolveSliderToParamValue('autoRotationSpeed', 50, settings)).toBeCloseTo(0);
+        // slider 0 = speed -360
+        expect(resolveSliderToParamValue('autoRotationSpeed', 0, settings)).toBeCloseTo(-360);
+      });
+    });
+
+    describe('special mappings with adjusted range (falls back to generic)', () => {
+      it('should use generic mapping for expansionFactor with expanded range', () => {
+        const settings: CurveSettings = { min: 0, max: 3, power: 1.0, type: 'power' };
+        // Generic: slider 50 → 0 + 0.5 * 3 = 1.5
+        expect(resolveSliderToParamValue('expansionFactor', 50, settings)).toBeCloseTo(1.5);
+        expect(resolveSliderToParamValue('expansionFactor', 100, settings)).toBeCloseTo(3);
+      });
+
+      it('should use generic mapping for fadeAmount with expanded range', () => {
+        const settings: CurveSettings = { min: 0, max: 20, power: 0.333, type: 'power' };
+        // Not using FadeMapping since max != 5
+        expect(resolveSliderToParamValue('fadeAmount', 100, settings)).toBeCloseTo(20);
+      });
+
+      it('should use generic mapping for noiseAmount with expanded range', () => {
+        const settings: CurveSettings = { min: 0, max: 5, power: 0.25, type: 'power' };
+        // max changed from 1 → 5
+        expect(resolveSliderToParamValue('noiseAmount', 100, settings)).toBeCloseTo(5);
+      });
+
+      it('should use generic mapping for autoRotationSpeed with adjusted power', () => {
+        const settings: CurveSettings = { min: -360, max: 360, power: 2.0, type: 'power' };
+        // Power changed from 1.0 → 2.0
+        expect(resolveSliderToParamValue('autoRotationSpeed', 50, settings)).toBeCloseTo(
+          mapSliderToValue(50, settings)
+        );
+      });
+    });
+  });
+
+  describe('resolveParamToSliderValue', () => {
+    describe('generic parameters', () => {
+      it('should reverse map for spikiness', () => {
+        const settings: CurveSettings = { min: 0, max: 1, power: 1.0, type: 'power' };
+        expect(resolveParamToSliderValue('spikiness', 0.5, settings)).toBeCloseTo(50);
+      });
+
+      it('should reverse map for hue', () => {
+        const settings: CurveSettings = { min: 0, max: 360, power: 1.0, type: 'power' };
+        expect(resolveParamToSliderValue('hue', 180, settings)).toBeCloseTo(50);
+      });
+    });
+
+    describe('special mappings at default settings', () => {
+      it('should use DilationMapping for expansionFactor at defaults', () => {
+        const settings: CurveSettings = { min: 0.5, max: 1.5, power: 1.0, type: 'power' };
+        expect(resolveParamToSliderValue('expansionFactor', 1.0, settings)).toBeCloseTo(100);
+        expect(resolveParamToSliderValue('expansionFactor', 0.5, settings)).toBe(0);
+        expect(resolveParamToSliderValue('expansionFactor', 1.5, settings)).toBe(200);
+      });
+
+      it('should use FadeMapping for fadeAmount at defaults', () => {
+        const settings: CurveSettings = { min: 0, max: 5, power: 0.333, type: 'power' };
+        expect(resolveParamToSliderValue('fadeAmount', 0, settings)).toBe(0);
+        expect(resolveParamToSliderValue('fadeAmount', 5, settings)).toBeCloseTo(100);
+      });
+
+      it('should use EffectAmountMapping for blurAmount at defaults', () => {
+        const settings: CurveSettings = { min: 0, max: 1, power: 0.25, type: 'power' };
+        const val = 0.5;
+        expect(resolveParamToSliderValue('blurAmount', val, settings)).toBeCloseTo(
+          EffectAmountMapping.amountToSlider(val)
+        );
+      });
+
+      it('should use EffectRateMapping for noiseRate at defaults', () => {
+        const settings: CurveSettings = { min: 0, max: 10, power: 0.333, type: 'power' };
+        const val = 5;
+        expect(resolveParamToSliderValue('noiseRate', val, settings)).toBeCloseTo(
+          EffectRateMapping.rateToSlider(val)
+        );
+      });
+    });
+
+    describe('special mappings with adjusted range (falls back to generic)', () => {
+      it('should use generic mapping for expansionFactor with expanded range', () => {
+        const settings: CurveSettings = { min: 0, max: 3, power: 1.0, type: 'power' };
+        expect(resolveParamToSliderValue('expansionFactor', 1.5, settings)).toBeCloseTo(50);
+        expect(resolveParamToSliderValue('expansionFactor', 3, settings)).toBeCloseTo(100);
+      });
+
+      it('should use generic mapping for fadeAmount with expanded range', () => {
+        const settings: CurveSettings = { min: 0, max: 20, power: 0.333, type: 'power' };
+        expect(resolveParamToSliderValue('fadeAmount', 20, settings)).toBeCloseTo(100);
+      });
+    });
+
+    describe('round-trip consistency', () => {
+      const testParams: Array<{ name: string; settings: CurveSettings; sliderValues: number[] }> = [
+        {
+          name: 'spikiness',
+          settings: { min: 0, max: 1, power: 1.0, type: 'power' },
+          sliderValues: [0, 25, 50, 75, 100],
+        },
+        {
+          name: 'hue',
+          settings: { min: 0, max: 360, power: 1.0, type: 'power' },
+          sliderValues: [0, 25, 50, 75, 100],
+        },
+        {
+          name: 'noiseAmount',
+          settings: { min: 0, max: 1, power: 0.25, type: 'power' },
+          sliderValues: [0, 25, 50, 75, 100],
+        },
+        {
+          name: 'fadeAmount',
+          settings: { min: 0, max: 5, power: 0.333, type: 'power' },
+          sliderValues: [0, 25, 50, 75, 100],
+        },
+        {
+          name: 'autoRotationSpeed',
+          settings: { min: -360, max: 360, power: 1.0, type: 'power' },
+          sliderValues: [0, 25, 50, 75, 100],
+        },
+      ];
+
+      for (const { name, settings, sliderValues } of testParams) {
+        it(`should round-trip slider→value→slider for ${name} at default settings`, () => {
+          for (const sv of sliderValues) {
+            const value = resolveSliderToParamValue(name, sv, settings);
+            const back = resolveParamToSliderValue(name, value, settings);
+            expect(back).toBeCloseTo(sv, 0);
+          }
+        });
+      }
+
+      it('should round-trip for expansionFactor (0-200 slider) at default settings', () => {
+        const settings: CurveSettings = { min: 0.5, max: 1.5, power: 1.0, type: 'power' };
+        for (const sv of [0, 50, 100, 150, 200]) {
+          const value = resolveSliderToParamValue('expansionFactor', sv, settings);
+          const back = resolveParamToSliderValue('expansionFactor', value, settings);
+          expect(back).toBeCloseTo(sv, 0);
+        }
+      });
+
+      it('should round-trip after range adjustment', () => {
+        // noiseAmount with expanded max: 0 to 5
+        const settings: CurveSettings = { min: 0, max: 5, power: 0.25, type: 'power' };
+        for (const sv of [0, 25, 50, 75, 100]) {
+          const value = resolveSliderToParamValue('noiseAmount', sv, settings);
+          const back = resolveParamToSliderValue('noiseAmount', value, settings);
+          expect(back).toBeCloseTo(sv, 0);
+        }
+      });
+    });
+  });
+
+  describe('formatParamValue', () => {
+    it('should format hue as degrees (integer)', () => {
+      expect(formatParamValue('hue', 180)).toBe('180°');
+      expect(formatParamValue('hue', 45.6)).toBe('46°');
+    });
+
+    it('should format rotation as degrees (integer)', () => {
+      expect(formatParamValue('rotation', 90)).toBe('90°');
+    });
+
+    it('should format autoRotationSpeed as degrees (1 decimal)', () => {
+      expect(formatParamValue('autoRotationSpeed', 15)).toBe('15.0°');
+      expect(formatParamValue('autoRotationSpeed', 15.67)).toBe('15.7°');
+    });
+
+    it('should format expansionFactor with 4 decimals', () => {
+      expect(formatParamValue('expansionFactor', 1)).toBe('1.0000');
+      expect(formatParamValue('expansionFactor', 1.05)).toBe('1.0500');
+    });
+
+    it('should format fadeAmount with 3 decimals', () => {
+      expect(formatParamValue('fadeAmount', 0.5)).toBe('0.500');
+    });
+
+    it('should format hueShiftAmount with 3 decimals', () => {
+      expect(formatParamValue('hueShiftAmount', 0.1)).toBe('0.100');
+    });
+
+    it('should format spikeFrequency with 1 decimal', () => {
+      expect(formatParamValue('spikeFrequency', 6)).toBe('6.0');
+      expect(formatParamValue('spikeFrequency', 12.34)).toBe('12.3');
+    });
+
+    it('should format unknown params with 2 decimals (default)', () => {
+      expect(formatParamValue('spikiness', 0.5)).toBe('0.50');
+      expect(formatParamValue('scale', 0.75)).toBe('0.75');
+      expect(formatParamValue('fillSize', 0.123)).toBe('0.12');
     });
   });
 });

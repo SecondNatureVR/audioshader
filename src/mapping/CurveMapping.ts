@@ -334,6 +334,151 @@ export const EffectRateMapping = {
 };
 
 /**
+ * Registry of special parameter mappings and their default settings.
+ * When curve settings match these defaults, the special mapping function is used.
+ * When settings differ (user adjusted the range), the generic curve mapping is used instead.
+ */
+interface SpecialMappingEntry {
+  defaultMin: number;
+  defaultMax: number;
+  defaultPower: number;
+  sliderToValue: (sliderValue: number, settings: CurveSettings) => number;
+  valueToSlider: (value: number, settings: CurveSettings) => number;
+}
+
+function buildSpecialMappings(): Record<string, SpecialMappingEntry> {
+  return {
+    expansionFactor: {
+      defaultMin: DilationMapping.MIN,
+      defaultMax: DilationMapping.MAX,
+      defaultPower: 1.0,
+      sliderToValue: (s) => DilationMapping.sliderToFactor(s),
+      valueToSlider: (v) => DilationMapping.factorToSlider(v),
+    },
+    fadeAmount: {
+      defaultMin: 0,
+      defaultMax: 5,
+      defaultPower: 0.333,
+      sliderToValue: (s) => FadeMapping.sliderToAmount(s),
+      valueToSlider: (v) => FadeMapping.amountToSlider(v),
+    },
+    noiseAmount: {
+      defaultMin: 0,
+      defaultMax: 1,
+      defaultPower: 0.25,
+      sliderToValue: (s) => EffectAmountMapping.sliderToAmount(s),
+      valueToSlider: (v) => EffectAmountMapping.amountToSlider(v),
+    },
+    blurAmount: {
+      defaultMin: 0,
+      defaultMax: 1,
+      defaultPower: 0.25,
+      sliderToValue: (s) => EffectAmountMapping.sliderToAmount(s),
+      valueToSlider: (v) => EffectAmountMapping.amountToSlider(v),
+    },
+    noiseRate: {
+      defaultMin: 0,
+      defaultMax: 10,
+      defaultPower: 0.333,
+      sliderToValue: (s) => EffectRateMapping.sliderToRate(s),
+      valueToSlider: (v) => EffectRateMapping.rateToSlider(v),
+    },
+    blurRate: {
+      defaultMin: 0,
+      defaultMax: 10,
+      defaultPower: 0.333,
+      sliderToValue: (s) => EffectRateMapping.sliderToRate(s),
+      valueToSlider: (v) => EffectRateMapping.rateToSlider(v),
+    },
+    autoRotationSpeed: {
+      defaultMin: -360,
+      defaultMax: 360,
+      defaultPower: 1.0,
+      sliderToValue: (s, settings) => RotationSpeedMapping.sliderToSpeed(s, settings.min, settings.max),
+      valueToSlider: (v, settings) => RotationSpeedMapping.speedToSlider(v, settings.min, settings.max),
+    },
+  };
+}
+
+// Lazily initialize to avoid circular references with the mapping objects below
+let _specialMappings: Record<string, SpecialMappingEntry> | null = null;
+function getSpecialMappings(): Record<string, SpecialMappingEntry> {
+  _specialMappings ??= buildSpecialMappings();
+  return _specialMappings;
+}
+
+/**
+ * Check whether a parameter's current settings match its special mapping defaults.
+ * Returns true if the settings have been user-adjusted (differ from defaults).
+ */
+function hasAdjustedRange(paramName: string, settings: CurveSettings): boolean {
+  const special = getSpecialMappings()[paramName];
+  if (special === undefined) return false;
+  return (
+    settings.min !== special.defaultMin ||
+    settings.max !== special.defaultMax ||
+    settings.power !== special.defaultPower
+  );
+}
+
+/**
+ * Convert a slider value (0-100) to the actual parameter value,
+ * using special mappings when settings match defaults, or generic curve mapping otherwise.
+ * This is a pure function — no side effects, no class instance needed.
+ */
+export function resolveSliderToParamValue(
+  paramName: string,
+  sliderValue: number,
+  settings: CurveSettings
+): number {
+  const special = getSpecialMappings()[paramName];
+  if (special !== undefined && !hasAdjustedRange(paramName, settings)) {
+    return special.sliderToValue(sliderValue, settings);
+  }
+  return mapSliderToValue(sliderValue, settings);
+}
+
+/**
+ * Convert a parameter value to slider position (0-100),
+ * using special mappings when settings match defaults, or generic curve mapping otherwise.
+ * This is a pure function — no side effects, no class instance needed.
+ */
+export function resolveParamToSliderValue(
+  paramName: string,
+  paramValue: number,
+  settings: CurveSettings
+): number {
+  const special = getSpecialMappings()[paramName];
+  if (special !== undefined && !hasAdjustedRange(paramName, settings)) {
+    return special.valueToSlider(paramValue, settings);
+  }
+  return reverseMapValueToSlider(paramValue, settings);
+}
+
+/**
+ * Format a parameter value for display based on its type.
+ * Pure function — extracted from UIController for testability.
+ */
+export function formatParamValue(paramName: string, value: number): string {
+  switch (paramName) {
+    case 'hue':
+    case 'rotation':
+      return `${Math.round(value)}°`;
+    case 'autoRotationSpeed':
+      return `${value.toFixed(1)}°`;
+    case 'expansionFactor':
+      return value.toFixed(4);
+    case 'fadeAmount':
+    case 'hueShiftAmount':
+      return value.toFixed(3);
+    case 'spikeFrequency':
+      return value.toFixed(1);
+    default:
+      return value.toFixed(2);
+  }
+}
+
+/**
  * Auto-rotation speed mapping
  */
 export const RotationSpeedMapping = {

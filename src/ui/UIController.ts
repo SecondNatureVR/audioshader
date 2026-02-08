@@ -7,13 +7,9 @@ import type { VisualParams, AudioMetrics, BlendMode } from '../types';
 import {
   CurveMapper,
   getParamDefaultSettings,
-  mapSliderToValue,
-  reverseMapValueToSlider,
-  DilationMapping,
-  FadeMapping,
-  EffectAmountMapping,
-  EffectRateMapping,
-  RotationSpeedMapping,
+  resolveSliderToParamValue,
+  resolveParamToSliderValue,
+  formatParamValue as formatParamValueFn,
   type CurveSettings,
 } from '../mapping/CurveMapping';
 import type { App } from '../App';
@@ -453,126 +449,29 @@ export class UIController {
   }
 
   /**
-   * Convert slider value to parameter value using curve mapping
+   * Convert slider value to parameter value using curve mapping.
+   * Delegates to the pure resolveSliderToParamValue function.
    */
   private sliderToParamValue(paramName: string, sliderValue: number): number {
     const settings = this.curveMapper.getSettings(paramName);
-
-    // Special mappings for certain parameters
-    switch (paramName) {
-      case 'expansionFactor':
-        // Use curve settings if they differ from DilationMapping defaults (allows range expansion)
-        // Otherwise fall back to DilationMapping for backward compatibility
-        if (settings.min !== DilationMapping.MIN || settings.max !== DilationMapping.MAX) {
-          return mapSliderToValue(sliderValue, settings);
-        }
-        return DilationMapping.sliderToFactor(sliderValue);
-      case 'fadeAmount':
-        // Use curve settings if they differ from FadeMapping defaults (allows range expansion)
-        // Default: min=0, max=5, power=0.333
-        if (settings.min !== 0 || settings.max !== 5 || settings.power !== 0.333) {
-          return mapSliderToValue(sliderValue, settings);
-        }
-        return FadeMapping.sliderToAmount(sliderValue);
-      case 'noiseAmount':
-      case 'blurAmount':
-        // Use curve settings if they differ from EffectAmountMapping defaults (allows range expansion)
-        // Default: min=0, max=1, power=0.25
-        if (settings.min !== 0 || settings.max !== 1 || settings.power !== 0.25) {
-          return mapSliderToValue(sliderValue, settings);
-        }
-        return EffectAmountMapping.sliderToAmount(sliderValue);
-      case 'noiseRate':
-      case 'blurRate':
-        // Use curve settings if they differ from EffectRateMapping defaults (allows range expansion)
-        // Default: min=0, max=10, power=0.333
-        if (settings.min !== 0 || settings.max !== 10 || settings.power !== 0.333) {
-          return mapSliderToValue(sliderValue, settings);
-        }
-        return EffectRateMapping.sliderToRate(sliderValue);
-      case 'autoRotationSpeed':
-        // Use curve settings if they differ from RotationSpeedMapping defaults (allows range expansion)
-        // Default: min=-360, max=360, power=1.0
-        // RotationSpeedMapping uses default params, so we need to pass them explicitly
-        if (settings.min !== -360 || settings.max !== 360 || settings.power !== 1.0) {
-          return mapSliderToValue(sliderValue, settings);
-        }
-        return RotationSpeedMapping.sliderToSpeed(sliderValue, settings.min, settings.max);
-      default:
-        return mapSliderToValue(sliderValue, settings);
-    }
+    return resolveSliderToParamValue(paramName, sliderValue, settings);
   }
 
   /**
-   * Convert parameter value to slider value using curve mapping
+   * Convert parameter value to slider value using curve mapping.
+   * Delegates to the pure resolveParamToSliderValue function.
    */
   private paramToSliderValue(paramName: string, paramValue: number): number {
     const settings = this.curveMapper.getSettings(paramName);
-
-    switch (paramName) {
-      case 'expansionFactor':
-        // Use curve settings if they differ from DilationMapping defaults (allows range expansion)
-        // Otherwise fall back to DilationMapping for backward compatibility
-        if (settings.min !== DilationMapping.MIN || settings.max !== DilationMapping.MAX) {
-          return reverseMapValueToSlider(paramValue, settings);
-        }
-        return DilationMapping.factorToSlider(paramValue);
-      case 'fadeAmount':
-        // Use curve settings if they differ from FadeMapping defaults (allows range expansion)
-        // Default: min=0, max=5, power=0.333
-        if (settings.min !== 0 || settings.max !== 5 || settings.power !== 0.333) {
-          return reverseMapValueToSlider(paramValue, settings);
-        }
-        return FadeMapping.amountToSlider(paramValue);
-      case 'noiseAmount':
-      case 'blurAmount':
-        // Use curve settings if they differ from EffectAmountMapping defaults (allows range expansion)
-        // Default: min=0, max=1, power=0.25
-        if (settings.min !== 0 || settings.max !== 1 || settings.power !== 0.25) {
-          return reverseMapValueToSlider(paramValue, settings);
-        }
-        return EffectAmountMapping.amountToSlider(paramValue);
-      case 'noiseRate':
-      case 'blurRate':
-        // Use curve settings if they differ from EffectRateMapping defaults (allows range expansion)
-        // Default: min=0, max=10, power=0.333
-        if (settings.min !== 0 || settings.max !== 10 || settings.power !== 0.333) {
-          return reverseMapValueToSlider(paramValue, settings);
-        }
-        return EffectRateMapping.rateToSlider(paramValue);
-      case 'autoRotationSpeed':
-        // Use curve settings if they differ from RotationSpeedMapping defaults (allows range expansion)
-        // Default: min=-360, max=360, power=1.0
-        // RotationSpeedMapping uses default params, so we need to pass them explicitly
-        if (settings.min !== -360 || settings.max !== 360 || settings.power !== 1.0) {
-          return reverseMapValueToSlider(paramValue, settings);
-        }
-        return RotationSpeedMapping.speedToSlider(paramValue, settings.min, settings.max);
-      default:
-        return reverseMapValueToSlider(paramValue, settings);
-    }
+    return resolveParamToSliderValue(paramName, paramValue, settings);
   }
 
   /**
-   * Format parameter value for display (used by curve editor)
+   * Format parameter value for display (used by curve editor).
+   * Delegates to the pure formatParamValue function.
    */
   private formatParamValue(paramName: string, value: number): string {
-    switch (paramName) {
-      case 'hue':
-      case 'rotation':
-        return `${Math.round(value)}°`;
-      case 'autoRotationSpeed':
-        return `${value.toFixed(1)}°`;
-      case 'expansionFactor':
-        return value.toFixed(4);
-      case 'fadeAmount':
-      case 'hueShiftAmount':
-        return value.toFixed(3);
-      case 'spikeFrequency':
-        return value.toFixed(1);
-      default:
-        return value.toFixed(2);
-    }
+    return formatParamValueFn(paramName, value);
   }
 
   /**
@@ -581,29 +480,7 @@ export class UIController {
   private updateValueDisplay(paramName: string, value: number): void {
     const display = this.valueDisplays.get(paramName);
     if (display === null || display === undefined) return;
-
-    // Format based on parameter type
-    switch (paramName) {
-      case 'hue':
-      case 'rotation':
-        display.textContent = `${Math.round(value)}°`;
-        break;
-      case 'autoRotationSpeed':
-        display.textContent = `${value.toFixed(1)}°`;
-        break;
-      case 'expansionFactor':
-        display.textContent = value.toFixed(4);
-        break;
-      case 'fadeAmount':
-      case 'hueShiftAmount':
-        display.textContent = value.toFixed(3);
-        break;
-      case 'spikeFrequency':
-        display.textContent = value.toFixed(1);
-        break;
-      default:
-        display.textContent = value.toFixed(2);
-    }
+    display.textContent = formatParamValueFn(paramName, value);
   }
 
   /**
