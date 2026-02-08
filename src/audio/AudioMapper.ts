@@ -427,16 +427,16 @@ export class AudioMapper {
         return slot.muted !== true;
       };
 
-      // Sum contributions from included slots
+      // Sum delta contributions: slot output is absolute; convert to offset from base so modulation stacks correctly
       let totalModulation = 0;
       for (let i = 0; i < mod.slots.length; i++) {
         const slot = mod.slots[i];
         if (slot !== undefined && includeSlot(slot, i)) {
-          totalModulation += this.computeSlotValue(param, i, slot, metrics);
+          const slotAbsolute = this.computeSlotValue(param, i, slot, metrics);
+          totalModulation += slotAbsolute - baseValue;
         }
       }
 
-      // Add modulation to base and clamp
       const finalValue = Math.max(range.min, Math.min(range.max, baseValue + totalModulation));
       result[param] = finalValue;
     }
@@ -487,6 +487,20 @@ export class AudioMapper {
     // 6. Map to parameter-space range
     const rangeSpan = slot.rangeMax - slot.rangeMin;
     return slot.rangeMin + transformed * rangeSpan;
+  }
+
+  /**
+   * Get the current computed output of a single slot (absolute value in parameter space).
+   * Used by UI for live value bars.
+   */
+  getSlotOutput(
+    param: keyof VisualParams,
+    slotIndex: number,
+    metrics: AudioMetrics,
+  ): number {
+    const slot = this.getSlot(param, slotIndex);
+    if (slot === undefined) return PARAM_RANGES[param].min;
+    return this.computeSlotValue(param, slotIndex, slot, metrics);
   }
 
   // ── utilities ────────────────────────────────────────────────────

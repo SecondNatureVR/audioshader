@@ -61,6 +61,8 @@ export class UIController {
   private modulationDrawer: HTMLElement | null = null;
   private currentModParam: string | null = null;
   private modLiveUpdateId: number | null = null;
+  private modLiveValueHistory: number[] = [];
+  private static readonly MOD_LIVE_HISTORY_MAX = 120; // ~2s at 60fps
   private radarChart: AudioRadarChart | null = null;
   private activeMappingsCounter = 0;
   private currentCurveControlGroup: HTMLElement | null = null;
@@ -1765,6 +1767,7 @@ export class UIController {
         <span class="mod-route-arrow">&rarr;</span>
         <span class="mod-route-target">${targetLabel}</span>
         <span class="mod-route-amount">${amountPct}%</span>
+        <div class="mod-route-bar" title="Live value"><div class="mod-route-bar-fill"></div></div>
         <button type="button" class="mod-route-remove" data-param="${param}" data-slot-index="${slotIndex}" title="Remove route">&times;</button>
       </div>`;
     }).join('');
@@ -1970,9 +1973,11 @@ export class UIController {
       <div id="mod-slots-container">${slotCards}</div>
       <button type="button" id="mod-add-slot" class="curve-btn-action" style="font-size:9px;padding:4px 8px;margin-top:4px;margin-bottom:6px;">+ Add Source</button>
       <div class="mod-live-viz" style="margin-bottom:6px;">
-        <label style="font-size:8px;color:#666;margin-bottom:2px;display:block;">Live</label>
+        <label style="font-size:8px;color:#666;margin-bottom:2px;display:block;">Live (computed value)</label>
         <div id="mod-live-bar-container" style="width:100%;height:12px;background:#111;border-radius:3px;overflow:hidden;position:relative;">
           <div id="mod-live-range" style="position:absolute;top:0;height:100%;background:rgba(0,170,255,0.1);border-left:1px solid rgba(0,170,255,0.3);border-right:1px solid rgba(0,170,255,0.3);"></div>
+          <div id="mod-live-peak-min" style="position:absolute;top:0;width:2px;height:100%;background:rgba(255,180,80,0.7);pointer-events:none;"></div>
+          <div id="mod-live-peak-max" style="position:absolute;top:0;width:2px;height:100%;background:rgba(255,180,80,0.7);pointer-events:none;"></div>
           <div id="mod-live-marker" style="position:absolute;top:0;width:2px;height:100%;background:#0af;"></div>
         </div>
       </div>
@@ -2314,6 +2319,7 @@ export class UIController {
     drawer.classList.remove('active');
     drawer.style.display = 'none';
     this.currentModParam = null;
+    this.modLiveValueHistory = [];
     this.stopModLiveUpdate();
   }
 
@@ -2325,9 +2331,31 @@ export class UIController {
     const update = (): void => {
       if (this.currentModParam === null) return;
       this.updateModLiveViz();
+      this.updateRouteLiveBars();
       this.modLiveUpdateId = window.requestAnimationFrame(update);
     };
     this.modLiveUpdateId = window.requestAnimationFrame(update);
+  }
+
+  /**
+   * Update the mini live value bars on each route row in the M-panel.
+   * Uses current metrics and getSlotOutput for each row's param/slot.
+   */
+  private updateRouteLiveBars(): void {
+    const metrics = this.audioAnalyzer?.getMetrics?.() ?? null;
+    if (metrics === null) return;
+    const audioMapper = this.app.getAudioMapper();
+    document.querySelectorAll<HTMLElement>('.mod-route-row').forEach((row) => {
+      const paramName = row.dataset['param'] as keyof VisualParams | undefined;
+      const slotIndex = parseInt(row.dataset['slotIndex'] ?? '0', 10);
+      if (paramName === undefined) return;
+      const range = PARAM_RANGES[paramName];
+      const value = audioMapper.getSlotOutput(paramName, slotIndex, metrics);
+      const span = range.max - range.min;
+      const norm = span > 0 ? Math.max(0, Math.min(1, (value - range.min) / span)) : 0;
+      const fill = row.querySelector<HTMLElement>('.mod-route-bar-fill');
+      if (fill !== null) fill.style.width = `${norm * 100}%`;
+    });
   }
 
   /**
@@ -2350,22 +2378,10 @@ export class UIController {
     const param = this.currentModParam as keyof VisualParams;
     const slot = audioMapper.getPrimarySlot(param);
     const range = PARAM_RANGES[param];
-
-    // Get current metric value from AudioAnalyzer
     const metrics = this.audioAnalyzer?.getMetrics?.() ?? null;
-    const metricValue = metrics !== null ? (metrics[slot.source] ?? 0) : 0;
 
-    const marker = document.getElementById('mod-live-marker');
     const rangeDiv = document.getElementById('mod-live-range');
-
-    if (marker !== null) {
-      // Map metric value (0-1) to percentage
-      const pct = Math.max(0, Math.min(100, metricValue * 100));
-      marker.style.left = `${pct}%`;
-    }
-
     if (rangeDiv !== null) {
-      // Show the output range relative to the parameter's full range
       const fullSpan = range.max - range.min;
       if (fullSpan > 0) {
         const leftPct = ((slot.rangeMin - range.min) / fullSpan) * 100;
@@ -2374,6 +2390,29 @@ export class UIController {
         rangeDiv.style.width = `${Math.min(100, rightPct - leftPct)}%`;
       }
     }
+
+    if (metrics === null) return;
+
+    const value = audioMapper.getSlotOutput(param, 0, metrics);
+    const fullSpan = range.max - range.min;
+    const normPct = fullSpan > 0 ? Math.max(0, Math.min(100, ((value - range.min) / fullSpan) * 100)) : 0;
+
+    this.modLiveValueHistory.push(value);
+    if (this.modLiveValueHistory.length > UIController.MOD_LIVE_HISTORY_MAX) {
+      this.modLiveValueHistory = this.modLiveValueHistory.slice(-UIController.MOD_LIVE_HISTORY_MAX);
+    }
+    const hist = this.modLiveValueHistory;
+    const peakMin = hist.length > 0 ? Math.min(...hist) : value;
+    const peakMax = hist.length > 0 ? Math.max(...hist) : value;
+    const peakMinPct = fullSpan > 0 ? Math.max(0, Math.min(100, ((peakMin - range.min) / fullSpan) * 100)) : 0;
+    const peakMaxPct = fullSpan > 0 ? Math.max(0, Math.min(100, ((peakMax - range.min) / fullSpan) * 100)) : 0;
+
+    const marker = document.getElementById('mod-live-marker');
+    if (marker !== null) marker.style.left = `${normPct}%`;
+    const peakMinEl = document.getElementById('mod-live-peak-min');
+    if (peakMinEl !== null) peakMinEl.style.left = `${peakMinPct}%`;
+    const peakMaxEl = document.getElementById('mod-live-peak-max');
+    if (peakMaxEl !== null) peakMaxEl.style.left = `${peakMaxPct}%`;
   }
 
   // ── Curve editor ───────────────────────────────────────────────

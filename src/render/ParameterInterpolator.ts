@@ -28,7 +28,8 @@ interface SpringInterpolationState {
  * A duration of 0 means the parameter snaps instantly (no interpolation).
  */
 const PARAM_DURATION_OVERRIDES: Record<string, number> = {
-  emanationRate: 0,  // Timing parameter — snaps instantly
+  emanationRate: 0,       // Timing parameter — snaps instantly
+  expansionFactor: 0,     // Dilation — snap so modulation is responsive
 };
 
 export class ParameterInterpolator {

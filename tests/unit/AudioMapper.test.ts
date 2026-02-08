@@ -441,8 +441,8 @@ describe('AudioMapper class', () => {
       baseParams.emanationRate = 10;
 
       const result = mapper.applyMappings(baseParams, makeMetrics({ bass: 0.5 }));
-      // 0.5 * 100 = 50 + base 10 = 60, clamped to [2, 200]
-      expect(result.emanationRate).toBeCloseTo(60, 1);
+      // Delta mode: slot output 0.5*100 = 50, delta 50-10 = 40, final 10+40 = 50
+      expect(result.emanationRate).toBeCloseTo(50, 1);
     });
   });
 
@@ -794,6 +794,26 @@ describe('AudioMapper class', () => {
 
     it('getSlot should return undefined for invalid index', () => {
       expect(mapper.getSlot('hue', 999)).toBeUndefined();
+    });
+
+    it('getSlotOutput should return slot value in param range', () => {
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [{
+          ...createDefaultSlot('rms', 'scale'),
+          amount: 1,
+          smoothing: 0,
+          rangeMin: 0.2,
+          rangeMax: 1.5,
+        }],
+      });
+      const out = mapper.getSlotOutput('scale', 0, makeMetrics({ rms: 0.5 }));
+      expect(out).toBeGreaterThanOrEqual(0.2);
+      expect(out).toBeLessThanOrEqual(1.5);
+      const outZero = mapper.getSlotOutput('scale', 0, makeMetrics({ rms: 0 }));
+      expect(outZero).toBeCloseTo(0.2, 2);
+      const outOne = mapper.getSlotOutput('scale', 0, makeMetrics({ rms: 1 }));
+      expect(outOne).toBeCloseTo(1.5, 2);
     });
 
     it('getActiveRoutes should return only enabled params with slots', () => {

@@ -111,6 +111,8 @@ export function randomizeParams(): VisualParams {
   params.hueShiftAmount = Math.random() * 0.5;
   params.fadeAmount = Math.random() * 5;
   params.autoRotationSpeed = (Math.random() - 0.5) * 360;
+  // Dilation (expansionFactor): use curve-mapping range 0.5–1.5 for presets
+  params.expansionFactor = 0.8 + Math.random() * 0.4;
 
   // Randomize timing
   params.emanationRate = 2 + Math.random() * 198;

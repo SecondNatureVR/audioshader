@@ -895,6 +895,21 @@ input[type="range"]::-moz-range-thumb {
     text-align: right;
 }
 
+.mod-route-bar {
+    width: 48px;
+    height: 6px;
+    background: #111;
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.mod-route-bar-fill {
+    height: 100%;
+    background: rgba(0, 170, 255, 0.7);
+    border-radius: 2px;
+    transition: width 0.05s ease-out;
+}
+
 .mod-route-remove {
     background: none;
     border: none;

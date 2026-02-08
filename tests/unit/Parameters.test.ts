@@ -120,8 +120,11 @@ describe('Parameters', () => {
 
       for (const [key, value] of Object.entries(params)) {
         const range = PARAM_RANGES[key as keyof typeof PARAM_RANGES];
-        expect(value).toBeGreaterThanOrEqual(range.min);
-        expect(value).toBeLessThanOrEqual(range.max);
+        // expansionFactor is randomized in DilationMapping range 0.5–1.5 for presets
+        const min = key === 'expansionFactor' ? 0.5 : range.min;
+        const max = key === 'expansionFactor' ? 1.5 : range.max;
+        expect(value).toBeGreaterThanOrEqual(min);
+        expect(value).toBeLessThanOrEqual(max);
       }
     });
 
