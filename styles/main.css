@@ -728,6 +728,67 @@ input[type="range"]::-moz-range-thumb {
     color: #0af;
 }
 
+/* Modulation Config Drawer */
+.modulation-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: auto;
+    max-height: 450px;
+    z-index: 10001;
+    pointer-events: none;
+    transform: translateX(-100%);
+    visibility: hidden;
+    display: none;
+}
+
+.modulation-drawer.active {
+    transform: translateX(0);
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.modulation-drawer-content {
+    background: rgba(20, 20, 20, 0.98);
+    border-right: 1px solid #444;
+    height: 100%;
+    max-height: 100%;
+    padding: 10px;
+    overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+    border-radius: 0 6px 6px 0;
+}
+
+.modulation-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #333;
+}
+
+.modulation-drawer-title {
+    font-size: 11px;
+    font-weight: bold;
+    color: #0af;
+}
+
+.modulation-drawer-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+}
+
+.modulation-drawer-close:hover {
+    color: #fff;
+}
+
 /* Curve Editor Drawer - slides out from left (no animation) */
 .curve-editor-drawer {
     position: fixed;

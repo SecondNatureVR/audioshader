@@ -59,6 +59,91 @@
         </div>
     </div>
 
+    <!-- Modulation Config Drawer -->
+    <div id="modulation-drawer" class="modulation-drawer">
+        <div class="modulation-drawer-content">
+            <div class="modulation-drawer-header">
+                <div class="modulation-drawer-title" id="modulation-drawer-title">Audio Mod</div>
+                <button class="modulation-drawer-close" id="modulation-drawer-close" title="Close">×</button>
+            </div>
+
+            <!-- Enable toggle -->
+            <div class="mod-row" style="margin-bottom: 8px;">
+                <label style="font-size: 9px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" id="mod-enabled" style="cursor: pointer;"> Enabled
+                </label>
+            </div>
+
+            <!-- Source selector -->
+            <div class="control-group" style="margin-bottom: 6px;">
+                <label style="font-size: 9px;">Source</label>
+                <select id="mod-source" style="width: 100%; padding: 3px 6px; font-size: 9px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
+                </select>
+            </div>
+
+            <!-- Amount slider -->
+            <div class="control-group" style="margin-bottom: 6px;">
+                <label style="font-size: 9px;">Amount</label>
+                <div class="control-row">
+                    <input type="range" id="mod-amount" min="0" max="100" step="1" value="50">
+                    <span class="value" id="mod-amount-value" contenteditable="true">50%</span>
+                </div>
+            </div>
+
+            <!-- Smoothing slider -->
+            <div class="control-group" style="margin-bottom: 6px;">
+                <label style="font-size: 9px;">Smoothing</label>
+                <div class="control-row">
+                    <input type="range" id="mod-smoothing" min="0" max="99" step="1" value="50">
+                    <span class="value" id="mod-smoothing-value" contenteditable="true">50%</span>
+                </div>
+            </div>
+
+            <!-- Response curve slider -->
+            <div class="control-group" style="margin-bottom: 6px;">
+                <label style="font-size: 9px;">Curve</label>
+                <div class="control-row">
+                    <input type="range" id="mod-curve" min="1" max="50" step="1" value="10">
+                    <span class="value" id="mod-curve-value" contenteditable="true">1.0</span>
+                </div>
+            </div>
+
+            <!-- Invert toggle -->
+            <div class="mod-row" style="margin-bottom: 6px;">
+                <label style="font-size: 9px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" id="mod-invert" style="cursor: pointer;"> Invert
+                </label>
+            </div>
+
+            <!-- Range Min/Max -->
+            <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                <div class="control-group" style="flex: 1; margin-bottom: 0;">
+                    <label style="font-size: 9px;">Range Min</label>
+                    <input type="number" id="mod-range-min" step="any" value="0" style="width: 100%; padding: 3px 6px; font-size: 9px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
+                </div>
+                <div class="control-group" style="flex: 1; margin-bottom: 0;">
+                    <label style="font-size: 9px;">Range Max</label>
+                    <input type="number" id="mod-range-max" step="any" value="1" style="width: 100%; padding: 3px 6px; font-size: 9px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
+                </div>
+            </div>
+
+            <!-- Live visualization bar -->
+            <div class="mod-live-viz" style="margin-bottom: 6px;">
+                <label style="font-size: 8px; color: #666; margin-bottom: 2px; display: block;">Live</label>
+                <div id="mod-live-bar-container" style="width: 100%; height: 12px; background: #111; border-radius: 3px; overflow: hidden; position: relative;">
+                    <div id="mod-live-range" style="position: absolute; top: 0; height: 100%; background: rgba(0,170,255,0.1); border-left: 1px solid rgba(0,170,255,0.3); border-right: 1px solid rgba(0,170,255,0.3);"></div>
+                    <div id="mod-live-marker" style="position: absolute; top: 0; width: 2px; height: 100%; background: #0af;"></div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display: flex; gap: 6px; justify-content: flex-start;">
+                <button class="curve-btn-action" id="mod-reset" style="font-size: 9px; padding: 4px 8px;">Reset</button>
+                <button class="curve-btn-action" id="mod-randomize" style="font-size: 9px; padding: 4px 8px;" title="Randomize modulation values">🎲</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Load GIF.js library -->
     <script src="vendor/gif.js"></script>
 

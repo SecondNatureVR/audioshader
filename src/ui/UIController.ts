@@ -14,7 +14,8 @@ import {
 } from '../mapping/CurveMapping';
 import type { App } from '../App';
 import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
-import { AudioMapper, ALL_MAPPABLE_PARAMS } from '../audio/AudioMapper';
+import { AudioMapper, ALL_MAPPABLE_PARAMS, createDefaultSlot, DEFAULT_AUDIO_SOURCES } from '../audio/AudioMapper';
+import { PARAM_RANGES } from '../render/Parameters';
 import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateAdjustedRange } from './valueUtils';
@@ -56,6 +57,9 @@ export class UIController {
   private devToolbox: HTMLElement | null = null;
   private hotkeyLegend: HTMLElement | null = null;
   private curveEditorDrawer: HTMLElement | null = null;
+  private modulationDrawer: HTMLElement | null = null;
+  private currentModParam: string | null = null;
+  private modLiveUpdateId: number | null = null;
   private currentCurveControlGroup: HTMLElement | null = null;
 
   // Slider references
@@ -110,6 +114,7 @@ export class UIController {
     this.setupJiggleControls();
     this.setupAudioControls();
     this.setupCurveEditor();
+    this.setupModulationDrawer();
     this.setupCollapsibleSections();
     this.setupRecorders();
     this.setupKeyboardShortcuts();
@@ -129,6 +134,7 @@ export class UIController {
     this.devToolbox = document.getElementById('dev-toolbox');
     this.hotkeyLegend = document.getElementById('hotkey-legend');
     this.curveEditorDrawer = document.getElementById('curve-editor-drawer');
+    this.modulationDrawer = document.getElementById('modulation-drawer');
   }
 
   /**
@@ -1494,20 +1500,10 @@ export class UIController {
   }
 
   /**
-   * Handle audio toggle button click.
-   * For now, toggles the audio mapping enabled/disabled.
-   * Phase 3 will open a modulation drawer instead.
+   * Handle audio toggle button click — opens the modulation drawer.
    */
   private handleAudioToggle(paramName: string): void {
-    const audioMapper = this.app.getAudioMapper();
-    const param = paramName as keyof VisualParams;
-    const mod = audioMapper.getModulation(param);
-    const newEnabled = !(mod?.enabled ?? false);
-
-    this.app.updateAudioModulation(param, { enabled: newEnabled });
-
-    // Update button visual state across all instances
-    this.updateAudioButtonState(paramName, newEnabled);
+    this.openModulationDrawer(paramName);
   }
 
   /**
@@ -1542,6 +1538,328 @@ export class UIController {
     for (const paramName of ALL_MAPPABLE_PARAMS) {
       const mod = audioMapper.getModulation(paramName);
       this.updateAudioButtonState(paramName, mod?.enabled ?? false);
+    }
+  }
+
+  // ── Modulation drawer ───────────────────────────────────────────
+
+  /**
+   * Setup the modulation config drawer controls
+   */
+  private setupModulationDrawer(): void {
+    const drawer = this.modulationDrawer;
+    if (drawer === null) return;
+
+    const closeBtn = document.getElementById('modulation-drawer-close');
+    const enabledCheck = document.getElementById('mod-enabled') as HTMLInputElement | null;
+    const sourceSelect = document.getElementById('mod-source') as HTMLSelectElement | null;
+    const amountSlider = document.getElementById('mod-amount') as HTMLInputElement | null;
+    const amountValue = document.getElementById('mod-amount-value');
+    const smoothingSlider = document.getElementById('mod-smoothing') as HTMLInputElement | null;
+    const smoothingValue = document.getElementById('mod-smoothing-value');
+    const curveSlider = document.getElementById('mod-curve') as HTMLInputElement | null;
+    const curveValue = document.getElementById('mod-curve-value');
+    const invertCheck = document.getElementById('mod-invert') as HTMLInputElement | null;
+    const rangeMinInput = document.getElementById('mod-range-min') as HTMLInputElement | null;
+    const rangeMaxInput = document.getElementById('mod-range-max') as HTMLInputElement | null;
+    const resetBtn = document.getElementById('mod-reset');
+    const randomizeBtn = document.getElementById('mod-randomize');
+
+    // Populate source dropdown with all 15 metrics
+    if (sourceSelect !== null) {
+      const metrics = AudioMapper.getAvailableMetrics();
+      sourceSelect.innerHTML = metrics.map((m) =>
+        `<option value="${m}">${AudioMapper.getMetricLabel(m)}</option>`
+      ).join('');
+    }
+
+    // Close handler
+    const closeModDrawer = (): void => {
+      this.closeModulationDrawer();
+    };
+
+    closeBtn?.addEventListener('click', closeModDrawer);
+
+    // Helper to get the current slot and update it
+    const updateSlot = (partial: Partial<import('../types').ModulationSlot>): void => {
+      if (this.currentModParam === null) return;
+      const audioMapper = this.app.getAudioMapper();
+      audioMapper.updatePrimarySlot(this.currentModParam as keyof VisualParams, partial);
+    };
+
+    // Enabled toggle
+    enabledCheck?.addEventListener('change', () => {
+      if (this.currentModParam === null) return;
+      const newEnabled = enabledCheck.checked;
+      this.app.updateAudioModulation(this.currentModParam as keyof VisualParams, { enabled: newEnabled });
+      this.updateAudioButtonState(this.currentModParam, newEnabled);
+    });
+
+    // Source selector
+    sourceSelect?.addEventListener('change', () => {
+      updateSlot({ source: sourceSelect.value as keyof AudioMetrics });
+    });
+
+    // Amount slider (0-100 → 0-1)
+    amountSlider?.addEventListener('input', () => {
+      const amount = parseFloat(amountSlider.value) / 100;
+      updateSlot({ amount });
+      if (amountValue !== null) {
+        amountValue.textContent = `${Math.round(amount * 100)}%`;
+      }
+    });
+
+    // Smoothing slider (0-99 → 0-0.99)
+    smoothingSlider?.addEventListener('input', () => {
+      const smoothing = parseFloat(smoothingSlider.value) / 100;
+      updateSlot({ smoothing });
+      if (smoothingValue !== null) {
+        smoothingValue.textContent = `${Math.round(smoothing * 100)}%`;
+      }
+    });
+
+    // Curve slider (1-50 → 0.1-5.0)
+    curveSlider?.addEventListener('input', () => {
+      const curve = parseFloat(curveSlider.value) / 10;
+      updateSlot({ curve });
+      if (curveValue !== null) {
+        curveValue.textContent = curve.toFixed(1);
+      }
+    });
+
+    // Invert toggle
+    invertCheck?.addEventListener('change', () => {
+      updateSlot({ invert: invertCheck.checked });
+    });
+
+    // Range min/max
+    rangeMinInput?.addEventListener('change', () => {
+      const val = parseFloat(rangeMinInput.value);
+      if (!isNaN(val)) {
+        updateSlot({ rangeMin: val });
+      }
+    });
+
+    rangeMaxInput?.addEventListener('change', () => {
+      const val = parseFloat(rangeMaxInput.value);
+      if (!isNaN(val)) {
+        updateSlot({ rangeMax: val });
+      }
+    });
+
+    // Reset button
+    resetBtn?.addEventListener('click', () => {
+      if (this.currentModParam === null) return;
+      const param = this.currentModParam as keyof VisualParams;
+      const audioMapper = this.app.getAudioMapper();
+      const defaultSource = (DEFAULT_AUDIO_SOURCES as Record<string, string>)[param] ?? 'rms';
+      const defaultSlot = createDefaultSlot(defaultSource as keyof AudioMetrics, param);
+      audioMapper.updatePrimarySlot(param, defaultSlot);
+      this.app.updateAudioModulation(param, { enabled: false });
+      this.updateAudioButtonState(this.currentModParam, false);
+      // Refresh drawer UI
+      this.populateModulationDrawer(this.currentModParam);
+    });
+
+    // Randomize button
+    randomizeBtn?.addEventListener('click', () => {
+      if (this.currentModParam === null) return;
+      const param = this.currentModParam as keyof VisualParams;
+      const audioMapper = this.app.getAudioMapper();
+      const metrics = AudioMapper.getAvailableMetrics();
+      const range = PARAM_RANGES[param];
+
+      // Random source
+      const source = metrics[Math.floor(Math.random() * metrics.length)] ?? 'rms';
+      // Random values
+      const slot: import('../types').ModulationSlot = {
+        source,
+        amount: 0.2 + Math.random() * 0.8,
+        smoothing: 0.3 + Math.random() * 0.6,
+        invert: Math.random() > 0.7,
+        curve: 0.5 + Math.random() * 2.5,
+        rangeMin: range.min,
+        rangeMax: range.max,
+      };
+      audioMapper.updatePrimarySlot(param, slot);
+      this.app.updateAudioModulation(param, { enabled: true });
+      this.updateAudioButtonState(this.currentModParam, true);
+      // Refresh drawer UI
+      this.populateModulationDrawer(this.currentModParam);
+    });
+  }
+
+  /**
+   * Populate the modulation drawer UI from the current slot values.
+   */
+  private populateModulationDrawer(paramName: string): void {
+    const audioMapper = this.app.getAudioMapper();
+    const param = paramName as keyof VisualParams;
+    const mod = audioMapper.getModulation(param);
+    const slot = mod?.slots[0] ?? audioMapper.getPrimarySlot(param);
+
+    const enabledCheck = document.getElementById('mod-enabled') as HTMLInputElement | null;
+    const sourceSelect = document.getElementById('mod-source') as HTMLSelectElement | null;
+    const amountSlider = document.getElementById('mod-amount') as HTMLInputElement | null;
+    const amountValue = document.getElementById('mod-amount-value');
+    const smoothingSlider = document.getElementById('mod-smoothing') as HTMLInputElement | null;
+    const smoothingValue = document.getElementById('mod-smoothing-value');
+    const curveSlider = document.getElementById('mod-curve') as HTMLInputElement | null;
+    const curveValue = document.getElementById('mod-curve-value');
+    const invertCheck = document.getElementById('mod-invert') as HTMLInputElement | null;
+    const rangeMinInput = document.getElementById('mod-range-min') as HTMLInputElement | null;
+    const rangeMaxInput = document.getElementById('mod-range-max') as HTMLInputElement | null;
+    const titleEl = document.getElementById('modulation-drawer-title');
+
+    if (titleEl !== null) {
+      titleEl.textContent = `Audio Mod: ${getParamLabel(paramName)}`;
+    }
+
+    if (enabledCheck !== null) enabledCheck.checked = mod?.enabled ?? false;
+    if (sourceSelect !== null) sourceSelect.value = slot.source;
+    if (amountSlider !== null) amountSlider.value = String(Math.round(slot.amount * 100));
+    if (amountValue !== null) amountValue.textContent = `${Math.round(slot.amount * 100)}%`;
+    if (smoothingSlider !== null) smoothingSlider.value = String(Math.round(slot.smoothing * 100));
+    if (smoothingValue !== null) smoothingValue.textContent = `${Math.round(slot.smoothing * 100)}%`;
+    if (curveSlider !== null) curveSlider.value = String(Math.round(slot.curve * 10));
+    if (curveValue !== null) curveValue.textContent = slot.curve.toFixed(1);
+    if (invertCheck !== null) invertCheck.checked = slot.invert;
+    if (rangeMinInput !== null) rangeMinInput.value = String(slot.rangeMin);
+    if (rangeMaxInput !== null) rangeMaxInput.value = String(slot.rangeMax);
+  }
+
+  /**
+   * Open the modulation drawer for a parameter.
+   * Toggles closed if already open for the same parameter.
+   */
+  private openModulationDrawer(paramName: string): void {
+    const drawer = this.modulationDrawer;
+    if (drawer === null) return;
+
+    // Toggle closed if same param
+    if (drawer.classList.contains('active') && this.currentModParam === paramName) {
+      this.closeModulationDrawer();
+      return;
+    }
+
+    // Close curve editor if open
+    if (this.curveEditorDrawer?.classList.contains('active') === true) {
+      this.curveEditorDrawer.classList.remove('active');
+      this.curveEditorDrawer.style.display = 'none';
+      this.currentCurveParam = null;
+    }
+
+    this.currentModParam = paramName;
+    this.populateModulationDrawer(paramName);
+
+    // Position the drawer similar to curve editor
+    let positioningElement: Element | null = null;
+
+    // Try param-slider component first
+    const component = document.querySelector<ParamSlider>(`param-slider[param-name="${paramName}"]`);
+    if (component !== null) {
+      positioningElement = component;
+    } else {
+      // Legacy: find the control group by slider ID
+      const sliderId = `${this.camelToKebab(paramName)}-slider`;
+      const sliderEl = document.getElementById(sliderId);
+      positioningElement = sliderEl?.closest('.control-group') ?? sliderEl;
+    }
+
+    if (positioningElement !== null) {
+      const rect = positioningElement.getBoundingClientRect();
+      const drawerWidth = 260;
+      const drawerLeft = Math.max(0, rect.left - drawerWidth - 8);
+
+      // Vertical positioning — ensure it fits in viewport
+      const viewportHeight = window.innerHeight;
+      const maxHeight = Math.min(450, viewportHeight - 20);
+      let drawerTop = rect.top;
+      if (drawerTop + maxHeight > viewportHeight - 10) {
+        drawerTop = Math.max(10, viewportHeight - maxHeight - 10);
+      }
+
+      drawer.style.left = `${drawerLeft}px`;
+      drawer.style.top = `${drawerTop}px`;
+      drawer.style.height = 'auto';
+      drawer.style.maxHeight = `${maxHeight}px`;
+    }
+
+    drawer.style.display = 'block';
+    drawer.classList.add('active');
+
+    // Start live visualization update
+    this.startModLiveUpdate();
+  }
+
+  /**
+   * Close the modulation drawer
+   */
+  private closeModulationDrawer(): void {
+    const drawer = this.modulationDrawer;
+    if (drawer === null) return;
+    drawer.classList.remove('active');
+    drawer.style.display = 'none';
+    this.currentModParam = null;
+    this.stopModLiveUpdate();
+  }
+
+  /**
+   * Start the live visualization update loop for the modulation drawer
+   */
+  private startModLiveUpdate(): void {
+    this.stopModLiveUpdate();
+    const update = (): void => {
+      if (this.currentModParam === null) return;
+      this.updateModLiveViz();
+      this.modLiveUpdateId = window.requestAnimationFrame(update);
+    };
+    this.modLiveUpdateId = window.requestAnimationFrame(update);
+  }
+
+  /**
+   * Stop the live visualization update loop
+   */
+  private stopModLiveUpdate(): void {
+    if (this.modLiveUpdateId !== null) {
+      window.cancelAnimationFrame(this.modLiveUpdateId);
+      this.modLiveUpdateId = null;
+    }
+  }
+
+  /**
+   * Update the live visualization bar in the modulation drawer
+   */
+  private updateModLiveViz(): void {
+    if (this.currentModParam === null) return;
+
+    const audioMapper = this.app.getAudioMapper();
+    const param = this.currentModParam as keyof VisualParams;
+    const slot = audioMapper.getPrimarySlot(param);
+    const range = PARAM_RANGES[param];
+
+    // Get current metric value from AudioAnalyzer
+    const metrics = this.audioAnalyzer?.getMetrics?.() ?? null;
+    const metricValue = metrics !== null ? (metrics[slot.source] ?? 0) : 0;
+
+    const marker = document.getElementById('mod-live-marker');
+    const rangeDiv = document.getElementById('mod-live-range');
+
+    if (marker !== null) {
+      // Map metric value (0-1) to percentage
+      const pct = Math.max(0, Math.min(100, metricValue * 100));
+      marker.style.left = `${pct}%`;
+    }
+
+    if (rangeDiv !== null) {
+      // Show the output range relative to the parameter's full range
+      const fullSpan = range.max - range.min;
+      if (fullSpan > 0) {
+        const leftPct = ((slot.rangeMin - range.min) / fullSpan) * 100;
+        const rightPct = ((slot.rangeMax - range.min) / fullSpan) * 100;
+        rangeDiv.style.left = `${Math.max(0, leftPct)}%`;
+        rangeDiv.style.width = `${Math.min(100, rightPct - leftPct)}%`;
+      }
     }
   }
 
