@@ -1160,8 +1160,8 @@ export class UIController {
       });
     }
 
-    // Generate parameter mapping UI
-    this.generateParameterMappingsUI();
+    // Setup M-panel (collapsible metrics, add-route form)
+    this.setupMPanel();
   }
 
   /**
@@ -1211,78 +1211,149 @@ export class UIController {
   /**
    * Generate the parameter mappings UI in the audio mapping panel
    */
-  private generateParameterMappingsUI(): void {
-    const container = document.getElementById('parameter-mappings-container');
-    if (container === null) return;
+  /**
+   * Setup the M-panel: collapsible metrics, add-route form, route click handlers.
+   * Called once during init.
+   */
+  private setupMPanel(): void {
+    // Collapsible metrics section
+    const metricsToggle = document.getElementById('metrics-section-toggle');
+    const metricsContent = document.getElementById('audio-metrics-collapsible');
+    const metricsArrow = document.getElementById('metrics-section-arrow');
+    if (metricsToggle !== null && metricsContent !== null) {
+      metricsToggle.addEventListener('click', () => {
+        const isHidden = metricsContent.style.display === 'none';
+        metricsContent.style.display = isHidden ? 'block' : 'none';
+        metricsArrow?.classList.toggle('collapsed', !isHidden);
+      });
+    }
 
-    const mappableParams: Array<keyof VisualParams> = [
-      'spikiness', 'spikeFrequency', 'spikeSharpness',
-      'scale', 'hue', 'fillSize', 'fillOpacity',
-      'autoRotationSpeed', 'hueShiftAmount', 'blendOpacity',
-      'expansionFactor', 'fadeAmount', 'noiseAmount', 'noiseRate',
-      'blurAmount', 'blurRate', 'jiggleAmount', 'emanationRate',
-      'rotation',
-    ];
+    // Add Route button
+    const addRouteBtn = document.getElementById('mod-add-route-btn');
+    const addRouteForm = document.getElementById('mod-add-route-form');
+    const addRouteSource = document.getElementById('add-route-source') as HTMLSelectElement | null;
+    const addRouteTarget = document.getElementById('add-route-target') as HTMLSelectElement | null;
+    const addRouteConfirm = document.getElementById('add-route-confirm');
+    const addRouteCancel = document.getElementById('add-route-cancel');
 
-    // All available audio sources (now 15 total)
-    const audioSources: Array<keyof AudioMetrics> = [
-      'rms', 'bass', 'mid', 'high', 'presence', 'harshness',
-      'mud', 'compression', 'collision', 'coherence', 'stereoWidth', 'phaseRisk',
-      'lowImbalance', 'emptiness', 'panPosition',
-    ];
+    // Populate source/target dropdowns
+    if (addRouteSource !== null) {
+      addRouteSource.innerHTML = AudioMapper.getAvailableMetrics().map((m) =>
+        `<option value="${m}">${AudioMapper.getMetricLabel(m)}</option>`
+      ).join('');
+    }
+    if (addRouteTarget !== null) {
+      addRouteTarget.innerHTML = ALL_MAPPABLE_PARAMS.map((p) =>
+        `<option value="${p}">${getParamLabel(p)}</option>`
+      ).join('');
+    }
 
-    // Get current mappings from AudioMapper
-    const audioMapper = this.app.getAudioMapper();
-
-    container.innerHTML = mappableParams.map((param) => {
-      const mod = audioMapper.getModulation(param);
-      const slot = mod?.slots[0];
-      const currentSource = slot?.source ?? 'rms';
-      const currentEnabled = mod?.enabled ?? false;
-      const currentAmount = (slot?.amount ?? 0.5) * 100;
-
-      return `
-      <div class="mapping-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 3px;">
-        <input type="checkbox" id="mapping-${param}-enabled" data-param="${param}" ${currentEnabled ? 'checked' : ''} style="cursor: pointer;">
-        <label for="mapping-${param}-enabled" style="font-size: 9px; color: #bbb; width: 80px; cursor: pointer;">${getParamLabel(param)}</label>
-        <div class="mapping-bar-container" style="width: 50px; height: 8px; background: #222; border-radius: 2px; overflow: hidden; position: relative;">
-          <div id="mapping-${param}-bar" class="mapping-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0af, #0fa); transition: width 0.05s;"></div>
-        </div>
-        <span id="mapping-${param}-value" style="font-size: 8px; color: #888; width: 35px; text-align: right;">0.00</span>
-        <select id="mapping-${param}-source" data-param="${param}" style="font-size: 8px; padding: 2px; background: #333; color: #eee; border: 1px solid #555; border-radius: 2px; width: 70px;">
-          ${audioSources.map((src) => `<option value="${src}" ${src === currentSource ? 'selected' : ''}>${AudioMapper.getMetricLabel(src)}</option>`).join('')}
-        </select>
-        <input type="range" id="mapping-${param}-amount" data-param="${param}" min="0" max="100" value="${currentAmount}" style="width: 50px;">
-      </div>
-    `;
-    }).join('');
-
-    // Add event listeners for mapping controls
-    mappableParams.forEach((param) => {
-      const checkbox = document.getElementById(`mapping-${param}-enabled`) as HTMLInputElement | null;
-      const sourceSelect = document.getElementById(`mapping-${param}-source`) as HTMLSelectElement | null;
-      const amountSlider = document.getElementById(`mapping-${param}-amount`) as HTMLInputElement | null;
-
-      if (checkbox !== null) {
-        checkbox.addEventListener('change', () => {
-          this.app.updateAudioModulation(param, { enabled: checkbox.checked });
-        });
-      }
-
-      if (sourceSelect !== null) {
-        sourceSelect.addEventListener('change', () => {
-          const audioMapperInner = this.app.getAudioMapper();
-          audioMapperInner.updatePrimarySlot(param, { source: sourceSelect.value as keyof AudioMetrics });
-        });
-      }
-
-      if (amountSlider !== null) {
-        amountSlider.addEventListener('input', () => {
-          const audioMapperInner = this.app.getAudioMapper();
-          audioMapperInner.updatePrimarySlot(param, { amount: parseFloat(amountSlider.value) / 100 });
-        });
+    addRouteBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (addRouteForm !== null) {
+        addRouteForm.style.display = addRouteForm.style.display === 'none' ? 'flex' : 'none';
       }
     });
+
+    addRouteCancel?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (addRouteForm !== null) addRouteForm.style.display = 'none';
+    });
+
+    addRouteConfirm?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (addRouteSource === null || addRouteTarget === null) return;
+      const source = addRouteSource.value as keyof AudioMetrics;
+      const target = addRouteTarget.value as keyof VisualParams;
+      const audioMapper = this.app.getAudioMapper();
+
+      const newSlot = createDefaultSlot(source, target);
+      audioMapper.addSlot(target, newSlot);
+      audioMapper.updateModulation(target, { enabled: true });
+      this.updateAudioButtonState(target, true);
+
+      if (addRouteForm !== null) addRouteForm.style.display = 'none';
+      this.refreshModUI();
+    });
+
+    // Single delegated click handler for route rows (survives innerHTML refresh, handles button vs row)
+    const routesContainer = document.getElementById('active-routes-container');
+    if (routesContainer !== null) {
+      routesContainer.addEventListener('click', (e) => {
+        const targetEl = e.target as HTMLElement;
+        const lockBtn = targetEl.closest?.('.mod-route-lock') as HTMLButtonElement | null;
+        const muteBtn = targetEl.closest?.('.mod-route-mute') as HTMLButtonElement | null;
+        const soloBtn = targetEl.closest?.('.mod-route-solo') as HTMLButtonElement | null;
+        const removeBtn = targetEl.closest?.('.mod-route-remove') as HTMLButtonElement | null;
+        const audioMapper = this.app.getAudioMapper();
+
+        if (lockBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const paramName = lockBtn.dataset['param'] as keyof VisualParams | undefined;
+          const slotIdx = parseInt(lockBtn.dataset['slotIndex'] ?? '0', 10);
+          if (paramName !== undefined) {
+            const slot = audioMapper.getSlot(paramName, slotIdx);
+            if (slot !== undefined) {
+              audioMapper.updateSlot(paramName, slotIdx, { locked: !slot.locked });
+              this.refreshModUI();
+              if (this.currentModParam === paramName) this.populateModulationDrawer(paramName);
+            }
+          }
+          return;
+        }
+        if (muteBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const paramName = muteBtn.dataset['param'] as keyof VisualParams | undefined;
+          const slotIdx = parseInt(muteBtn.dataset['slotIndex'] ?? '0', 10);
+          if (paramName !== undefined) {
+            const slot = audioMapper.getSlot(paramName, slotIdx);
+            if (slot !== undefined) {
+              audioMapper.updateSlot(paramName, slotIdx, { muted: !slot.muted });
+              this.refreshModUI();
+              if (this.currentModParam === paramName) this.populateModulationDrawer(paramName);
+            }
+          }
+          return;
+        }
+        if (soloBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const paramName = soloBtn.dataset['param'] as keyof VisualParams | undefined;
+          const slotIdx = parseInt(soloBtn.dataset['slotIndex'] ?? '0', 10);
+          if (paramName !== undefined) {
+            const slot = audioMapper.getSlot(paramName, slotIdx);
+            if (slot !== undefined) {
+              audioMapper.updateSlot(paramName, slotIdx, { solo: !slot.solo });
+              this.refreshModUI();
+              if (this.currentModParam === paramName) this.populateModulationDrawer(paramName);
+            }
+          }
+          return;
+        }
+        if (removeBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const paramName = removeBtn.dataset['param'] as keyof VisualParams | undefined;
+          const slotIdx = parseInt(removeBtn.dataset['slotIndex'] ?? '0', 10);
+          if (paramName !== undefined) {
+            audioMapper.removeSlot(paramName, slotIdx);
+            if (audioMapper.getSlotCount(paramName) === 0) {
+              audioMapper.updateModulation(paramName, { enabled: false });
+              this.updateAudioButtonState(paramName, false);
+            }
+            this.refreshModUI();
+            if (this.currentModParam === paramName) this.populateModulationDrawer(paramName);
+          }
+          return;
+        }
+        const row = targetEl.closest?.('.mod-route-row') as HTMLElement | null;
+        if (row?.dataset['param'] !== undefined) {
+          this.openModulationDrawer(row.dataset['param']);
+        }
+      });
+    }
   }
 
   /**
@@ -1581,7 +1652,8 @@ export class UIController {
   }
 
   /**
-   * Randomize which metrics map to which params (random source + enable/disable)
+   * Randomize which metrics map to which params (random source + enable/disable).
+   * Locked slots are not modified.
    */
   private randomizeAllMappings(): void {
     const audioMapper = this.app.getAudioMapper();
@@ -1589,27 +1661,37 @@ export class UIController {
 
     for (const param of ALL_MAPPABLE_PARAMS) {
       const range = PARAM_RANGES[param];
-      const enabled = Math.random() < 0.4; // ~40% enabled
-      const source = metrics[Math.floor(Math.random() * metrics.length)] ?? 'rms';
+      const mod = audioMapper.getModulation(param);
+      const slots = mod?.slots ?? [];
+      const hasUnlocked = slots.some((s) => !s.locked);
 
-      audioMapper.updatePrimarySlot(param, {
-        source,
-        amount: 0.2 + Math.random() * 0.8,
-        smoothing: 0.3 + Math.random() * 0.6,
-        invert: Math.random() > 0.7,
-        curve: 0.5 + Math.random() * 2.5,
-        rangeMin: range.min,
-        rangeMax: range.max,
-      });
-      audioMapper.updateModulation(param, { enabled });
+      if (hasUnlocked) {
+        const enabled = Math.random() < 0.4; // ~40% enabled
+        audioMapper.updateModulation(param, { enabled });
+      }
+
+      for (let i = 0; i < slots.length; i++) {
+        const slot = slots[i];
+        if (slot?.locked) continue;
+        const source = metrics[Math.floor(Math.random() * metrics.length)] ?? 'rms';
+        audioMapper.updateSlot(param, i, {
+          source,
+          amount: 0.2 + Math.random() * 0.8,
+          smoothing: 0.3 + Math.random() * 0.6,
+          invert: Math.random() > 0.7,
+          curve: 0.5 + Math.random() * 2.5,
+          rangeMin: range.min,
+          rangeMax: range.max,
+        });
+      }
     }
 
-    this.updateAllAudioButtonStates();
-    this.generateParameterMappingsUI();
+    this.refreshModUI();
   }
 
   /**
-   * Randomize modulation values but keep current source pairings
+   * Randomize modulation values but keep current source pairings.
+   * Locked slots are not modified.
    */
   private randomizeAllValues(): void {
     const audioMapper = this.app.getAudioMapper();
@@ -1619,17 +1701,21 @@ export class UIController {
       if (mod === undefined || !mod.enabled) continue;
 
       const range = PARAM_RANGES[param];
-      audioMapper.updatePrimarySlot(param, {
-        amount: 0.2 + Math.random() * 0.8,
-        smoothing: 0.3 + Math.random() * 0.6,
-        invert: Math.random() > 0.7,
-        curve: 0.5 + Math.random() * 2.5,
-        rangeMin: range.min,
-        rangeMax: range.max,
-      });
+      const slots = mod.slots;
+      for (let i = 0; i < slots.length; i++) {
+        if (slots[i]?.locked) continue;
+        audioMapper.updateSlot(param, i, {
+          amount: 0.2 + Math.random() * 0.8,
+          smoothing: 0.3 + Math.random() * 0.6,
+          invert: Math.random() > 0.7,
+          curve: 0.5 + Math.random() * 2.5,
+          rangeMin: range.min,
+          rangeMax: range.max,
+        });
+      }
     }
 
-    this.generateParameterMappingsUI();
+    this.refreshModUI();
   }
 
   // ── Active mappings overview ──────────────────────────────────
@@ -1637,228 +1723,528 @@ export class UIController {
   /**
    * Update the active mappings overview in the M-panel
    */
+  /**
+   * Render active route rows in the M-panel.
+   * Each route is a clickable row: source -> target | amount | remove.
+   * When a param has multiple slots, each slot gets its own row.
+   */
   private updateActiveMappingsOverview(): void {
-    const container = document.getElementById('active-mappings-container');
+    const container = document.getElementById('active-routes-container');
+    const countEl = document.getElementById('active-routes-count');
     if (container === null) return;
 
     const audioMapper = this.app.getAudioMapper();
-    const lines: string[] = [];
+    const routes = audioMapper.getActiveRoutes();
 
-    for (const param of ALL_MAPPABLE_PARAMS) {
-      const mod = audioMapper.getModulation(param);
-      if (mod === undefined || !mod.enabled) continue;
-      const slot = mod.slots[0];
-      if (slot === undefined) continue;
+    if (countEl !== null) {
+      countEl.textContent = `(${routes.length})`;
+    }
 
-      const label = getParamLabel(param);
+    if (routes.length === 0) {
+      container.innerHTML = '<div style="color:#555;font-style:italic;font-size:9px;">No active routes. Click "A" on any slider or "+ Add Route" below.</div>';
+      return;
+    }
+
+    container.innerHTML = routes.map(({ param, slotIndex, slot }) => {
       const sourceLabel = AudioMapper.getMetricLabel(slot.source);
+      const targetLabel = getParamLabel(param);
       const amountPct = Math.round(slot.amount * 100);
-      lines.push(
-        `<div style="display:flex;gap:4px;margin-bottom:2px;">` +
-        `<span style="color:#0af;width:80px;overflow:hidden;text-overflow:ellipsis;">${label}</span>` +
-        `<span style="color:#888;">← ${sourceLabel} (${amountPct}%)</span>` +
-        `</div>`
-      );
-    }
-
-    if (lines.length === 0) {
-      container.innerHTML = '<div style="color:#555;font-style:italic;">No active mappings</div>';
-    } else {
-      container.innerHTML = lines.join('');
-    }
+      const locked = slot.locked === true;
+      const muted = slot.muted === true;
+      const solo = slot.solo === true;
+      const rowClass = ['mod-route-row']
+        .concat(locked ? 'mod-route-locked' : [])
+        .concat(muted ? 'mod-route-muted' : [])
+        .concat(solo ? 'mod-route-solo' : [])
+        .join(' ');
+      return `<div class="${rowClass}" data-param="${param}" data-slot-index="${slotIndex}">
+        <button type="button" class="mod-route-lock" data-param="${param}" data-slot-index="${slotIndex}" title="${locked ? 'Unlock (allow random)' : 'Lock (exclude from random)'}" aria-pressed="${locked}">${locked ? '\u{1F512}' : '\u{1F513}'}</button>
+        <button type="button" class="mod-route-mute" data-param="${param}" data-slot-index="${slotIndex}" title="${muted ? 'Unmute' : 'Mute route'}" aria-pressed="${muted}">M</button>
+        <button type="button" class="mod-route-solo" data-param="${param}" data-slot-index="${slotIndex}" title="${solo ? 'Solo off' : 'Solo this route'}" aria-pressed="${solo}">S</button>
+        <span class="mod-route-source">${sourceLabel}</span>
+        <span class="mod-route-arrow">&rarr;</span>
+        <span class="mod-route-target">${targetLabel}</span>
+        <span class="mod-route-amount">${amountPct}%</span>
+        <button type="button" class="mod-route-remove" data-param="${param}" data-slot-index="${slotIndex}" title="Remove route">&times;</button>
+      </div>`;
+    }).join('');
+    // Clicks handled by delegated listener on active-routes-container (setupMPanel)
   }
 
   // ── Modulation drawer ───────────────────────────────────────────
 
   /**
-   * Setup the modulation config drawer controls
+   * Setup the modulation config drawer controls.
+   * One delegated click handler for close and slot toggles (survives innerHTML refresh).
    */
   private setupModulationDrawer(): void {
-    const drawer = this.modulationDrawer;
-    if (drawer === null) return;
+    const drawerContent = document.getElementById('modulation-drawer-content');
+    if (drawerContent === null) return;
+    const self = this;
+    drawerContent.addEventListener('click', (e) => {
+      const targetEl = e.target as HTMLElement;
+      const closeBtn = targetEl.closest?.('#mod-drawer-close');
+      const lockBtn = targetEl.closest?.('.mod-slot-lock') as HTMLElement | null;
+      const muteBtn = targetEl.closest?.('.mod-slot-mute') as HTMLElement | null;
+      const soloBtn = targetEl.closest?.('.mod-slot-solo') as HTMLElement | null;
+      const deleteBtn = targetEl.closest?.('.mod-slot-delete') as HTMLElement | null;
 
-    const closeBtn = document.getElementById('modulation-drawer-close');
-    const enabledCheck = document.getElementById('mod-enabled') as HTMLInputElement | null;
-    const sourceSelect = document.getElementById('mod-source') as HTMLSelectElement | null;
-    const amountSlider = document.getElementById('mod-amount') as HTMLInputElement | null;
-    const amountValue = document.getElementById('mod-amount-value');
-    const smoothingSlider = document.getElementById('mod-smoothing') as HTMLInputElement | null;
-    const smoothingValue = document.getElementById('mod-smoothing-value');
-    const curveSlider = document.getElementById('mod-curve') as HTMLInputElement | null;
-    const curveValue = document.getElementById('mod-curve-value');
-    const invertCheck = document.getElementById('mod-invert') as HTMLInputElement | null;
-    const rangeMinInput = document.getElementById('mod-range-min') as HTMLInputElement | null;
-    const rangeMaxInput = document.getElementById('mod-range-max') as HTMLInputElement | null;
-    const resetBtn = document.getElementById('mod-reset');
-    const randomizeBtn = document.getElementById('mod-randomize');
-
-    // Populate source dropdown with all 15 metrics
-    if (sourceSelect !== null) {
-      const metrics = AudioMapper.getAvailableMetrics();
-      sourceSelect.innerHTML = metrics.map((m) =>
-        `<option value="${m}">${AudioMapper.getMetricLabel(m)}</option>`
-      ).join('');
-    }
-
-    // Close handler
-    const closeModDrawer = (): void => {
-      this.closeModulationDrawer();
-    };
-
-    closeBtn?.addEventListener('click', closeModDrawer);
-
-    // Helper to get the current slot and update it
-    const updateSlot = (partial: Partial<import('../types').ModulationSlot>): void => {
-      if (this.currentModParam === null) return;
-      const audioMapper = this.app.getAudioMapper();
-      audioMapper.updatePrimarySlot(this.currentModParam as keyof VisualParams, partial);
-    };
-
-    // Enabled toggle
-    enabledCheck?.addEventListener('change', () => {
-      if (this.currentModParam === null) return;
-      const newEnabled = enabledCheck.checked;
-      this.app.updateAudioModulation(this.currentModParam as keyof VisualParams, { enabled: newEnabled });
-      this.updateAudioButtonState(this.currentModParam, newEnabled);
-    });
-
-    // Source selector
-    sourceSelect?.addEventListener('change', () => {
-      updateSlot({ source: sourceSelect.value as keyof AudioMetrics });
-    });
-
-    // Amount slider (0-100 → 0-1)
-    amountSlider?.addEventListener('input', () => {
-      const amount = parseFloat(amountSlider.value) / 100;
-      updateSlot({ amount });
-      if (amountValue !== null) {
-        amountValue.textContent = `${Math.round(amount * 100)}%`;
+      if (closeBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        self.closeModulationDrawer();
+        return;
       }
-    });
+      const paramName = self.currentModParam;
+      if (paramName === null) return;
+      const param = paramName as keyof VisualParams;
+      const audioMapper = self.app.getAudioMapper();
 
-    // Smoothing slider (0-99 → 0-0.99)
-    smoothingSlider?.addEventListener('input', () => {
-      const smoothing = parseFloat(smoothingSlider.value) / 100;
-      updateSlot({ smoothing });
-      if (smoothingValue !== null) {
-        smoothingValue.textContent = `${Math.round(smoothing * 100)}%`;
+      if (lockBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(lockBtn.dataset['slotIndex'] ?? '0', 10);
+        const slot = audioMapper.getSlot(param, idx);
+        if (slot !== undefined) {
+          audioMapper.updateSlot(param, idx, { locked: !slot.locked });
+          self.refreshModUI();
+          self.populateModulationDrawer(paramName);
+        }
+        return;
       }
-    });
-
-    // Curve slider (1-50 → 0.1-5.0)
-    curveSlider?.addEventListener('input', () => {
-      const curve = parseFloat(curveSlider.value) / 10;
-      updateSlot({ curve });
-      if (curveValue !== null) {
-        curveValue.textContent = curve.toFixed(1);
+      if (muteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(muteBtn.dataset['slotIndex'] ?? '0', 10);
+        const slot = audioMapper.getSlot(param, idx);
+        if (slot !== undefined) {
+          audioMapper.updateSlot(param, idx, { muted: !slot.muted });
+          self.refreshModUI();
+          self.populateModulationDrawer(paramName);
+        }
+        return;
       }
-    });
-
-    // Invert toggle
-    invertCheck?.addEventListener('change', () => {
-      updateSlot({ invert: invertCheck.checked });
-    });
-
-    // Range min/max
-    rangeMinInput?.addEventListener('change', () => {
-      const val = parseFloat(rangeMinInput.value);
-      if (!isNaN(val)) {
-        updateSlot({ rangeMin: val });
+      if (soloBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(soloBtn.dataset['slotIndex'] ?? '0', 10);
+        const slot = audioMapper.getSlot(param, idx);
+        if (slot !== undefined) {
+          audioMapper.updateSlot(param, idx, { solo: !slot.solo });
+          self.refreshModUI();
+          self.populateModulationDrawer(paramName);
+        }
+        return;
       }
-    });
-
-    rangeMaxInput?.addEventListener('change', () => {
-      const val = parseFloat(rangeMaxInput.value);
-      if (!isNaN(val)) {
-        updateSlot({ rangeMax: val });
+      if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(deleteBtn.dataset['slotIndex'] ?? '0', 10);
+        audioMapper.removeSlot(param, idx);
+        if (audioMapper.getSlotCount(param) === 0) {
+          self.app.updateAudioModulation(param, { enabled: false });
+          self.updateAudioButtonState(paramName, false);
+        }
+        self.populateModulationDrawer(paramName);
+        self.refreshModUI();
       }
-    });
-
-    // Reset button
-    resetBtn?.addEventListener('click', () => {
-      if (this.currentModParam === null) return;
-      const param = this.currentModParam as keyof VisualParams;
-      const audioMapper = this.app.getAudioMapper();
-      const defaultSource = (DEFAULT_AUDIO_SOURCES as Record<string, string>)[param] ?? 'rms';
-      const defaultSlot = createDefaultSlot(defaultSource as keyof AudioMetrics, param);
-      audioMapper.updatePrimarySlot(param, defaultSlot);
-      this.app.updateAudioModulation(param, { enabled: false });
-      this.updateAudioButtonState(this.currentModParam, false);
-      // Refresh drawer UI
-      this.populateModulationDrawer(this.currentModParam);
-    });
-
-    // Randomize button
-    randomizeBtn?.addEventListener('click', () => {
-      if (this.currentModParam === null) return;
-      const param = this.currentModParam as keyof VisualParams;
-      const audioMapper = this.app.getAudioMapper();
-      const metrics = AudioMapper.getAvailableMetrics();
-      const range = PARAM_RANGES[param];
-
-      // Random source
-      const source = metrics[Math.floor(Math.random() * metrics.length)] ?? 'rms';
-      // Random values
-      const slot: import('../types').ModulationSlot = {
-        source,
-        amount: 0.2 + Math.random() * 0.8,
-        smoothing: 0.3 + Math.random() * 0.6,
-        invert: Math.random() > 0.7,
-        curve: 0.5 + Math.random() * 2.5,
-        rangeMin: range.min,
-        rangeMax: range.max,
-      };
-      audioMapper.updatePrimarySlot(param, slot);
-      this.app.updateAudioModulation(param, { enabled: true });
-      this.updateAudioButtonState(this.currentModParam, true);
-      // Refresh drawer UI
-      this.populateModulationDrawer(this.currentModParam);
     });
   }
 
   /**
-   * Populate the modulation drawer UI from the current slot values.
+   * Generate the source <option> elements for a metric dropdown.
+   */
+  private static buildSourceOptions(selected: string): string {
+    return AudioMapper.getAvailableMetrics().map((m) =>
+      `<option value="${m}"${m === selected ? ' selected' : ''}>${AudioMapper.getMetricLabel(m)}</option>`
+    ).join('');
+  }
+
+  /**
+   * Render a single slot card's HTML (for the modulation drawer).
+   */
+  private static renderSlotCard(slot: import('../types').ModulationSlot, index: number, total: number): string {
+    const amountPct = Math.round(slot.amount * 100);
+    const smoothPct = Math.round(slot.smoothing * 100);
+    const curveTen = Math.round(slot.curve * 10);
+    return `
+      <div class="mod-slot-card" data-slot-index="${index}">
+        <div class="mod-slot-header">
+          <span class="mod-slot-label">Slot ${index + 1}</span>
+          <span class="mod-slot-toggles">
+            <button type="button" class="mod-slot-lock" data-slot-index="${index}" title="${slot.locked ? 'Unlock' : 'Lock'}" aria-pressed="${!!slot.locked}">${slot.locked ? '\u{1F512}' : '\u{1F513}'}</button>
+            <button type="button" class="mod-slot-mute" data-slot-index="${index}" title="${slot.muted ? 'Unmute' : 'Mute'}" aria-pressed="${!!slot.muted}">M</button>
+            <button type="button" class="mod-slot-solo" data-slot-index="${index}" title="${slot.solo ? 'Solo off' : 'Solo'}" aria-pressed="${!!slot.solo}">S</button>
+            ${total > 1 ? `<button type="button" class="mod-slot-delete" data-slot-index="${index}" title="Remove slot">&times;</button>` : ''}
+          </span>
+        </div>
+        <div class="control-group" style="margin-bottom:4px;">
+          <label style="font-size:9px;">Source</label>
+          <select class="mod-slot-source" data-slot-index="${index}"
+            style="width:100%;padding:3px 6px;font-size:9px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:3px;">
+            ${UIController.buildSourceOptions(slot.source)}
+          </select>
+        </div>
+        <div class="control-group" style="margin-bottom:4px;">
+          <label style="font-size:9px;">Amount</label>
+          <div class="control-row">
+            <input type="range" class="mod-slot-amount" data-slot-index="${index}" min="0" max="100" step="1" value="${amountPct}">
+            <span class="value mod-slot-amount-val" data-slot-index="${index}" contenteditable="true">${amountPct}%</span>
+          </div>
+        </div>
+        <div class="control-group" style="margin-bottom:4px;">
+          <label style="font-size:9px;">Offset</label>
+          <div class="control-row">
+            <input type="range" class="mod-slot-offset" data-slot-index="${index}" min="0" max="200" step="1" value="${Math.round((slot.offset + 1) * 100)}">
+            <span class="value mod-slot-offset-val" data-slot-index="${index}" contenteditable="true">${slot.offset.toFixed(2)}</span>
+          </div>
+        </div>
+        <div class="control-group" style="margin-bottom:4px;">
+          <label style="font-size:9px;">Multiply</label>
+          <div class="control-row">
+            <input type="range" class="mod-slot-multiplier" data-slot-index="${index}" min="0" max="300" step="1" value="${Math.round(slot.multiplier * 100)}">
+            <span class="value mod-slot-multiplier-val" data-slot-index="${index}" contenteditable="true">${slot.multiplier.toFixed(2)}</span>
+          </div>
+        </div>
+        <div class="control-group" style="margin-bottom:4px;">
+          <label style="font-size:9px;">Smooth</label>
+          <div class="control-row">
+            <input type="range" class="mod-slot-smooth" data-slot-index="${index}" min="0" max="99" step="1" value="${smoothPct}">
+            <span class="value mod-slot-smooth-val" data-slot-index="${index}" contenteditable="true">${smoothPct}%</span>
+          </div>
+        </div>
+        <div class="control-group" style="margin-bottom:4px;">
+          <label style="font-size:9px;">Curve</label>
+          <div class="control-row">
+            <input type="range" class="mod-slot-curve" data-slot-index="${index}" min="1" max="50" step="1" value="${curveTen}">
+            <span class="value mod-slot-curve-val" data-slot-index="${index}" contenteditable="true">${slot.curve.toFixed(1)}</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <label style="font-size:9px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <input type="checkbox" class="mod-slot-invert" data-slot-index="${index}" ${slot.invert ? 'checked' : ''} style="cursor:pointer;"> Invert
+          </label>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:4px;">
+          <div class="control-group" style="flex:1;margin-bottom:0;">
+            <label style="font-size:9px;">Range Min</label>
+            <input type="number" class="mod-slot-range-min" data-slot-index="${index}" step="any" value="${slot.rangeMin}"
+              style="width:100%;padding:3px 6px;font-size:9px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:3px;">
+          </div>
+          <div class="control-group" style="flex:1;margin-bottom:0;">
+            <label style="font-size:9px;">Range Max</label>
+            <input type="number" class="mod-slot-range-max" data-slot-index="${index}" step="any" value="${slot.rangeMax}"
+              style="width:100%;padding:3px 6px;font-size:9px;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:3px;">
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /**
+   * Populate the modulation drawer dynamically with all slots for the current param.
+   * Re-renders the full drawer content and wires up event listeners.
    */
   private populateModulationDrawer(paramName: string): void {
+    const container = document.getElementById('modulation-drawer-content');
+    if (container === null) return;
+
     const audioMapper = this.app.getAudioMapper();
     const param = paramName as keyof VisualParams;
     const mod = audioMapper.getModulation(param);
-    const slot = mod?.slots[0] ?? audioMapper.getPrimarySlot(param);
+    const isEnabled = mod?.enabled ?? false;
+    const slots = mod?.slots ?? [audioMapper.getPrimarySlot(param)];
 
-    const enabledCheck = document.getElementById('mod-enabled') as HTMLInputElement | null;
-    const sourceSelect = document.getElementById('mod-source') as HTMLSelectElement | null;
-    const amountSlider = document.getElementById('mod-amount') as HTMLInputElement | null;
-    const amountValue = document.getElementById('mod-amount-value');
-    const smoothingSlider = document.getElementById('mod-smoothing') as HTMLInputElement | null;
-    const smoothingValue = document.getElementById('mod-smoothing-value');
-    const curveSlider = document.getElementById('mod-curve') as HTMLInputElement | null;
-    const curveValue = document.getElementById('mod-curve-value');
-    const invertCheck = document.getElementById('mod-invert') as HTMLInputElement | null;
-    const rangeMinInput = document.getElementById('mod-range-min') as HTMLInputElement | null;
-    const rangeMaxInput = document.getElementById('mod-range-max') as HTMLInputElement | null;
-    const titleEl = document.getElementById('modulation-drawer-title');
+    // Build slot cards
+    const slotCards = slots.map((slot, i) => UIController.renderSlotCard(slot, i, slots.length)).join('');
 
-    if (titleEl !== null) {
-      titleEl.textContent = `Audio Mod: ${getParamLabel(paramName)}`;
+    container.innerHTML = `
+      <div class="modulation-drawer-header">
+        <div class="modulation-drawer-title">Audio Mod: ${getParamLabel(paramName)}</div>
+        <button type="button" class="modulation-drawer-close" id="mod-drawer-close" title="Close">&times;</button>
+      </div>
+      <div class="mod-row" style="margin-bottom:6px;">
+        <label style="font-size:9px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="mod-enabled" ${isEnabled ? 'checked' : ''} style="cursor:pointer;"> Enabled
+        </label>
+      </div>
+      <div id="mod-slots-container">${slotCards}</div>
+      <button type="button" id="mod-add-slot" class="curve-btn-action" style="font-size:9px;padding:4px 8px;margin-top:4px;margin-bottom:6px;">+ Add Source</button>
+      <div class="mod-live-viz" style="margin-bottom:6px;">
+        <label style="font-size:8px;color:#666;margin-bottom:2px;display:block;">Live</label>
+        <div id="mod-live-bar-container" style="width:100%;height:12px;background:#111;border-radius:3px;overflow:hidden;position:relative;">
+          <div id="mod-live-range" style="position:absolute;top:0;height:100%;background:rgba(0,170,255,0.1);border-left:1px solid rgba(0,170,255,0.3);border-right:1px solid rgba(0,170,255,0.3);"></div>
+          <div id="mod-live-marker" style="position:absolute;top:0;width:2px;height:100%;background:#0af;"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:flex-start;">
+        <button type="button" class="curve-btn-action" id="mod-reset" style="font-size:9px;padding:4px 8px;">Reset</button>
+        <button type="button" class="curve-btn-action" id="mod-randomize" style="font-size:9px;padding:4px 8px;" title="Randomize modulation values">&#127922;</button>
+      </div>
+    `;
+
+    // ── Wire up events ─────────────────────────────────────────
+    const self = this;
+    const updateSlot = (slotIndex: number, partial: Partial<import('../types').ModulationSlot>): void => {
+      audioMapper.updateSlot(param, slotIndex, partial);
+    };
+
+    // Close / lock / mute / solo / delete handled by delegated listener in setupModulationDrawer
+
+    // Enabled toggle
+    (document.getElementById('mod-enabled') as HTMLInputElement | null)?.addEventListener('change', (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      self.app.updateAudioModulation(param, { enabled: checked });
+      self.updateAudioButtonState(paramName, checked);
+      self.refreshModUI();
+    });
+
+    // Per-slot event delegation on the slots container
+    const slotsContainer = document.getElementById('mod-slots-container');
+    if (slotsContainer !== null) {
+      // Source selects
+      slotsContainer.querySelectorAll<HTMLSelectElement>('.mod-slot-source').forEach((el) => {
+        el.addEventListener('change', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          updateSlot(idx, { source: el.value as keyof AudioMetrics });
+          self.refreshModUI();
+        });
+      });
+
+      // Amount sliders
+      slotsContainer.querySelectorAll<HTMLInputElement>('.mod-slot-amount').forEach((el) => {
+        el.addEventListener('input', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          const amount = parseFloat(el.value) / 100;
+          updateSlot(idx, { amount });
+          const valSpan = slotsContainer.querySelector<HTMLElement>(`.mod-slot-amount-val[data-slot-index="${idx}"]`);
+          if (valSpan !== null) valSpan.textContent = `${Math.round(amount * 100)}%`;
+          self.refreshModUI();
+        });
+      });
+
+      // Offset sliders (0-200 → -1.0 to +1.0)
+      slotsContainer.querySelectorAll<HTMLInputElement>('.mod-slot-offset').forEach((el) => {
+        el.addEventListener('input', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          const offset = (parseFloat(el.value) / 100) - 1;
+          updateSlot(idx, { offset });
+          const valSpan = slotsContainer.querySelector<HTMLElement>(`.mod-slot-offset-val[data-slot-index="${idx}"]`);
+          if (valSpan !== null) valSpan.textContent = offset.toFixed(2);
+        });
+      });
+
+      // Multiplier sliders (0-300 → 0.0 to 3.0)
+      slotsContainer.querySelectorAll<HTMLInputElement>('.mod-slot-multiplier').forEach((el) => {
+        el.addEventListener('input', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          const multiplier = parseFloat(el.value) / 100;
+          updateSlot(idx, { multiplier });
+          const valSpan = slotsContainer.querySelector<HTMLElement>(`.mod-slot-multiplier-val[data-slot-index="${idx}"]`);
+          if (valSpan !== null) valSpan.textContent = multiplier.toFixed(2);
+        });
+      });
+
+      // Smoothing sliders
+      slotsContainer.querySelectorAll<HTMLInputElement>('.mod-slot-smooth').forEach((el) => {
+        el.addEventListener('input', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          const smoothing = parseFloat(el.value) / 100;
+          updateSlot(idx, { smoothing });
+          const valSpan = slotsContainer.querySelector<HTMLElement>(`.mod-slot-smooth-val[data-slot-index="${idx}"]`);
+          if (valSpan !== null) valSpan.textContent = `${Math.round(smoothing * 100)}%`;
+        });
+      });
+
+      // Curve sliders
+      slotsContainer.querySelectorAll<HTMLInputElement>('.mod-slot-curve').forEach((el) => {
+        el.addEventListener('input', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          const curve = parseFloat(el.value) / 10;
+          updateSlot(idx, { curve });
+          const valSpan = slotsContainer.querySelector<HTMLElement>(`.mod-slot-curve-val[data-slot-index="${idx}"]`);
+          if (valSpan !== null) valSpan.textContent = curve.toFixed(1);
+        });
+      });
+
+      // Invert checkboxes
+      slotsContainer.querySelectorAll<HTMLInputElement>('.mod-slot-invert').forEach((el) => {
+        el.addEventListener('change', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          updateSlot(idx, { invert: el.checked });
+        });
+      });
+
+      // Range min
+      slotsContainer.querySelectorAll<HTMLInputElement>('.mod-slot-range-min').forEach((el) => {
+        el.addEventListener('change', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          const val = parseFloat(el.value);
+          if (!isNaN(val)) updateSlot(idx, { rangeMin: val });
+        });
+      });
+
+      // Range max
+      slotsContainer.querySelectorAll<HTMLInputElement>('.mod-slot-range-max').forEach((el) => {
+        el.addEventListener('change', () => {
+          const idx = parseInt(el.dataset['slotIndex'] ?? '0', 10);
+          const val = parseFloat(el.value);
+          if (!isNaN(val)) updateSlot(idx, { rangeMax: val });
+        });
+      });
+
+      // ── Direct input on value spans ────────────────────────────
+      // Helper: wire blur+Enter on a value span to apply a parsed value
+      const wireDirectInput = (
+        spanClass: string,
+        sliderClass: string,
+        parse: (text: string) => number | null,
+        apply: (idx: number, val: number) => void,
+        format: (val: number) => string,
+        toSlider: (val: number) => number,
+      ): void => {
+        slotsContainer.querySelectorAll<HTMLElement>(spanClass).forEach((span) => {
+          const idx = parseInt(span.dataset['slotIndex'] ?? '0', 10);
+          const commit = (): void => {
+            const raw = (span.textContent ?? '').trim();
+            const val = parse(raw);
+            if (val === null) {
+              // Revert to current slider value
+              const slider = slotsContainer.querySelector<HTMLInputElement>(`${sliderClass}[data-slot-index="${idx}"]`);
+              if (slider !== null) span.textContent = format(toSlider(parseFloat(slider.value)));
+              return;
+            }
+            apply(idx, val);
+            span.textContent = format(val);
+            // Sync the slider position
+            const slider = slotsContainer.querySelector<HTMLInputElement>(`${sliderClass}[data-slot-index="${idx}"]`);
+            if (slider !== null) slider.value = String(toSlider(val));
+          };
+          span.addEventListener('blur', commit);
+          span.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); span.blur(); }
+          });
+        });
+      };
+
+      // Amount: display 0-100%, underlying 0-1
+      wireDirectInput(
+        '.mod-slot-amount-val', '.mod-slot-amount',
+        (t) => { const n = parseFloat(t.replace('%', '')); return isNaN(n) ? null : n / 100; },
+        (i, v) => { updateSlot(i, { amount: Math.max(0, Math.min(1, v)) }); },
+        (v) => `${Math.round(v * 100)}%`,
+        (v) => Math.round(v * 100),
+      );
+
+      // Offset: display -1.00 to +1.00, slider 0-200
+      wireDirectInput(
+        '.mod-slot-offset-val', '.mod-slot-offset',
+        (t) => { const n = parseFloat(t); return isNaN(n) ? null : n; },
+        (i, v) => { const clamped = Math.max(-1, Math.min(1, v)); updateSlot(i, { offset: clamped }); },
+        (v) => v.toFixed(2),
+        (v) => Math.round((v + 1) * 100),
+      );
+
+      // Multiplier: display 0.00 to 3.00, slider 0-300
+      wireDirectInput(
+        '.mod-slot-multiplier-val', '.mod-slot-multiplier',
+        (t) => { const n = parseFloat(t); return isNaN(n) ? null : n; },
+        (i, v) => { const clamped = Math.max(0, Math.min(3, v)); updateSlot(i, { multiplier: clamped }); },
+        (v) => v.toFixed(2),
+        (v) => Math.round(v * 100),
+      );
+
+      // Smoothing: display 0-99%, underlying 0-0.99
+      wireDirectInput(
+        '.mod-slot-smooth-val', '.mod-slot-smooth',
+        (t) => { const n = parseFloat(t.replace('%', '')); return isNaN(n) ? null : n / 100; },
+        (i, v) => { updateSlot(i, { smoothing: Math.max(0, Math.min(0.99, v)) }); },
+        (v) => `${Math.round(v * 100)}%`,
+        (v) => Math.round(v * 100),
+      );
+
+      // Curve: display 0.1-5.0, slider 1-50 (value * 10)
+      wireDirectInput(
+        '.mod-slot-curve-val', '.mod-slot-curve',
+        (t) => { const n = parseFloat(t); return isNaN(n) ? null : n; },
+        (i, v) => { const clamped = Math.max(0.1, Math.min(5, v)); updateSlot(i, { curve: clamped }); },
+        (v) => v.toFixed(1),
+        (v) => Math.round(v * 10),
+      );
+
+      // Lock / mute / solo / delete handled by delegated listener in setupModulationDrawer
     }
 
-    if (enabledCheck !== null) enabledCheck.checked = mod?.enabled ?? false;
-    if (sourceSelect !== null) sourceSelect.value = slot.source;
-    if (amountSlider !== null) amountSlider.value = String(Math.round(slot.amount * 100));
-    if (amountValue !== null) amountValue.textContent = `${Math.round(slot.amount * 100)}%`;
-    if (smoothingSlider !== null) smoothingSlider.value = String(Math.round(slot.smoothing * 100));
-    if (smoothingValue !== null) smoothingValue.textContent = `${Math.round(slot.smoothing * 100)}%`;
-    if (curveSlider !== null) curveSlider.value = String(Math.round(slot.curve * 10));
-    if (curveValue !== null) curveValue.textContent = slot.curve.toFixed(1);
-    if (invertCheck !== null) invertCheck.checked = slot.invert;
-    if (rangeMinInput !== null) rangeMinInput.value = String(slot.rangeMin);
-    if (rangeMaxInput !== null) rangeMaxInput.value = String(slot.rangeMax);
+    // Add slot button
+    document.getElementById('mod-add-slot')?.addEventListener('click', () => {
+      const newSlot = createDefaultSlot('rms', param);
+      audioMapper.addSlot(param, newSlot);
+      // Auto-enable if first slot added
+      if (!isEnabled) {
+        self.app.updateAudioModulation(param, { enabled: true });
+        self.updateAudioButtonState(paramName, true);
+      }
+      self.populateModulationDrawer(paramName);
+      self.refreshModUI();
+    });
+
+    // Reset button
+    document.getElementById('mod-reset')?.addEventListener('click', () => {
+      const defaultSource = (DEFAULT_AUDIO_SOURCES as Record<string, string>)[param] ?? 'rms';
+      const defaultSlot = createDefaultSlot(defaultSource as keyof AudioMetrics, param);
+      // Replace all slots with a single default
+      audioMapper.setModulation(param, { enabled: false, slots: [defaultSlot] });
+      self.updateAudioButtonState(paramName, false);
+      self.populateModulationDrawer(paramName);
+      self.refreshModUI();
+    });
+
+    // Randomize button (skips locked slots)
+    document.getElementById('mod-randomize')?.addEventListener('click', () => {
+      const allMetrics = AudioMapper.getAvailableMetrics();
+      const range = PARAM_RANGES[param];
+      const slotCount = audioMapper.getSlotCount(param);
+      for (let i = 0; i < slotCount; i++) {
+        const slot = audioMapper.getSlot(param, i);
+        if (slot?.locked) continue;
+        const src = allMetrics[Math.floor(Math.random() * allMetrics.length)] ?? 'rms';
+        audioMapper.updateSlot(param, i, {
+          source: src,
+          amount: 0.2 + Math.random() * 0.8,
+          offset: (Math.random() - 0.5) * 0.4,
+          multiplier: 0.5 + Math.random() * 1.5,
+          smoothing: 0.3 + Math.random() * 0.6,
+          invert: Math.random() > 0.7,
+          curve: 0.5 + Math.random() * 2.5,
+          rangeMin: range.min,
+          rangeMax: range.max,
+        });
+      }
+      self.app.updateAudioModulation(param, { enabled: true });
+      self.updateAudioButtonState(paramName, true);
+      self.populateModulationDrawer(paramName);
+      self.refreshModUI();
+    });
   }
 
   /**
    * Open the modulation drawer for a parameter.
    * Toggles closed if already open for the same parameter.
    */
+  /**
+   * Refresh all modulation-related UI after any state mutation.
+   * Keeps M-panel active routes, A-button states, and the open drawer in sync.
+   */
+  private refreshModUI(): void {
+    // 1. Update all A-button active states
+    this.updateAllAudioButtonStates();
+
+    // 2. Re-render the M-panel active routes (if panel is visible)
+    this.updateActiveMappingsOverview();
+
+    // 3. If the modulation drawer is open, re-populate it (already done inline in most handlers)
+    // Not needed here since populateModulationDrawer is called by the handlers that need it.
+  }
+
   private openModulationDrawer(paramName: string): void {
     const drawer = this.modulationDrawer;
     if (drawer === null) return;
@@ -1895,12 +2281,12 @@ export class UIController {
 
     if (positioningElement !== null) {
       const rect = positioningElement.getBoundingClientRect();
-      const drawerWidth = 260;
+      const drawerWidth = 280;
       const drawerLeft = Math.max(0, rect.left - drawerWidth - 8);
 
       // Vertical positioning — ensure it fits in viewport
       const viewportHeight = window.innerHeight;
-      const maxHeight = Math.min(450, viewportHeight - 20);
+      const maxHeight = Math.min(Math.round(viewportHeight * 0.8), viewportHeight - 20);
       let drawerTop = rect.top;
       if (drawerTop + maxHeight > viewportHeight - 10) {
         drawerTop = Math.max(10, viewportHeight - maxHeight - 10);
@@ -2591,9 +2977,6 @@ export class UIController {
       }
     }
 
-    // Update mapping bars for each parameter
-    this.updateMappingBars(metrics);
-
     // Update radar chart
     if (this.radarChart !== null) {
       this.radarChart.update(metrics);
@@ -2603,63 +2986,6 @@ export class UIController {
     this.activeMappingsCounter = (this.activeMappingsCounter + 1) % 10;
     if (this.activeMappingsCounter === 0) {
       this.updateActiveMappingsOverview();
-    }
-  }
-
-  /**
-   * Update the visualization bars for audio-mapped parameters
-   */
-  private updateMappingBars(metrics: AudioMetrics): void {
-    try {
-      const audioMapper = this.app.getAudioMapper();
-      const mappableParams: Array<keyof VisualParams> = [
-        'spikiness', 'spikeFrequency', 'spikeSharpness', 'hue', 'scale',
-        'fillSize', 'fillOpacity', 'blendOpacity', 'expansionFactor',
-        'fadeAmount', 'hueShiftAmount', 'rotation', 'autoRotationSpeed',
-        'noiseAmount', 'noiseRate', 'blurAmount', 'blurRate', 'jiggleAmount',
-        'emanationRate',
-      ];
-
-      for (const param of mappableParams) {
-        try {
-          const mod = audioMapper.getModulation(param);
-          if (mod === undefined) continue;
-
-          const slot = mod.slots[0];
-          if (slot === undefined) continue;
-
-          const bar = document.getElementById(`mapping-${param}-bar`);
-          const valueDisplay = document.getElementById(`mapping-${param}-value`);
-
-          // Get the current metric value and apply amount (depth)
-          const metricValue = metrics[slot.source] ?? 0;
-          const effectiveValue = Math.min(1, metricValue * slot.amount);
-
-          if (bar !== null) {
-            const barWidth = Math.max(0, Math.min(100, effectiveValue * 100));
-            bar.style.width = `${barWidth}%`;
-
-            if (mod.enabled) {
-              bar.style.background = 'linear-gradient(90deg, #0af, #0fa)';
-            } else {
-              bar.style.background = '#555';
-            }
-          }
-
-          if (valueDisplay !== null) {
-            valueDisplay.textContent = effectiveValue.toFixed(2);
-            if (mod.enabled && effectiveValue > 0.1) {
-              valueDisplay.style.color = '#0af';
-            } else {
-              valueDisplay.style.color = '#888';
-            }
-          }
-        } catch (err: unknown) {
-          console.debug(`Error updating mapping bar for ${param}:`, err);
-        }
-      }
-    } catch (err: unknown) {
-      console.debug('Error in updateMappingBars:', err);
     }
   }
 

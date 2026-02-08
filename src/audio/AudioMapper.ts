@@ -3,8 +3,11 @@
  *
  * Each visual parameter can have one or more ModulationSlots, each routing
  * an audio metric through amount/curve/smoothing/range to produce a modulation value.
- * Multiple slots are summed (mod-matrix style). The current UI exposes one slot
- * per parameter; the data model supports arbitrary stacking.
+ * Multiple slots are summed (mod-matrix style).
+ *
+ * Signal flow per slot:
+ *   metric * amount -> clamp(0,1) -> pow(curve) -> invert -> EMA smooth
+ *     -> * multiplier + offset -> clamp(0,1) -> rangeMin + v * rangeSpan
  */
 
 import type {
@@ -33,11 +36,16 @@ export function createDefaultSlot(
   return {
     source,
     amount: 0.5,
+    offset: 0,
+    multiplier: 1,
     smoothing: 0.5,
     invert: false,
     curve: 1.0,          // linear by default
     rangeMin: range?.min ?? 0,
     rangeMax: range?.max ?? 1,
+    locked: false,
+    muted: false,
+    solo: false,
   };
 }
 
@@ -51,6 +59,27 @@ export function createDefaultModulation(
   return {
     enabled: false,
     slots: [createDefaultSlot(source, param)],
+  };
+}
+
+/**
+ * Normalize a slot loaded from storage that may be missing newer fields.
+ * Ensures offset and multiplier are present with correct defaults.
+ */
+export function normalizeSlot(slot: Partial<ModulationSlot> & Pick<ModulationSlot, 'source'>): ModulationSlot {
+  return {
+    source: slot.source,
+    amount: slot.amount ?? 0.5,
+    offset: slot.offset ?? 0,
+    multiplier: slot.multiplier ?? 1,
+    smoothing: slot.smoothing ?? 0.5,
+    invert: slot.invert ?? false,
+    curve: slot.curve ?? 1.0,
+    rangeMin: slot.rangeMin ?? 0,
+    rangeMax: slot.rangeMax ?? 1,
+    locked: slot.locked ?? false,
+    muted: slot.muted ?? false,
+    solo: slot.solo ?? false,
   };
 }
 
@@ -108,11 +137,16 @@ export function migrateLegacyMapping(
       {
         source: legacy.source,
         amount: legacy.sensitivity,
+        offset: legacy.offset ?? 0,
+        multiplier: legacy.multiplier ?? 1,
         smoothing: legacy.smoothing,
         invert: legacy.invert,
         curve: 1.0,
         rangeMin: range?.min ?? legacy.minValue,
         rangeMax: range?.max ?? legacy.maxValue,
+        locked: false,
+        muted: false,
+        solo: false,
       },
     ],
   };
@@ -251,6 +285,95 @@ export class AudioMapper {
     this.mappings[param] = mod;
   }
 
+  // ── slot management ──────────────────────────────────────────────
+
+  /**
+   * Add a new modulation slot to a parameter.
+   * Creates the ParameterModulation entry if it doesn't exist.
+   */
+  addSlot(param: keyof VisualParams, slot?: ModulationSlot): ModulationSlot {
+    const mod = this.mappings[param] ?? createDefaultModulation('rms', param);
+    const newSlot = slot ?? createDefaultSlot('rms', param);
+    mod.slots.push(newSlot);
+    this.mappings[param] = mod;
+    return newSlot;
+  }
+
+  /**
+   * Remove a modulation slot at the given index.
+   * If the last slot is removed, modulation is disabled for that parameter.
+   */
+  removeSlot(param: keyof VisualParams, slotIndex: number): void {
+    const mod = this.mappings[param];
+    if (mod === undefined) return;
+    if (slotIndex < 0 || slotIndex >= mod.slots.length) return;
+
+    // Clear smoothing state for the removed slot and re-index higher slots
+    this.smoothedValues.delete(`${param}_${slotIndex}_smoothed`);
+    for (let i = slotIndex + 1; i < mod.slots.length; i++) {
+      const key = `${param}_${i}_smoothed`;
+      const val = this.smoothedValues.get(key);
+      if (val !== undefined) {
+        this.smoothedValues.set(`${param}_${i - 1}_smoothed`, val);
+        this.smoothedValues.delete(key);
+      }
+    }
+
+    mod.slots.splice(slotIndex, 1);
+
+    // Auto-disable when all slots removed
+    if (mod.slots.length === 0) {
+      mod.enabled = false;
+    }
+
+    this.mappings[param] = mod;
+  }
+
+  /**
+   * Update a slot at a specific index.
+   */
+  updateSlot(param: keyof VisualParams, slotIndex: number, partial: Partial<ModulationSlot>): void {
+    const mod = this.mappings[param];
+    if (mod === undefined) return;
+    const existing = mod.slots[slotIndex];
+    if (existing === undefined) return;
+    mod.slots[slotIndex] = { ...existing, ...partial };
+    this.mappings[param] = mod;
+  }
+
+  /**
+   * Get the number of modulation slots for a parameter.
+   */
+  getSlotCount(param: keyof VisualParams): number {
+    return this.mappings[param]?.slots.length ?? 0;
+  }
+
+  /**
+   * Get a specific slot by index.
+   */
+  getSlot(param: keyof VisualParams, slotIndex: number): ModulationSlot | undefined {
+    return this.mappings[param]?.slots[slotIndex];
+  }
+
+  /**
+   * Get all active routes as a flat list of { param, slotIndex, slot } entries.
+   * Only includes enabled parameters with at least one slot.
+   */
+  getActiveRoutes(): Array<{ param: keyof VisualParams; slotIndex: number; slot: ModulationSlot }> {
+    const routes: Array<{ param: keyof VisualParams; slotIndex: number; slot: ModulationSlot }> = [];
+    for (const [paramName, mod] of Object.entries(this.mappings)) {
+      if (mod === undefined || !mod.enabled) continue;
+      const param = paramName as keyof VisualParams;
+      for (let i = 0; i < mod.slots.length; i++) {
+        const slot = mod.slots[i];
+        if (slot !== undefined) {
+          routes.push({ param, slotIndex: i, slot });
+        }
+      }
+    }
+    return routes;
+  }
+
   /** Get all mappings */
   getMappings(): AudioMappings {
     return { ...this.mappings };
@@ -296,11 +419,19 @@ export class AudioMapper {
       const range = PARAM_RANGES[param];
       const baseValue = baseParams[param];
 
-      // Sum contributions from all slots
+      // Mute/solo: if any slot has solo, only soloed slots contribute; else all non-muted slots
+      const anySolo = mod.slots.some((s) => s?.solo === true);
+      const includeSlot = (slot: ModulationSlot | undefined, i: number): boolean => {
+        if (slot === undefined) return false;
+        if (anySolo) return slot.solo === true;
+        return slot.muted !== true;
+      };
+
+      // Sum contributions from included slots
       let totalModulation = 0;
       for (let i = 0; i < mod.slots.length; i++) {
         const slot = mod.slots[i];
-        if (slot !== undefined) {
+        if (slot !== undefined && includeSlot(slot, i)) {
           totalModulation += this.computeSlotValue(param, i, slot, metrics);
         }
       }
@@ -316,7 +447,7 @@ export class AudioMapper {
   /**
    * Compute a single slot's modulation output.
    *
-   * Signal flow: metric → amount → curve → invert → smooth → range → output
+   * Signal flow: metric → amount → curve → invert → smooth → *multiplier+offset → range → output
    */
   private computeSlotValue(
     param: keyof VisualParams,
@@ -348,9 +479,14 @@ export class AudioMapper {
     const smoothed = prev + alpha * (v - prev);
     this.smoothedValues.set(smoothingKey, smoothed);
 
-    // 5. Map to parameter-space range
+    // 5. Apply multiplier and offset (linear transform)
+    const mult = slot.multiplier ?? 1;
+    const off = slot.offset ?? 0;
+    const transformed = Math.max(0, Math.min(1, smoothed * mult + off));
+
+    // 6. Map to parameter-space range
     const rangeSpan = slot.rangeMax - slot.rangeMin;
-    return slot.rangeMin + smoothed * rangeSpan;
+    return slot.rangeMin + transformed * rangeSpan;
   }
 
   // ── utilities ────────────────────────────────────────────────────
@@ -376,8 +512,14 @@ export class AudioMapper {
         const migrated = migrateLegacyMappings(data as unknown as LegacyAudioMappings);
         this.mappings = { ...this.mappings, ...migrated };
       } else {
-        // New format
-        this.mappings = { ...this.mappings, ...(data as AudioMappings) };
+        // New format — normalize slots to ensure offset/multiplier are present
+        const imported = data as AudioMappings;
+        for (const mod of Object.values(imported)) {
+          if (mod !== undefined && mod.slots !== undefined) {
+            mod.slots = mod.slots.map((s) => normalizeSlot(s));
+          }
+        }
+        this.mappings = { ...this.mappings, ...imported };
       }
       return true;
     } catch (error) {

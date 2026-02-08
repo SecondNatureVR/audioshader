@@ -6,6 +6,7 @@ import {
   AudioMapper,
   createDefaultSlot,
   createDefaultModulation,
+  normalizeSlot,
   migrateLegacyMapping,
   migrateLegacyMappings,
   ALL_MAPPABLE_PARAMS,
@@ -55,11 +56,16 @@ describe('AudioMapper factory helpers', () => {
     const slot = createDefaultSlot('bass');
     expect(slot.source).toBe('bass');
     expect(slot.amount).toBe(0.5);
+    expect(slot.offset).toBe(0);
+    expect(slot.multiplier).toBe(1);
     expect(slot.smoothing).toBe(0.5);
     expect(slot.invert).toBe(false);
     expect(slot.curve).toBe(1.0);
     expect(slot.rangeMin).toBe(0);
     expect(slot.rangeMax).toBe(1);
+    expect(slot.locked).toBe(false);
+    expect(slot.muted).toBe(false);
+    expect(slot.solo).toBe(false);
   });
 
   it('createDefaultSlot should use param range when param is provided', () => {
@@ -189,7 +195,7 @@ describe('AudioMapper class', () => {
       const mod: ParameterModulation = {
         enabled: true,
         slots: [
-          { source: 'high', amount: 0.9, smoothing: 0.3, invert: true, curve: 2.0, rangeMin: 0, rangeMax: 100 },
+          { source: 'high', amount: 0.9, offset: 0, multiplier: 1, smoothing: 0.3, invert: true, curve: 2.0, rangeMin: 0, rangeMax: 100 },
         ],
       };
       mapper.setModulation('hue', mod);
@@ -267,6 +273,8 @@ describe('AudioMapper class', () => {
         slots: [{
           source: 'mid',
           amount: 1.0,
+          offset: 0,
+          multiplier: 1,
           smoothing: 0,      // no smoothing
           invert: false,
           curve: 1.0,
@@ -295,6 +303,8 @@ describe('AudioMapper class', () => {
         slots: [{
           source: 'bass',
           amount: 1.0,
+          offset: 0,
+          multiplier: 1,
           smoothing: 0,
           invert: false,
           curve: 2.0,         // square curve: 0.5^2 = 0.25
@@ -321,6 +331,8 @@ describe('AudioMapper class', () => {
         slots: [{
           source: 'rms',
           amount: 1.0,
+          offset: 0,
+          multiplier: 1,
           smoothing: 0,
           invert: true,
           curve: 1.0,
@@ -348,6 +360,8 @@ describe('AudioMapper class', () => {
           {
             source: 'bass',
             amount: 1.0,
+            offset: 0,
+            multiplier: 1,
             smoothing: 0,
             invert: false,
             curve: 1.0,
@@ -357,6 +371,8 @@ describe('AudioMapper class', () => {
           {
             source: 'high',
             amount: 1.0,
+            offset: 0,
+            multiplier: 1,
             smoothing: 0,
             invert: false,
             curve: 1.0,
@@ -384,6 +400,8 @@ describe('AudioMapper class', () => {
         slots: [{
           source: 'rms',
           amount: 1.0,
+          offset: 0,
+          multiplier: 1,
           smoothing: 0,
           invert: false,
           curve: 1.0,
@@ -409,6 +427,8 @@ describe('AudioMapper class', () => {
         slots: [{
           source: 'bass',
           amount: 1.0,
+          offset: 0,
+          multiplier: 1,
           smoothing: 0,
           invert: false,
           curve: 1.0,
@@ -439,6 +459,8 @@ describe('AudioMapper class', () => {
         slots: [{
           source: 'rms',
           amount: 1.0,
+          offset: 0,
+          multiplier: 1,
           smoothing: 0.9,    // heavy smoothing
           invert: false,
           curve: 1.0,
@@ -473,6 +495,8 @@ describe('AudioMapper class', () => {
         slots: [{
           source: 'rms',
           amount: 1.0,
+          offset: 0,
+          multiplier: 1,
           smoothing: 0.9,
           invert: false,
           curve: 1.0,
@@ -576,6 +600,368 @@ describe('AudioMapper class', () => {
       const newMapper = new AudioMapper();
       newMapper.setMappings(allMappings);
       expect(newMapper.getPrimarySlot('hue').source).toBe('bass');
+    });
+  });
+
+  // ── offset / multiplier signal chain ────────────────────────────
+
+  describe('offset and multiplier', () => {
+    it('should apply multiplier to scale the processed signal', () => {
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [{
+          source: 'rms',
+          amount: 1.0,
+          offset: 0,
+          multiplier: 2.0,   // doubles the signal
+          smoothing: 0,
+          invert: false,
+          curve: 1.0,
+          rangeMin: 0,
+          rangeMax: 1,
+        }],
+      });
+
+      const baseParams = createDefaultParams();
+      baseParams.scale = 0;
+
+      // rms=0.3 → v=0.3 → *2 = 0.6 → range [0,1] → 0.6
+      const result = mapper.applyMappings(baseParams, makeMetrics({ rms: 0.3 }));
+      expect(result.scale).toBeCloseTo(0.6, 2);
+    });
+
+    it('should clamp after multiplier application', () => {
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [{
+          source: 'rms',
+          amount: 1.0,
+          offset: 0,
+          multiplier: 5.0,   // way over 1
+          smoothing: 0,
+          invert: false,
+          curve: 1.0,
+          rangeMin: 0,
+          rangeMax: 1,
+        }],
+      });
+
+      const baseParams = createDefaultParams();
+      baseParams.scale = 0;
+
+      // rms=0.5 → v=0.5 → *5 = 2.5 → clamp(0,1) = 1 → range [0,1] → 1
+      const result = mapper.applyMappings(baseParams, makeMetrics({ rms: 0.5 }));
+      expect(result.scale).toBeCloseTo(1.0, 2);
+    });
+
+    it('should apply offset to shift the baseline', () => {
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [{
+          source: 'rms',
+          amount: 1.0,
+          offset: 0.5,       // shift baseline up
+          multiplier: 1.0,
+          smoothing: 0,
+          invert: false,
+          curve: 1.0,
+          rangeMin: 0,
+          rangeMax: 1,
+        }],
+      });
+
+      const baseParams = createDefaultParams();
+      baseParams.scale = 0;
+
+      // rms=0 → v=0 → *1 + 0.5 = 0.5 → range [0,1] → 0.5
+      const result = mapper.applyMappings(baseParams, makeMetrics({ rms: 0 }));
+      expect(result.scale).toBeCloseTo(0.5, 2);
+    });
+
+    it('should combine multiplier and offset correctly', () => {
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+      mapper.setModulation('hue', {
+        enabled: true,
+        slots: [{
+          source: 'mid',
+          amount: 1.0,
+          offset: 0.2,
+          multiplier: 0.5,
+          smoothing: 0,
+          invert: false,
+          curve: 1.0,
+          rangeMin: 0,
+          rangeMax: 100,
+        }],
+      });
+
+      const baseParams = createDefaultParams();
+      baseParams.hue = 0;
+
+      // mid=0.6 → v=0.6 → *0.5 + 0.2 = 0.5 → range [0,100] → 50
+      const result = mapper.applyMappings(baseParams, makeMetrics({ mid: 0.6 }));
+      expect(result.hue).toBeCloseTo(50, 1);
+    });
+
+    it('defaults (multiplier=1, offset=0) should be identity', () => {
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [{
+          source: 'rms',
+          amount: 1.0,
+          offset: 0,
+          multiplier: 1,
+          smoothing: 0,
+          invert: false,
+          curve: 1.0,
+          rangeMin: 0,
+          rangeMax: 1,
+        }],
+      });
+
+      const baseParams = createDefaultParams();
+      baseParams.scale = 0;
+
+      // rms=0.7 → v=0.7 → *1 + 0 = 0.7 → range [0,1] → 0.7
+      const result = mapper.applyMappings(baseParams, makeMetrics({ rms: 0.7 }));
+      expect(result.scale).toBeCloseTo(0.7, 2);
+    });
+  });
+
+  // ── slot management ─────────────────────────────────────────────
+
+  describe('slot management', () => {
+    it('addSlot should add a new slot to a parameter', () => {
+      const initial = mapper.getSlotCount('hue');
+      const newSlot = createDefaultSlot('bass', 'hue');
+      mapper.addSlot('hue', newSlot);
+      expect(mapper.getSlotCount('hue')).toBe(initial + 1);
+      expect(mapper.getSlot('hue', initial)?.source).toBe('bass');
+    });
+
+    it('addSlot should create modulation entry if none exists', () => {
+      // Create a fresh mapper then manually delete the mapping
+      const m = new AudioMapper();
+      m.setMappings({}); // clear all
+      m.addSlot('hue', createDefaultSlot('mid', 'hue'));
+      expect(m.getSlotCount('hue')).toBe(2); // default + new
+    });
+
+    it('removeSlot should remove a slot at given index', () => {
+      mapper.addSlot('hue', createDefaultSlot('bass', 'hue'));
+      mapper.addSlot('hue', createDefaultSlot('high', 'hue'));
+      const before = mapper.getSlotCount('hue');
+      mapper.removeSlot('hue', 1);
+      expect(mapper.getSlotCount('hue')).toBe(before - 1);
+    });
+
+    it('removeSlot should auto-disable when last slot removed', () => {
+      mapper.updateModulation('hue', { enabled: true });
+      // Remove all slots
+      while (mapper.getSlotCount('hue') > 0) {
+        mapper.removeSlot('hue', 0);
+      }
+      expect(mapper.getModulation('hue')?.enabled).toBe(false);
+    });
+
+    it('removeSlot should no-op for out-of-range index', () => {
+      const before = mapper.getSlotCount('hue');
+      mapper.removeSlot('hue', 999);
+      expect(mapper.getSlotCount('hue')).toBe(before);
+    });
+
+    it('updateSlot should update a specific slot by index', () => {
+      mapper.addSlot('hue', createDefaultSlot('bass', 'hue'));
+      mapper.updateSlot('hue', 1, { source: 'high', amount: 0.9 });
+      const slot = mapper.getSlot('hue', 1);
+      expect(slot?.source).toBe('high');
+      expect(slot?.amount).toBe(0.9);
+    });
+
+    it('getSlot should return undefined for invalid index', () => {
+      expect(mapper.getSlot('hue', 999)).toBeUndefined();
+    });
+
+    it('getActiveRoutes should return only enabled params with slots', () => {
+      // Disable all
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+      // Enable just hue with 2 slots
+      mapper.updateModulation('hue', { enabled: true });
+      mapper.addSlot('hue', createDefaultSlot('bass', 'hue'));
+
+      const routes = mapper.getActiveRoutes();
+      expect(routes.length).toBe(2); // 2 slots for hue
+      expect(routes.every((r) => r.param === 'hue')).toBe(true);
+      expect(routes[0]!.slotIndex).toBe(0);
+      expect(routes[1]!.slotIndex).toBe(1);
+    });
+
+    it('getActiveRoutes should be empty when no params enabled', () => {
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+      expect(mapper.getActiveRoutes()).toHaveLength(0);
+    });
+  });
+
+  // ── normalizeSlot ───────────────────────────────────────────────
+
+  describe('normalizeSlot', () => {
+    it('should add missing offset and multiplier with defaults', () => {
+      const incomplete = { source: 'rms' as const, amount: 0.8, smoothing: 0.3, invert: true, curve: 2.0, rangeMin: 0, rangeMax: 10 };
+      const result = normalizeSlot(incomplete);
+      expect(result.offset).toBe(0);
+      expect(result.multiplier).toBe(1);
+      expect(result.amount).toBe(0.8);
+      expect(result.source).toBe('rms');
+    });
+
+    it('should preserve existing offset and multiplier', () => {
+      const full = { source: 'bass' as const, amount: 0.5, offset: 0.3, multiplier: 2.0, smoothing: 0.5, invert: false, curve: 1.0, rangeMin: 0, rangeMax: 1 };
+      const result = normalizeSlot(full);
+      expect(result.offset).toBe(0.3);
+      expect(result.multiplier).toBe(2.0);
+    });
+
+    it('should handle minimal input (only source)', () => {
+      const result = normalizeSlot({ source: 'high' });
+      expect(result.source).toBe('high');
+      expect(result.amount).toBe(0.5);
+      expect(result.offset).toBe(0);
+      expect(result.multiplier).toBe(1);
+      expect(result.smoothing).toBe(0.5);
+      expect(result.invert).toBe(false);
+      expect(result.curve).toBe(1.0);
+    });
+
+    it('should add locked, muted, solo with defaults when missing', () => {
+      const result = normalizeSlot({ source: 'rms' });
+      expect(result.locked).toBe(false);
+      expect(result.muted).toBe(false);
+      expect(result.solo).toBe(false);
+    });
+
+    it('should preserve locked, muted, solo when present', () => {
+      const result = normalizeSlot({ source: 'rms', locked: true, muted: true, solo: true });
+      expect(result.locked).toBe(true);
+      expect(result.muted).toBe(true);
+      expect(result.solo).toBe(true);
+    });
+  });
+
+  // ── mute / solo behavior in apply ─────────────────────────────────
+
+  describe('mute and solo in applyMappings', () => {
+    it('should exclude muted slots from modulation', () => {
+      const mapper = new AudioMapper();
+      const base = createDefaultParams();
+      base.scale = 0.5;
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [
+          { ...createDefaultSlot('rms', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, muted: false },
+          { ...createDefaultSlot('bass', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, muted: true },
+        ],
+      });
+      const metrics = makeMetrics({ rms: 0.5, bass: 1.0 });
+      const out = mapper.applyMappings(base, metrics);
+      expect(out.scale).toBeDefined();
+      // With all slots muted, no modulation: result should equal base
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [
+          { ...createDefaultSlot('rms', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, muted: true },
+          { ...createDefaultSlot('bass', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, muted: true },
+        ],
+      });
+      const allMuted = mapper.applyMappings(base, metrics);
+      expect(allMuted.scale).toBe(0.5);
+    });
+
+    it('should when any slot is soloed only use soloed slots', () => {
+      const mapper = new AudioMapper();
+      const base = createDefaultParams();
+      base.scale = 0.5;
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [
+          { ...createDefaultSlot('rms', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, solo: false },
+          { ...createDefaultSlot('bass', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, solo: true },
+        ],
+      });
+      const metrics = makeMetrics({ rms: 0.8, bass: 0.2 });
+      const out = mapper.applyMappings(base, metrics);
+      expect(out.scale).toBeDefined();
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [
+          { ...createDefaultSlot('rms', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, solo: false },
+          { ...createDefaultSlot('bass', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, solo: false },
+        ],
+      });
+      const noSolo = mapper.applyMappings(base, metrics);
+      mapper.setModulation('scale', {
+        enabled: true,
+        slots: [
+          { ...createDefaultSlot('rms', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, solo: true },
+          { ...createDefaultSlot('bass', 'scale'), amount: 1, rangeMin: 0, rangeMax: 1, solo: false },
+        ],
+      });
+      const onlyRmsSolo = mapper.applyMappings(base, metrics);
+      expect(onlyRmsSolo.scale).not.toBe(noSolo.scale);
+    });
+  });
+
+  // ── legacy migration with offset/multiplier ─────────────────────
+
+  describe('legacy migration preserves offset/multiplier', () => {
+    it('should carry over multiplier and offset from legacy format', () => {
+      const legacy: LegacyAudioMappingConfig = {
+        enabled: true,
+        source: 'bass',
+        sensitivity: 0.8,
+        smoothing: 0.6,
+        multiplier: 2.0,
+        offset: 0.1,
+        invert: false,
+        minValue: 0,
+        maxValue: 1,
+      };
+      const mod = migrateLegacyMapping(legacy, 'scale');
+      expect(mod.slots[0]!.offset).toBe(0.1);
+      expect(mod.slots[0]!.multiplier).toBe(2.0);
+    });
+
+    it('should default offset=0, multiplier=1 when legacy values are missing', () => {
+      // Simulate a legacy config without multiplier/offset (cast to bypass TS)
+      const legacy = {
+        enabled: true,
+        source: 'rms',
+        sensitivity: 0.5,
+        smoothing: 0.5,
+        invert: false,
+        minValue: 0,
+        maxValue: 1,
+      } as LegacyAudioMappingConfig;
+      const mod = migrateLegacyMapping(legacy);
+      expect(mod.slots[0]!.offset).toBe(0);
+      expect(mod.slots[0]!.multiplier).toBe(1);
     });
   });
 });

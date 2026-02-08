@@ -59,88 +59,10 @@
         </div>
     </div>
 
-    <!-- Modulation Config Drawer -->
+    <!-- Modulation Config Drawer (dynamically populated by UIController) -->
     <div id="modulation-drawer" class="modulation-drawer">
-        <div class="modulation-drawer-content">
-            <div class="modulation-drawer-header">
-                <div class="modulation-drawer-title" id="modulation-drawer-title">Audio Mod</div>
-                <button class="modulation-drawer-close" id="modulation-drawer-close" title="Close">×</button>
-            </div>
-
-            <!-- Enable toggle -->
-            <div class="mod-row" style="margin-bottom: 8px;">
-                <label style="font-size: 9px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                    <input type="checkbox" id="mod-enabled" style="cursor: pointer;"> Enabled
-                </label>
-            </div>
-
-            <!-- Source selector -->
-            <div class="control-group" style="margin-bottom: 6px;">
-                <label style="font-size: 9px;">Source</label>
-                <select id="mod-source" style="width: 100%; padding: 3px 6px; font-size: 9px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
-                </select>
-            </div>
-
-            <!-- Amount slider -->
-            <div class="control-group" style="margin-bottom: 6px;">
-                <label style="font-size: 9px;">Amount</label>
-                <div class="control-row">
-                    <input type="range" id="mod-amount" min="0" max="100" step="1" value="50">
-                    <span class="value" id="mod-amount-value" contenteditable="true">50%</span>
-                </div>
-            </div>
-
-            <!-- Smoothing slider -->
-            <div class="control-group" style="margin-bottom: 6px;">
-                <label style="font-size: 9px;">Smoothing</label>
-                <div class="control-row">
-                    <input type="range" id="mod-smoothing" min="0" max="99" step="1" value="50">
-                    <span class="value" id="mod-smoothing-value" contenteditable="true">50%</span>
-                </div>
-            </div>
-
-            <!-- Response curve slider -->
-            <div class="control-group" style="margin-bottom: 6px;">
-                <label style="font-size: 9px;">Curve</label>
-                <div class="control-row">
-                    <input type="range" id="mod-curve" min="1" max="50" step="1" value="10">
-                    <span class="value" id="mod-curve-value" contenteditable="true">1.0</span>
-                </div>
-            </div>
-
-            <!-- Invert toggle -->
-            <div class="mod-row" style="margin-bottom: 6px;">
-                <label style="font-size: 9px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                    <input type="checkbox" id="mod-invert" style="cursor: pointer;"> Invert
-                </label>
-            </div>
-
-            <!-- Range Min/Max -->
-            <div style="display: flex; gap: 6px; margin-bottom: 6px;">
-                <div class="control-group" style="flex: 1; margin-bottom: 0;">
-                    <label style="font-size: 9px;">Range Min</label>
-                    <input type="number" id="mod-range-min" step="any" value="0" style="width: 100%; padding: 3px 6px; font-size: 9px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
-                </div>
-                <div class="control-group" style="flex: 1; margin-bottom: 0;">
-                    <label style="font-size: 9px;">Range Max</label>
-                    <input type="number" id="mod-range-max" step="any" value="1" style="width: 100%; padding: 3px 6px; font-size: 9px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
-                </div>
-            </div>
-
-            <!-- Live visualization bar -->
-            <div class="mod-live-viz" style="margin-bottom: 6px;">
-                <label style="font-size: 8px; color: #666; margin-bottom: 2px; display: block;">Live</label>
-                <div id="mod-live-bar-container" style="width: 100%; height: 12px; background: #111; border-radius: 3px; overflow: hidden; position: relative;">
-                    <div id="mod-live-range" style="position: absolute; top: 0; height: 100%; background: rgba(0,170,255,0.1); border-left: 1px solid rgba(0,170,255,0.3); border-right: 1px solid rgba(0,170,255,0.3);"></div>
-                    <div id="mod-live-marker" style="position: absolute; top: 0; width: 2px; height: 100%; background: #0af;"></div>
-                </div>
-            </div>
-
-            <!-- Actions -->
-            <div style="display: flex; gap: 6px; justify-content: flex-start;">
-                <button class="curve-btn-action" id="mod-reset" style="font-size: 9px; padding: 4px 8px;">Reset</button>
-                <button class="curve-btn-action" id="mod-randomize" style="font-size: 9px; padding: 4px 8px;" title="Randomize modulation values">🎲</button>
-            </div>
+        <div class="modulation-drawer-content" id="modulation-drawer-content">
+            <!-- Header, slots, and actions rendered dynamically -->
         </div>
     </div>
 
@@ -633,129 +555,62 @@
             <canvas id="audio-radar-canvas" width="200" height="200" style="display: block; margin: 0 auto; background: rgba(0,0,0,0.3); border-radius: 4px;"></canvas>
         </div>
 
-        <!-- Audio Metrics Visualization -->
-        <div id="audio-metrics-visualization">
-            <h5>Audio Metrics</h5>
-            <table class="metrics-table" id="audio-metrics-table">
-                <thead>
-                    <tr>
-                        <th>Metric</th>
-                        <th>Value</th>
-                        <th>Range</th>
-                        <th>Bar</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr data-metric="rms">
-                        <td class="metric-name">RMS</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="bass">
-                        <td class="metric-name">Bass</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="mid">
-                        <td class="metric-name">Mid</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="high">
-                        <td class="metric-name">High</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="presence">
-                        <td class="metric-name">Presence</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="harshness">
-                        <td class="metric-name">Harshness</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="mud">
-                        <td class="metric-name">Mud</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="compression">
-                        <td class="metric-name">Compression</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="collision">
-                        <td class="metric-name">Collision</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="coherence">
-                        <td class="metric-name">Coherence</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="stereoWidth">
-                        <td class="metric-name">Stereo Width</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="phaseRisk">
-                        <td class="metric-name">Phase Risk</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="lowImbalance">
-                        <td class="metric-name">Low Imbalance</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="emptiness">
-                        <td class="metric-name">Emptiness</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                    <tr data-metric="panPosition">
-                        <td class="metric-name">Pan Position</td>
-                        <td class="metric-value">0.000</td>
-                        <td class="metric-range">0-1</td>
-                        <td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Active Mappings Overview -->
-        <div id="active-mappings-overview" style="margin-top: 10px;">
-            <h5>Active Mappings</h5>
-            <div id="active-mappings-container" style="font-size: 8px; color: #bbb;">
-                <!-- Populated dynamically -->
+        <!-- Active Routes (replaces old parameter mapping list) -->
+        <div id="active-routes-section">
+            <div class="mod-section-toggle" id="routes-section-toggle">
+                <h5 style="margin:0;">Active Routes <span id="active-routes-count" style="color:#555;">(0)</span></h5>
+            </div>
+            <div id="active-routes-container" style="font-size: 9px;">
+                <!-- Populated dynamically by updateActiveMappingsOverview -->
+            </div>
+            <button type="button" id="mod-add-route-btn" class="curve-btn-action" style="font-size:8px;padding:3px 8px;margin-top:4px;">+ Add Route</button>
+            <div id="mod-add-route-form" class="mod-add-route-form" style="display:none;">
+                <select id="add-route-source" title="Audio source">
+                    <!-- populated dynamically -->
+                </select>
+                <span style="color:#555;font-size:9px;">&rarr;</span>
+                <select id="add-route-target" title="Visual parameter">
+                    <!-- populated dynamically -->
+                </select>
+                <button type="button" id="add-route-confirm" class="curve-btn-action" style="font-size:8px;padding:2px 6px;">Add</button>
+                <button type="button" id="add-route-cancel" class="curve-btn-action" style="font-size:8px;padding:2px 6px;">Cancel</button>
             </div>
         </div>
 
-        <!-- Parameter Mapping Controls -->
-        <div id="audio-mapping-content" style="margin-top: 10px;">
-            <h5>Parameter Mappings</h5>
-            <div style="font-size: 8px; color: #888; margin-bottom: 8px;">
-                Enable audio reactivity for visual parameters. Click the A button on any slider to open the modulation drawer.
+        <!-- Audio Metrics (collapsible, collapsed by default) -->
+        <div id="audio-metrics-section" style="margin-top: 10px;">
+            <div class="mod-section-toggle" id="metrics-section-toggle">
+                <h5 style="margin:0;">Audio Metrics</h5>
+                <span class="mod-section-arrow collapsed" id="metrics-section-arrow">&#9660;</span>
             </div>
-            <div id="parameter-mappings-container">
-                <!-- Will be populated dynamically -->
+            <div id="audio-metrics-collapsible" style="display:none;">
+                <table class="metrics-table" id="audio-metrics-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Range</th>
+                            <th>Bar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-metric="rms"><td class="metric-name">RMS</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="bass"><td class="metric-name">Bass</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="mid"><td class="metric-name">Mid</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="high"><td class="metric-name">High</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="presence"><td class="metric-name">Presence</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="harshness"><td class="metric-name">Harshness</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="mud"><td class="metric-name">Mud</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="compression"><td class="metric-name">Compression</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="collision"><td class="metric-name">Collision</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="coherence"><td class="metric-name">Coherence</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="stereoWidth"><td class="metric-name">Stereo Width</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="phaseRisk"><td class="metric-name">Phase Risk</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="lowImbalance"><td class="metric-name">Low Imbalance</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="emptiness"><td class="metric-name">Emptiness</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="panPosition"><td class="metric-name">Pan Position</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

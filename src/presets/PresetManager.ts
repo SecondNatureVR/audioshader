@@ -6,7 +6,7 @@
 import type { VisualParams, AudioMappings, Preset, BlendMode, LegacyAudioMappings } from '../types';
 import { DEFAULT_PARAMS } from '../render/Parameters';
 import { getDefaultPresetsMap, migrateOldLocalStorage, getDefaultEmanationRate, getDefaultBlendMode } from './defaultPresets';
-import { migrateLegacyMappings } from '../audio/AudioMapper';
+import { migrateLegacyMappings, normalizeSlot } from '../audio/AudioMapper';
 
 const STORAGE_KEY = 'audioshader_presets';
 const CURRENT_PRESET_KEY = 'audioshader_current_preset';
@@ -57,6 +57,8 @@ export class PresetManager {
               preset.audioMappings = migrated;
               needsSave = true;
             }
+            // Normalize slots to ensure offset/multiplier are present
+            PresetManager.normalizeAudioMappingSlots(preset.audioMappings);
           }
         }
         if (needsSave) {
@@ -433,5 +435,18 @@ export class PresetManager {
 
     // Already new format
     return null;
+  }
+
+  /**
+   * Normalize all slots in audio mappings to ensure newer fields
+   * (offset, multiplier) are present with correct defaults.
+   * Mutates the mappings in place.
+   */
+  static normalizeAudioMappingSlots(mappings: AudioMappings): void {
+    for (const mod of Object.values(mappings)) {
+      if (mod !== undefined && mod.slots !== undefined) {
+        mod.slots = mod.slots.map((s) => normalizeSlot(s));
+      }
+    }
   }
 }

@@ -67,11 +67,16 @@ export interface AudioMetrics {
 export interface ModulationSlot {
   source: keyof AudioMetrics;
   amount: number;        // 0-1, depth of modulation
+  offset: number;        // linear offset after processing (default 0)
+  multiplier: number;    // linear multiplier after processing (default 1)
   smoothing: number;     // 0-0.99, EMA smoothing factor
   invert: boolean;
   curve: number;         // power curve shaping the response (1.0 = linear)
   rangeMin: number;      // output range min (parameter space)
   rangeMax: number;      // output range max (parameter space)
+  locked?: boolean;      // if true, random map/val do not modify this slot (default false)
+  muted?: boolean;       // if true, this slot contributes no modulation (default false)
+  solo?: boolean;       // if any slot has solo, only soloed slots contribute (default false)
 }
 
 /** Per-parameter modulation configuration */

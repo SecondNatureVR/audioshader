@@ -733,9 +733,9 @@ input[type="range"]::-moz-range-thumb {
     position: fixed;
     top: 0;
     left: 0;
-    width: 260px;
+    width: 280px;
     height: auto;
-    max-height: 450px;
+    max-height: 80vh;
     z-index: 10001;
     pointer-events: none;
     transform: translateX(-100%);
@@ -787,6 +787,202 @@ input[type="range"]::-moz-range-thumb {
 
 .modulation-drawer-close:hover {
     color: #fff;
+}
+
+/* Mod slot cards */
+.mod-slot-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+}
+
+.mod-slot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.mod-slot-label {
+    font-size: 9px;
+    font-weight: bold;
+    color: #0af;
+}
+
+.mod-slot-delete {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.mod-slot-delete:hover {
+    color: #f44;
+}
+
+.mod-slot-toggles {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.mod-slot-lock,
+.mod-slot-mute,
+.mod-slot-solo {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 9px;
+    padding: 2px 4px;
+    line-height: 1;
+    border-radius: 2px;
+}
+.mod-slot-lock:hover,
+.mod-slot-mute:hover,
+.mod-slot-solo:hover {
+    color: #888;
+    background: rgba(255, 255, 255, 0.06);
+}
+.mod-slot-lock[aria-pressed="true"] { color: #0af; }
+.mod-slot-mute[aria-pressed="true"] { color: #f84; }
+.mod-slot-solo[aria-pressed="true"] { color: #8f8; }
+
+/* Route rows in M-panel */
+.mod-route-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    margin-bottom: 3px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 9px;
+}
+
+.mod-route-row:hover {
+    background: rgba(0, 170, 255, 0.08);
+}
+
+.mod-route-source {
+    color: #0fa;
+    width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mod-route-arrow {
+    color: #555;
+}
+
+.mod-route-target {
+    color: #0af;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mod-route-amount {
+    color: #888;
+    width: 35px;
+    text-align: right;
+}
+
+.mod-route-remove {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.mod-route-remove:hover {
+    color: #f44;
+}
+
+.mod-route-lock,
+.mod-route-mute,
+.mod-route-solo {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 1px 3px;
+    line-height: 1;
+    border-radius: 2px;
+    min-width: 18px;
+}
+.mod-route-lock:hover,
+.mod-route-mute:hover,
+.mod-route-solo:hover {
+    color: #888;
+    background: rgba(255, 255, 255, 0.06);
+}
+.mod-route-lock[aria-pressed="true"] { color: #0af; }
+.mod-route-mute[aria-pressed="true"] { color: #f84; }
+.mod-route-solo[aria-pressed="true"] { color: #8f8; }
+.mod-route-row.mod-route-muted .mod-route-source,
+.mod-route-row.mod-route-muted .mod-route-target { opacity: 0.6; }
+.mod-route-row.mod-route-solo { background: rgba(0, 170, 255, 0.06); }
+
+/* Add route inline form */
+.mod-add-route-form {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    margin-top: 4px;
+    padding: 4px;
+    background: rgba(0, 170, 255, 0.05);
+    border-radius: 3px;
+}
+
+.mod-add-route-form select {
+    font-size: 8px;
+    padding: 2px 4px;
+    background: #0a0a0a;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 3px;
+    flex: 1;
+}
+
+.mod-add-route-form button {
+    font-size: 8px;
+    padding: 2px 6px;
+}
+
+/* Collapsible sections in M-panel */
+.mod-section-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+}
+
+.mod-section-toggle:hover h5 {
+    color: #0af;
+}
+
+.mod-section-arrow {
+    font-size: 10px;
+    color: #555;
+    transition: transform 0.15s;
+}
+
+.mod-section-arrow.collapsed {
+    transform: rotate(-90deg);
 }
 
 /* Curve Editor Drawer - slides out from left (no animation) */

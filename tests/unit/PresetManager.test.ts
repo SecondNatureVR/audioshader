@@ -346,6 +346,8 @@ describe('PresetManager', () => {
           slots: [{
             source: 'collision',
             amount: 0.5,
+            offset: 0,
+            multiplier: 1,
             smoothing: 0.5,
             invert: false,
             curve: 1.0,
