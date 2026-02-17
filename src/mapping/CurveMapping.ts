@@ -34,6 +34,7 @@ export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilation
   spikeSharpness: { min: 0, max: 1, power: 1.0 },
   fillSize: { min: 0, max: 1, power: 1.0 },
   fillOpacity: { min: 0, max: 1, power: 1.0 },
+  strokeWeight: { min: 0.002, max: 0.05, power: 1.0 },
   blendOpacity: { min: 0, max: 1, power: 1.0 },
   jiggleAmount: { min: 0, max: 1, power: 1.0 },
 
@@ -64,6 +65,14 @@ export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilation
   // Note: expansionFactor is the actual param name, dilationSpeed is legacy
   expansionFactor: { min: 0.5, max: 1.5, power: 1.0 },
   dilationSpeed: { min: 0.5, max: 1.5, power: 1.0 }, // legacy alias
+
+  // Post-processing
+  fishbowlShape: { min: -0.5, max: 0.5, power: 1.0 },
+  fishbowlDilation: { min: -0.5, max: 0.5, power: 1.0 },
+  radialPowerShape: { min: 0.3, max: 3, power: 2.0 },
+  radialPowerDilation: { min: 0.3, max: 3, power: 2.0 },
+  kaleidoscopeSections: { min: 0, max: 16, power: 1.0 },
+  tunnelStrength: { min: 0, max: 0.9, power: 1.0 },
 };
 
 /**
@@ -474,6 +483,19 @@ export function formatParamValue(paramName: string, value: number): string {
     case 'spikeFrequency':
     case 'emanationRate':
       return value.toFixed(1);
+    case 'kaleidoscopeSections':
+      return Math.round(value).toString();
+    case 'fishbowlShape':
+    case 'fishbowlDilation':
+      return value.toFixed(2);
+    case 'radialPowerShape':
+    case 'radialPowerDilation':
+    case 'tunnelStrength':
+    case 'strokeWeight':
+    case 'strokeGlow':
+      return value.toFixed(3);
+    case 'strokeOpacity':
+      return value.toFixed(2);
     default:
       return value.toFixed(2);
   }

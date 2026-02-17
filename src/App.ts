@@ -6,10 +6,11 @@
 import { Renderer, type RenderOptions } from './render/Renderer';
 import { loadAllShaders } from './render/shaders';
 import { ParameterInterpolator } from './render/ParameterInterpolator';
-import { createDefaultParams, PARAM_RANGES, applyJiggle, randomizeParams } from './render/Parameters';
+import { createDefaultParams, mergeParams, PARAM_RANGES, applyJiggle, randomizeParams } from './render/Parameters';
 import { PresetManager } from './presets/PresetManager';
 import { AudioMapper } from './audio/AudioMapper';
-import type { VisualParams, AudioMetrics, RenderState, ParameterModulation, BlendMode } from './types';
+import { DEFAULT_PALETTE, mergePalette } from './config/colorPalette';
+import type { VisualParams, AudioMetrics, RenderState, ParameterModulation, BlendMode, ColorPalette } from './types';
 
 export interface AppConfig {
   canvas: HTMLCanvasElement;
@@ -40,6 +41,7 @@ export class App {
   private blendMode: BlendMode = 'additive';
   private lastCaptureTime: number = 0;
   private totalRotation: number = 0;
+  private colorPalette: ColorPalette = { ...DEFAULT_PALETTE };
 
   // Use fixed interval timing like lucas.html for consistent behavior across browsers
   private static readonly TARGET_FPS = 60;
@@ -71,7 +73,9 @@ export class App {
       shaders.starVertex,
       shaders.starFragment,
       shaders.dilationVertex,
-      shaders.dilationFragment
+      shaders.dilationFragment,
+      shaders.postprocessVertex,
+      shaders.postprocessFragment
     );
 
     // Load last used preset if available
@@ -79,12 +83,8 @@ export class App {
     if (lastPreset !== null) {
       const preset = this.presetManager.loadPreset(lastPreset);
       if (preset !== null) {
-        // Migrate old presets: merge emanationRate into params
-        const paramsWithRate = { ...preset.params };
-        if (paramsWithRate.emanationRate === undefined || paramsWithRate.emanationRate === 2.0) {
-          paramsWithRate.emanationRate = preset.emanationRate ?? App.DEFAULT_EMANATION_RATE;
-        }
-        this.setParams(paramsWithRate);
+        const merged = this.mergePresetParams(preset.params, preset.emanationRate);
+        this.setParams(merged);
         if (preset.audioMappings !== undefined) {
           this.audioMapper.setMappings(preset.audioMappings);
         }
@@ -214,6 +214,9 @@ export class App {
         u_blendOpacity: this.params.blendOpacity,
         u_fillSize: this.params.fillSize,
         u_fillOpacity: this.params.fillOpacity,
+        u_strokeWeight: this.params.strokeWeight,
+        u_strokeOpacity: this.params.strokeOpacity,
+        u_strokeGlow: this.params.strokeGlow,
       },
       dilationFactor: this.dilationFrozen ? 1.0 : this.params.expansionFactor,
       shouldCaptureShape,
@@ -224,6 +227,13 @@ export class App {
       noiseRate: this.params.noiseRate,
       blurAmount: this.params.blurAmount,
       blurRate: this.params.blurRate,
+      fishbowlShape: this.params.fishbowlShape,
+      fishbowlDilation: this.params.fishbowlDilation,
+      radialPowerShape: this.params.radialPowerShape,
+      radialPowerDilation: this.params.radialPowerDilation,
+      kaleidoscopeSections: this.params.kaleidoscopeSections,
+      tunnelStrength: this.params.tunnelStrength,
+      colorPalette: this.colorPalette,
       rotation: this.params.rotation,
       blendMode: this.blendMode,
       blendOpacity: this.params.blendOpacity,
@@ -494,12 +504,45 @@ export class App {
       this.params,
       this.audioMapper.getMappings(),
       undefined,
-      this.blendMode
+      this.blendMode,
+      this.colorPalette
     );
+  }
+
+  getColorPalette(): ColorPalette {
+    return { ...this.colorPalette };
+  }
+
+  setColorPalette(palette: Partial<ColorPalette>): void {
+    this.colorPalette = mergePalette({ ...this.colorPalette, ...palette });
+    this.notifyParamsChange();
   }
 
   // Default emanation rate used when preset doesn't specify one
   private static readonly DEFAULT_EMANATION_RATE = 30;
+
+  /**
+   * Merge preset params with defaults for backwards compatibility.
+   * Presets that don't define new params get no-effect values (fishbowl: 0, radialPower: 1, kaleidoscope: 0).
+   */
+  private mergePresetParams(
+    presetParams: Partial<VisualParams>,
+    presetEmanationRate?: number
+  ): VisualParams {
+    const params = { ...presetParams };
+    if (params.emanationRate === undefined || params.emanationRate === 2.0) {
+      params.emanationRate = presetEmanationRate ?? App.DEFAULT_EMANATION_RATE;
+    }
+    // Migrate legacy fishbowlAmount -> fishbowlShape/fishbowlDilation
+    const legacy = presetParams as Partial<VisualParams> & { fishbowlAmount?: number };
+    if (legacy.fishbowlAmount !== undefined && params.fishbowlShape === undefined) {
+      params.fishbowlShape = legacy.fishbowlAmount;
+    }
+    if (legacy.fishbowlAmount !== undefined && params.fishbowlDilation === undefined) {
+      params.fishbowlDilation = legacy.fishbowlAmount;
+    }
+    return mergeParams(params);
+  }
 
   /**
    * Load a preset by name
@@ -508,17 +551,15 @@ export class App {
     const preset = this.presetManager.loadPreset(name);
     if (preset === null) return false;
 
-    // Migrate old presets: if emanationRate is on the preset root (old format), merge into params
-    const paramsWithRate = { ...preset.params };
-    if (paramsWithRate.emanationRate === undefined || paramsWithRate.emanationRate === 2.0) {
-      // Use legacy field if present, otherwise default
-      paramsWithRate.emanationRate = preset.emanationRate ?? App.DEFAULT_EMANATION_RATE;
-    }
-    this.setParams(paramsWithRate);
+    const merged = this.mergePresetParams(preset.params, preset.emanationRate);
+    this.setParams(merged);
     // Set blendMode from preset or default to 'additive'
     this.blendMode = preset.blendMode ?? 'additive';
     if (preset.audioMappings !== undefined) {
       this.audioMapper.setMappings(preset.audioMappings);
+    }
+    if (preset.colorPalette !== undefined) {
+      this.colorPalette = mergePalette(preset.colorPalette);
     }
     return true;
   }
@@ -527,6 +568,6 @@ export class App {
    * Check if there are unsaved changes
    */
   hasUnsavedChanges(): boolean {
-    return this.presetManager.hasUnsavedChanges(this.params);
+    return this.presetManager.hasUnsavedChanges(this.params, this.colorPalette);
   }
 }

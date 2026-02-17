@@ -3,7 +3,7 @@
  * Handles saving, loading, import/export of visual presets
  */
 
-import type { VisualParams, AudioMappings, Preset, BlendMode, LegacyAudioMappings } from '../types';
+import type { VisualParams, AudioMappings, Preset, BlendMode, ColorPalette, LegacyAudioMappings } from '../types';
 import { DEFAULT_PARAMS } from '../render/Parameters';
 import { getDefaultPresetsMap, migrateOldLocalStorage, getDefaultEmanationRate, getDefaultBlendMode } from './defaultPresets';
 import { migrateLegacyMappings, normalizeSlot } from '../audio/AudioMapper';
@@ -148,7 +148,8 @@ export class PresetManager {
     params: VisualParams,
     audioMappings?: AudioMappings,
     emanationRate?: number,
-    blendMode?: BlendMode
+    blendMode?: BlendMode,
+    colorPalette?: ColorPalette
   ): void {
     const now = new Date().toISOString();
     const existing = this.presets.get(name);
@@ -159,6 +160,7 @@ export class PresetManager {
       blendMode: blendMode ?? existing?.blendMode,
       emanationRate: emanationRate ?? existing?.emanationRate,
       audioMappings: audioMappings !== undefined ? { ...audioMappings } : undefined,
+      colorPalette: colorPalette ?? existing?.colorPalette,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
@@ -237,9 +239,9 @@ export class PresetManager {
   }
 
   /**
-   * Check if current parameters differ from the loaded preset
+   * Check if current parameters (and optionally palette) differ from the loaded preset
    */
-  hasUnsavedChanges(currentParams: VisualParams): boolean {
+  hasUnsavedChanges(currentParams: VisualParams, currentPalette?: ColorPalette): boolean {
     if (this.currentPresetName === null) {
       // No preset loaded, check if params differ from defaults
       return !this.paramsEqual(currentParams, DEFAULT_PARAMS);
@@ -250,7 +252,19 @@ export class PresetManager {
       return true;
     }
 
-    return !this.paramsEqual(currentParams, preset.params);
+    if (!this.paramsEqual(currentParams, preset.params)) return true;
+    if (currentPalette !== undefined && preset.colorPalette !== undefined) {
+      if (!this.paletteEqual(currentPalette, preset.colorPalette)) return true;
+    }
+    return false;
+  }
+
+  private paletteEqual(a: ColorPalette, b: ColorPalette): boolean {
+    if (a.hueMin !== b.hueMin || a.hueMax !== b.hueMax) return false;
+    if (Math.abs(a.saturation - b.saturation) > 0.001) return false;
+    if (Math.abs(a.value - b.value) > 0.001) return false;
+    if (a.dominantColors.length !== b.dominantColors.length) return false;
+    return a.dominantColors.every((c, i) => c === b.dominantColors[i]);
   }
 
   /**

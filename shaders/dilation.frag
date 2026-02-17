@@ -12,7 +12,41 @@ uniform float u_noiseRate;
 uniform float u_blurAmount;
 uniform float u_blurRate;
 uniform float u_time;
+uniform float u_fishbowlDilation;   // >0 convex/barrel, <0 concave/pincushion, 0=off
+uniform float u_radialPowerDilation; // <1 expand center, >1 expand periphery, 1=off
 varying vec2 v_uv;
+
+// Radial power: sample_r = r^power (forward). For output at r, sample from r^(1/power)
+// Use pixel-space radius so distortion is circular in the image (fixes peanut/aspect pinch)
+vec2 radialPowerSampleUV(vec2 uv) {
+    if (abs(u_radialPowerDilation - 1.0) < 0.001) return uv;
+    vec2 center = vec2(0.5);
+    vec2 dir = uv - center;
+    vec2 dirPixel = dir * u_resolution.xy;
+    float r = length(dirPixel);
+    if (r < 0.001) return uv;
+    float sampleR = pow(r, 1.0 / u_radialPowerDilation);
+    vec2 sampleDirPixel = dirPixel * (sampleR / r);
+    return center + sampleDirPixel / u_resolution.xy;
+}
+
+// Apply fishbowl distortion to sample UV (before dilation reads from history)
+// Use pixel-space radius so distortion is circular in the image (fixes peanut/aspect pinch)
+vec2 fishbowlSampleUV(vec2 uv) {
+    if (abs(u_fishbowlDilation) < 0.001) return uv;
+    vec2 center = vec2(0.5);
+    vec2 dir = uv - center;
+    vec2 dirPixel = dir * u_resolution.xy;
+    float rPixel = length(dirPixel);
+    if (rPixel < 0.001) return uv;
+    float halfDiag = 0.5 * length(u_resolution.xy);
+    float r = rPixel / halfDiag;
+    float k = u_fishbowlDilation * 2.0;
+    float sampleR = max(0.0, r * (1.0 - k * r * r));
+    float sampleRPixel = sampleR * halfDiag;
+    vec2 sampleDirPixel = dirPixel * (sampleRPixel / rPixel);
+    return center + sampleDirPixel / u_resolution.xy;
+}
 
 // Convert HSV to RGB
 vec3 hsv2rgb(vec3 c) {
@@ -38,49 +72,39 @@ void main() {
     vec2 scaledDir = dir / u_expansionFactor; // Scale inward to sample outward
     vec2 sampleUV = scaledDir + center;
 
-    // Check if current pixel is at the center (within small radius)
+    // Center region: small radius so center acts as drain; blend zone for smooth transition
     float distFromCenter = length(dir);
-    float centerRadius = 0.002; // Very small radius around center (about 2 pixels at 1000px resolution)
+    float centerRadius = 0.002;
+    float blendRadius = centerRadius * 2.5;   // Smooth blend from center to normal over this range
+    float drainFactor = 0.12;                 // Soft drain: dim center so it doesn't propagate bright values
 
-    vec4 history;
-    if (distFromCenter < centerRadius) {
-        // At center: sample neighboring pixels and average them for display
-        // Sample neighbors from positions OUTSIDE the center radius to avoid sampling black
-        // Use a radius that's definitely outside centerRadius to get actual color values
-        float neighborRadius = centerRadius * 2.5; // Sample from ring outside center
-        vec4 neighborSum = vec4(0.0);
-        float neighborCount = 0.0;
-
-        // Sample neighbors in 8 directions from positions outside center
-        for (float angle = 0.0; angle < 6.28318; angle += 0.785398) { // 8 directions (2*PI/8)
-            vec2 neighborDir = vec2(cos(angle), sin(angle)) * neighborRadius;
-            vec2 neighborUV = uv + neighborDir; // Sample from current UV, not scaled sampleUV
-            vec4 neighbor = texture2D(u_history, neighborUV);
-            
-            // Only use neighbors that are outside the center region (to avoid black)
-            float neighborDist = length(neighborUV - center);
-            if (neighborDist > centerRadius) {
-                neighborSum += neighbor;
-                neighborCount += 1.0;
-            }
-        }
-
-        // Use average of valid neighbors, or black if no valid neighbors
-        history = neighborCount > 0.0 ? neighborSum / neighborCount : vec4(0.0, 0.0, 0.0, 0.0);
-    } else {
-        // Check if we're sampling from the center region (prevent center pixels from propagating outward)
-        vec2 sampleDir = sampleUV - center;
-        float sampleDistFromCenter = length(sampleDir);
-
-        if (sampleDistFromCenter < centerRadius) {
-            // If sampling from center, use black/transparent to prevent propagation
-            // This prevents center pixels (even with averaged neighbors) from propagating outward
-            history = vec4(0.0, 0.0, 0.0, 0.0);
-        } else {
-            // Normal sampling
-            history = texture2D(u_history, sampleUV);
+    // Sample neighbors from a ring outside the center (for blending center display)
+    float neighborRadius = centerRadius * 3.0;
+    vec4 neighborSum = vec4(0.0);
+    float neighborCount = 0.0;
+    for (float angle = 0.0; angle < 6.28318; angle += 0.523599) { // 12 directions
+        vec2 neighborDir = vec2(cos(angle), sin(angle)) * neighborRadius;
+        vec2 neighborUV = center + neighborDir;
+        float nd = length(neighborUV - center);
+        if (nd > centerRadius) {
+            neighborSum += texture2D(u_history, fishbowlSampleUV(radialPowerSampleUV(neighborUV)));
+            neighborCount += 1.0;
         }
     }
+    vec4 centerBlend = neighborCount > 0.0 ? neighborSum / neighborCount : texture2D(u_history, fishbowlSampleUV(radialPowerSampleUV(center + vec2(neighborRadius, 0.0))));
+
+    // Normal sample (what we'd use if not at center)
+    vec2 sampleDir = sampleUV - center;
+    float sampleDistFromCenter = length(sampleDir);
+    vec4 normalSample = texture2D(u_history, fishbowlSampleUV(radialPowerSampleUV(sampleUV)));
+
+    // Drain: when sampling FROM center, dim so bright doesn't propagate; smooth transition at boundary
+    float drainBlend = 1.0 - smoothstep(centerRadius * 0.5, centerRadius, sampleDistFromCenter);
+    vec4 sampledHistory = mix(normalSample, normalSample * drainFactor, drainBlend);
+
+    // At center: show blend of neighbors so center blends with surroundings; smooth transition at edge
+    float inCenter = 1.0 - smoothstep(centerRadius, blendRadius, distFromCenter);
+    vec4 history = mix(sampledHistory, centerBlend, inCenter);
 
     // Fade based on expansion (further from center = more faded)
     // distFromCenter already calculated above
@@ -122,7 +146,7 @@ void main() {
             for (int i = 0; i < 6; i++) {
                 float a = float(i) / 6.0 * 6.28318;
                 vec2 offset = vec2(cos(a), sin(a)) * blurRadius;
-                sum += texture2D(u_history, uv + offset);
+                sum += texture2D(u_history, fishbowlSampleUV(radialPowerSampleUV(uv + offset)));
                 count += 1.0;
             }
             shiftedColor = (sum / count).rgb;

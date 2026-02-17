@@ -267,6 +267,46 @@
                 <span class="value" id="spike-sharpness-value" contenteditable="true">0.00</span>
             </div>
         </div>
+        <div class="control-group">
+            <label>Fishbowl (Shape) <span class="curve-btn" data-param="fishbowlShape" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="fishbowl-shape-slider" min="0" max="100" value="50">
+                <span class="value" id="fishbowl-shape-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Radial Zoom (Shape) <span class="curve-btn" data-param="radialPowerShape" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="radial-power-shape-slider" min="0" max="100" value="50">
+                <span class="value" id="radial-power-shape-value" contenteditable="true">1.00</span>
+            </div>
+        </div>
+
+        <!-- Stroke Parameters -->
+        <div class="section-header">
+            <span>Stroke</span>
+        </div>
+        <div class="control-group">
+            <label>Stroke Weight <span class="curve-btn" data-param="strokeWeight" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="stroke-weight-slider" min="0" max="100" value="23">
+                <span class="value" id="stroke-weight-value" contenteditable="true">0.012</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Stroke Opacity <span class="curve-btn" data-param="strokeOpacity" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="stroke-opacity-slider" min="0" max="100" value="100">
+                <span class="value" id="stroke-opacity-value" contenteditable="true">1.00</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Stroke Glow <span class="curve-btn" data-param="strokeGlow" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="stroke-glow-slider" min="0" max="100" value="0">
+                <span class="value" id="stroke-glow-value" contenteditable="true">0.000</span>
+            </div>
+        </div>
 
         <!-- Appearance Parameters -->
         <div class="section-header">
@@ -347,6 +387,20 @@
                 <span class="value" id="emanation-rate-value" contenteditable="true">2.0</span>
             </div>
         </div>
+        <div class="control-group">
+            <label>Fishbowl (Trails) <span class="curve-btn" data-param="fishbowlDilation" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="fishbowl-dilation-slider" min="0" max="100" value="50">
+                <span class="value" id="fishbowl-dilation-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Radial Zoom (Trails) <span class="curve-btn" data-param="radialPowerDilation" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="radial-power-dilation-slider" min="0" max="100" value="50">
+                <span class="value" id="radial-power-dilation-value" contenteditable="true">1.00</span>
+            </div>
+        </div>
 
         <!-- Filter Parameters -->
         <div class="section-header">
@@ -418,6 +472,88 @@
             </div>
         </div>
 
+        <!-- Post-Processing -->
+        <div class="section-header">
+            <span>Post-Processing</span>
+        </div>
+        <div class="control-group">
+            <label>Kaleidoscope <span class="curve-btn" data-param="kaleidoscopeSections" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="kaleidoscope-sections-slider" min="0" max="16" value="0">
+                <span class="value" id="kaleidoscope-sections-value" contenteditable="true">0</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Tunnel <span class="curve-btn" data-param="tunnelStrength" title="Edit curve">~</span></label>
+            <div class="control-row">
+                <input type="range" id="tunnel-strength-slider" min="0" max="100" value="0">
+                <span class="value" id="tunnel-strength-value" contenteditable="true">0.00</span>
+            </div>
+        </div>
+
+        <!-- Color Palette -->
+        <div class="section-header collapsed" id="color-palette-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
+            <span>Color Palette</span>
+        </div>
+        <div id="color-palette-content" style="display: none; padding-left: 8px;">
+            <div style="font-size: 9px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Gamut</div>
+            <div class="control-group">
+                <label>Hue Min</label>
+                <div class="control-row">
+                    <input type="range" id="palette-hue-min" min="0" max="360" value="0">
+                    <span class="value" id="palette-hue-min-value" contenteditable="true">0</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Hue Max</label>
+                <div class="control-row">
+                    <input type="range" id="palette-hue-max" min="0" max="360" value="360">
+                    <span class="value" id="palette-hue-max-value" contenteditable="true">360</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Saturation</label>
+                <div class="control-row">
+                    <input type="range" id="palette-saturation" min="0" max="100" value="100">
+                    <span class="value" id="palette-saturation-value" contenteditable="true">100%</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Value</label>
+                <div class="control-row">
+                    <input type="range" id="palette-value" min="0" max="100" value="100">
+                    <span class="value" id="palette-value-value" contenteditable="true">100%</span>
+                </div>
+            </div>
+            <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Dominant Colors</div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
+                <label class="palette-swatch" title="Color 1">
+                    <input type="color" id="palette-color-0" value="#ff0000" style="position:absolute;opacity:0;width:0;height:0;">
+                    <span class="palette-swatch-preview" id="palette-swatch-0" data-index="0"></span>
+                </label>
+                <label class="palette-swatch" title="Color 2">
+                    <input type="color" id="palette-color-1" value="#00ff00" style="position:absolute;opacity:0;width:0;height:0;">
+                    <span class="palette-swatch-preview" id="palette-swatch-1" data-index="1"></span>
+                </label>
+                <label class="palette-swatch" title="Color 3">
+                    <input type="color" id="palette-color-2" value="#0000ff" style="position:absolute;opacity:0;width:0;height:0;">
+                    <span class="palette-swatch-preview" id="palette-swatch-2" data-index="2"></span>
+                </label>
+                <label class="palette-swatch" title="Color 4">
+                    <input type="color" id="palette-color-3" value="#ffff00" style="position:absolute;opacity:0;width:0;height:0;">
+                    <span class="palette-swatch-preview" id="palette-swatch-3" data-index="3"></span>
+                </label>
+                <label class="palette-swatch" title="Color 5">
+                    <input type="color" id="palette-color-4" value="#ff00ff" style="position:absolute;opacity:0;width:0;height:0;">
+                    <span class="palette-swatch-preview" id="palette-swatch-4" data-index="4"></span>
+                </label>
+            </div>
+            <div style="display: flex; gap: 4px;">
+                <button id="palette-clear-dominant" style="flex: 1; padding: 4px; background: #555; border: none; color: #fff; cursor: pointer; border-radius: 3px; font-size: 9px;">Clear Dominant</button>
+                <button id="palette-reset" style="flex: 1; padding: 4px; background: #333; border: none; color: #aaa; cursor: pointer; border-radius: 3px; font-size: 9px;">Reset</button>
+            </div>
+        </div>
+
         <!-- Actions -->
         <div class="section-header">
             <span>Actions</span>
@@ -477,6 +613,18 @@
                 <input type="checkbox" id="jiggle-param-fillOpacity" checked>
                 <span>Fill Opacity</span>
             </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-strokeWeight" checked>
+                <span>Stroke Weight</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-strokeOpacity" checked>
+                <span>Stroke Opacity</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-strokeGlow" checked>
+                <span>Stroke Glow</span>
+            </label>
 
             <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Emanation</div>
             <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
@@ -520,6 +668,32 @@
             <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
                 <input type="checkbox" id="jiggle-param-blendOpacity" checked>
                 <span>Blend Opacity</span>
+            </label>
+
+            <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Post-Processing</div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-fishbowlShape" checked>
+                <span>Fishbowl (Shape)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-fishbowlDilation" checked>
+                <span>Fishbowl (Trails)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-radialPowerShape" checked>
+                <span>Radial Zoom (Shape)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-radialPowerDilation" checked>
+                <span>Radial Zoom (Trails)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-kaleidoscopeSections" checked>
+                <span>Kaleidoscope</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                <input type="checkbox" id="jiggle-param-tunnelStrength" checked>
+                <span>Tunnel</span>
             </label>
         </div>
 

@@ -26,6 +26,9 @@ export interface VisualParams {
   blendOpacity: number;
   fillSize: number;
   fillOpacity: number;
+  strokeWeight: number;  // outline thickness (0.001-0.05)
+  strokeOpacity: number; // 0-1, stroke alpha
+  strokeGlow: number;   // 0-0.05, soft glow size beyond stroke
 
   // Dilation/emanation effect parameters
   expansionFactor: number;
@@ -39,8 +42,29 @@ export interface VisualParams {
   // Jiggle effect
   jiggleAmount: number;
 
+  // Post-processing effects
+  fishbowlShape: number;       // shape distortion: >0 convex, <0 concave, 0=off
+  fishbowlDilation: number;    // dilation/trails distortion: >0 convex, <0 concave, 0=off
+  radialPowerShape: number;    // shape: <1 expand center, >1 expand periphery, 1=off
+  radialPowerDilation: number; // dilation: <1 expand center, >1 expand periphery, 1=off
+  kaleidoscopeSections: number; // 0=off, 2+=number of radial slices
+  tunnelStrength: number;      // 0=off, >0 perspective tunnel (edge=horizon)
+
   // Timing
   emanationRate: number;  // Shapes per second (instant, no interpolation)
+}
+
+/** Color palette: gamut (allowed range) and dominant colors */
+export interface ColorPalette {
+  /** Gamut: hue range in degrees */
+  hueMin: number;
+  hueMax: number;
+  /** Gamut: saturation 0-1 */
+  saturation: number;
+  /** Gamut: value/brightness 0-1 */
+  value: number;
+  /** Dominant colors as hex strings (#rrggbb). Up to 5. When set, used instead of hue. */
+  dominantColors: string[];
 }
 
 // Audio metrics from the analyzer
@@ -118,6 +142,7 @@ export interface Preset {
   /** @deprecated Use params.emanationRate instead. Kept for migration of old presets. */
   emanationRate?: number | undefined;
   audioMappings?: AudioMappings | undefined;
+  colorPalette?: ColorPalette | undefined;
   /** @deprecated Old flat-config format. Kept for migration of old presets. */
   legacyAudioMappings?: LegacyAudioMappings | undefined;
   createdAt?: string | undefined;

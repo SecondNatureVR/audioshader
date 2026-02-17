@@ -4,7 +4,8 @@
  */
 
 import { RESOLUTIONS, getCurrentResolution } from '../config/resolutions';
-import type { ResolutionKey, BlendMode } from '../types';
+import { hexToRgb } from '../config/colorPalette';
+import type { ResolutionKey, BlendMode, ColorPalette } from '../types';
 
 export interface RenderUniforms {
   u_time: number;
@@ -18,6 +19,9 @@ export interface RenderUniforms {
   u_blendOpacity: number;
   u_fillSize: number;
   u_fillOpacity: number;
+  u_strokeWeight: number;
+  u_strokeOpacity: number;
+  u_strokeGlow: number;
 }
 
 export interface RenderOptions {
@@ -36,6 +40,13 @@ export interface RenderOptions {
   blendOpacity: number;
   autoRotationSpeed: number;
   totalRotation: number;
+  fishbowlShape: number;
+  fishbowlDilation: number;
+  radialPowerShape: number;
+  radialPowerDilation: number;
+  kaleidoscopeSections: number;
+  tunnelStrength: number;
+  colorPalette: ColorPalette;
 }
 
 export class Renderer {
@@ -43,11 +54,14 @@ export class Renderer {
   private gl: WebGLRenderingContext;
   private program: WebGLProgram | null = null;
   private dilationProgram: WebGLProgram | null = null;
+  private postprocessProgram: WebGLProgram | null = null;
   private quadBuffer: WebGLBuffer | null = null;
   private historyTexture: WebGLTexture | null = null;
   private historyFramebuffer: WebGLFramebuffer | null = null;
   private currentTexture: WebGLTexture | null = null;
   private currentFramebuffer: WebGLFramebuffer | null = null;
+  private compositeTexture: WebGLTexture | null = null;
+  private compositeFramebuffer: WebGLFramebuffer | null = null;
   private currentResolution: ResolutionKey;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -75,7 +89,7 @@ export class Renderer {
     }
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 
-    if (this.historyTexture !== null && this.currentTexture !== null) {
+    if (this.historyTexture !== null && this.currentTexture !== null && this.compositeTexture !== null) {
       this.setupFramebuffers();
     }
   }
@@ -172,6 +186,41 @@ export class Renderer {
       0
     );
 
+    // Create composite texture and framebuffer (for texture + star before post-process)
+    this.compositeTexture = gl.createTexture();
+    if (this.compositeTexture === null) {
+      throw new Error('Failed to create composite texture');
+    }
+    gl.bindTexture(gl.TEXTURE_2D, this.compositeTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      this.canvas.width,
+      this.canvas.height,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    this.compositeFramebuffer = gl.createFramebuffer();
+    if (this.compositeFramebuffer === null) {
+      throw new Error('Failed to create composite framebuffer');
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.compositeFramebuffer);
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      this.compositeTexture,
+      0
+    );
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
@@ -199,7 +248,9 @@ export class Renderer {
     vertexSource: string,
     fragmentSource: string,
     dilationVertexSource: string,
-    dilationFragmentSource: string
+    dilationFragmentSource: string,
+    postprocessVertexSource: string,
+    postprocessFragmentSource: string
   ): Promise<void> {
     const gl = this.gl;
 
@@ -235,6 +286,23 @@ export class Renderer {
     if (gl.getProgramParameter(this.dilationProgram, gl.LINK_STATUS) !== true) {
       const info = gl.getProgramInfoLog(this.dilationProgram);
       throw new Error(`Dilation program linking error: ${info ?? 'unknown error'}`);
+    }
+
+    // Compile postprocess shader program
+    const postprocessVertexShader = this.compileShader(postprocessVertexSource, gl.VERTEX_SHADER);
+    const postprocessFragmentShader = this.compileShader(postprocessFragmentSource, gl.FRAGMENT_SHADER);
+
+    this.postprocessProgram = gl.createProgram();
+    if (this.postprocessProgram === null) {
+      throw new Error('Failed to create postprocess program');
+    }
+    gl.attachShader(this.postprocessProgram, postprocessVertexShader);
+    gl.attachShader(this.postprocessProgram, postprocessFragmentShader);
+    gl.linkProgram(this.postprocessProgram);
+
+    if (gl.getProgramParameter(this.postprocessProgram, gl.LINK_STATUS) !== true) {
+      const info = gl.getProgramInfoLog(this.postprocessProgram);
+      throw new Error(`Postprocess program linking error: ${info ?? 'unknown error'}`);
     }
 
     // Setup full-screen quad buffer
@@ -299,6 +367,24 @@ export class Renderer {
     }
   }
 
+  private setPaletteUniforms(palette: ColorPalette): void {
+    const gl = this.gl;
+    if (this.program === null) return;
+    gl.useProgram(this.program);
+    this.setUniform('u_hueMin', palette.hueMin);
+    this.setUniform('u_hueMax', palette.hueMax);
+    this.setUniform('u_saturation', palette.saturation);
+    this.setUniform('u_value', palette.value);
+    const colors = palette.dominantColors.filter((c) => c.length > 0);
+    this.setUniform('u_dominantCount', colors.length);
+    const rgb = (hex: string) => hexToRgb(hex);
+    this.setUniform('u_color0', colors[0] ? rgb(colors[0]) : [1, 1, 1]);
+    this.setUniform('u_color1', colors[1] ? rgb(colors[1]) : [1, 1, 1]);
+    this.setUniform('u_color2', colors[2] ? rgb(colors[2]) : [1, 1, 1]);
+    this.setUniform('u_color3', colors[3] ? rgb(colors[3]) : [1, 1, 1]);
+    this.setUniform('u_color4', colors[4] ? rgb(colors[4]) : [1, 1, 1]);
+  }
+
   private setBlendMode(mode: BlendMode, _opacity: number): void {
     const gl = this.gl;
 
@@ -332,7 +418,13 @@ export class Renderer {
   render(options: RenderOptions): void {
     const gl = this.gl;
 
-    if (this.program === null || this.dilationProgram === null || this.quadBuffer === null) {
+    if (
+      this.program === null ||
+      this.dilationProgram === null ||
+      this.postprocessProgram === null ||
+      this.quadBuffer === null ||
+      this.compositeFramebuffer === null
+    ) {
       throw new Error('Renderer not initialized');
     }
 
@@ -359,6 +451,8 @@ export class Renderer {
     this.setUniform('u_expansionFactor', options.dilationFactor, this.dilationProgram);
     this.setUniform('u_fadeAmount', options.fadeAmount, this.dilationProgram);
     this.setUniform('u_hueShiftAmount', options.hueShiftAmount, this.dilationProgram);
+    this.setUniform('u_fishbowlDilation', options.fishbowlDilation, this.dilationProgram);
+    this.setUniform('u_radialPowerDilation', options.radialPowerDilation, this.dilationProgram);
     this.setUniform('u_noiseAmount', options.noiseAmount, this.dilationProgram);
     this.setUniform('u_noiseRate', options.noiseRate, this.dilationProgram);
     this.setUniform('u_blurAmount', options.blurAmount, this.dilationProgram);
@@ -394,13 +488,16 @@ export class Renderer {
       this.setUniform('u_rotation', options.totalRotation);
       this.setUniform('u_autoRotationSpeed', 0.0);
       this.setUniform('u_blendOpacity', options.blendOpacity);
+      this.setUniform('u_fishbowlShape', options.fishbowlShape);
+      this.setUniform('u_radialPowerShape', options.radialPowerShape);
+      this.setPaletteUniforms(options.colorPalette);
 
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.disable(gl.BLEND);
     }
 
-    // Step 3: Display current texture to screen
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // Step 3: Composite texture + star into composite framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.compositeFramebuffer);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(this.dilationProgram);
     gl.enableVertexAttribArray(dilationPositionLocation);
@@ -411,13 +508,15 @@ export class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, this.currentTexture);
     gl.uniform1i(dilationHistoryLocation, 0);
     this.setUniform('u_expansionFactor', 1.0, this.dilationProgram);
+    this.setUniform('u_fishbowlDilation', 0, this.dilationProgram);
+    this.setUniform('u_radialPowerDilation', 1.0, this.dilationProgram);
     this.setUniform('u_resolution', [this.canvas.width, this.canvas.height], this.dilationProgram);
 
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-    // Step 4: Draw current star on top
+    // Step 4: Draw current star on composite
     gl.useProgram(this.program);
     gl.enableVertexAttribArray(shapePositionLocation);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
@@ -433,11 +532,35 @@ export class Renderer {
     this.setUniform('u_rotation', options.rotation);
     this.setUniform('u_autoRotationSpeed', options.autoRotationSpeed);
     this.setUniform('u_blendOpacity', options.blendOpacity);
+    this.setUniform('u_fishbowlShape', options.fishbowlShape);
+    this.setUniform('u_radialPowerShape', options.radialPowerShape);
+    this.setPaletteUniforms(options.colorPalette);
 
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.disable(gl.BLEND);
 
-    // Step 5: Copy current texture to history
+    // Step 5: Post-process composite to screen (kaleidoscope only; fishbowl is in shape + dilation)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.useProgram(this.postprocessProgram);
+    const postprocessPositionLocation = gl.getAttribLocation(this.postprocessProgram, 'a_position');
+    gl.enableVertexAttribArray(postprocessPositionLocation);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+    gl.vertexAttribPointer(postprocessPositionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.compositeTexture);
+    const postprocessInputLocation = gl.getUniformLocation(this.postprocessProgram, 'u_input');
+    gl.uniform1i(postprocessInputLocation, 0);
+    this.setUniform('u_resolution', [this.canvas.width, this.canvas.height], this.postprocessProgram);
+    this.setUniform('u_kaleidoscopeSections', options.kaleidoscopeSections, this.postprocessProgram);
+    this.setUniform('u_tunnelStrength', options.tunnelStrength, this.postprocessProgram);
+
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Step 6: Copy current texture to history
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.historyFramebuffer);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(this.dilationProgram);
@@ -449,6 +572,8 @@ export class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, this.currentTexture);
     gl.uniform1i(dilationHistoryLocation, 0);
     this.setUniform('u_expansionFactor', 1.0, this.dilationProgram);
+    this.setUniform('u_fishbowlDilation', 0, this.dilationProgram);
+    this.setUniform('u_radialPowerDilation', 1.0, this.dilationProgram);
     this.setUniform('u_resolution', [this.canvas.width, this.canvas.height], this.dilationProgram);
 
     gl.clearColor(0, 0, 0, 1);

@@ -16,6 +16,9 @@ interface RawPreset {
   scale?: number;
   fillSize?: number;
   fillOpacity?: number;
+  strokeWeight?: number;
+  strokeOpacity?: number;
+  strokeGlow?: number;
   blendOpacity?: number;
   blendMode?: BlendMode;
   expansionFactor?: number;
@@ -29,6 +32,14 @@ interface RawPreset {
   blurRate?: number;
   autoRotationSpeed?: number;
   jiggleAmount?: number;
+  fishbowlShape?: number;
+  fishbowlDilation?: number;
+  radialPowerShape?: number;
+  radialPowerDilation?: number;
+  /** @deprecated Migrated to fishbowlShape/fishbowlDilation */
+  fishbowlAmount?: number;
+  kaleidoscopeSections?: number;
+  tunnelStrength?: number;
 }
 
 /**
@@ -43,6 +54,9 @@ function convertRawPreset(raw: RawPreset): VisualParams {
     scale: raw.scale ?? 0.5,
     fillSize: raw.fillSize ?? 0,
     fillOpacity: raw.fillOpacity ?? 0.5,
+    strokeWeight: raw.strokeWeight ?? 0.012,
+    strokeOpacity: raw.strokeOpacity ?? 1.0,
+    strokeGlow: raw.strokeGlow ?? 0,
     blendOpacity: raw.blendOpacity ?? 0.5,
     expansionFactor: raw.expansionFactor ?? 1.0,
     fadeAmount: raw.fadeAmount ?? 0.02,
@@ -54,6 +68,12 @@ function convertRawPreset(raw: RawPreset): VisualParams {
     blurRate: raw.blurRate ?? 0,
     autoRotationSpeed: raw.autoRotationSpeed ?? 0,
     jiggleAmount: raw.jiggleAmount ?? 0.3,
+    fishbowlShape: raw.fishbowlShape ?? raw.fishbowlAmount ?? 0,
+    fishbowlDilation: raw.fishbowlDilation ?? raw.fishbowlAmount ?? 0,
+    radialPowerShape: raw.radialPowerShape ?? 1.0,
+    radialPowerDilation: raw.radialPowerDilation ?? 1.0,
+    kaleidoscopeSections: raw.kaleidoscopeSections ?? 0,
+    tunnelStrength: raw.tunnelStrength ?? 0,
     emanationRate: raw.emanationRate ?? 30,
   };
 }

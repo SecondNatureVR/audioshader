@@ -20,6 +20,9 @@ export const DEFAULT_PARAMS: VisualParams = {
   blendOpacity: 1.0,
   fillSize: 0,
   fillOpacity: 0,
+  strokeWeight: 0.012,
+  strokeOpacity: 1.0,
+  strokeGlow: 0,
 
   // Dilation/emanation effect parameters
   expansionFactor: 1.003,
@@ -32,6 +35,14 @@ export const DEFAULT_PARAMS: VisualParams = {
 
   // Jiggle effect
   jiggleAmount: 0,
+
+  // Post-processing effects
+  fishbowlShape: 0,
+  fishbowlDilation: 0,
+  radialPowerShape: 1.0,
+  radialPowerDilation: 1.0,
+  kaleidoscopeSections: 0,
+  tunnelStrength: 0,
 
   // Timing
   emanationRate: 2.0,  // Match lucas.html default
@@ -58,6 +69,9 @@ export const PARAM_RANGES: Record<keyof VisualParams, ParamRange> = {
   blendOpacity: { min: 0, max: 1, step: 0.01, default: 1.0 },
   fillSize: { min: 0, max: 1, step: 0.01, default: 0 },
   fillOpacity: { min: 0, max: 1, step: 0.01, default: 0 },
+  strokeWeight: { min: 0.002, max: 0.05, step: 0.001, default: 0.012 },
+  strokeOpacity: { min: 0, max: 1, step: 0.01, default: 1.0 },
+  strokeGlow: { min: 0, max: 0.05, step: 0.001, default: 0 },
   expansionFactor: { min: 1.001, max: 1.02, step: 0.001, default: 1.003 },
   fadeAmount: { min: 0, max: 5, step: 0.1, default: 2.0 },
   hueShiftAmount: { min: 0, max: 0.5, step: 0.01, default: 0.1 },
@@ -66,6 +80,12 @@ export const PARAM_RANGES: Record<keyof VisualParams, ParamRange> = {
   blurAmount: { min: 0, max: 1, step: 0.01, default: 0 },
   blurRate: { min: 0, max: 10000, step: 0.1, default: 0 },
   jiggleAmount: { min: 0, max: 1, step: 0.01, default: 0 },
+  fishbowlShape: { min: -0.5, max: 0.5, step: 0.01, default: 0 },
+  fishbowlDilation: { min: -0.5, max: 0.5, step: 0.01, default: 0 },
+  radialPowerShape: { min: 0.3, max: 3, step: 0.01, default: 1.0 },
+  radialPowerDilation: { min: 0.3, max: 3, step: 0.01, default: 1.0 },
+  kaleidoscopeSections: { min: 0, max: 16, step: 1, default: 0 },
+  tunnelStrength: { min: 0, max: 0.9, step: 0.01, default: 0 },
   emanationRate: { min: 2, max: 200, step: 1, default: 2.0 },
 };
 
@@ -105,6 +125,9 @@ export function randomizeParams(): VisualParams {
   params.hue = Math.random() * 360;
   params.fillSize = Math.random();
   params.fillOpacity = Math.random();
+  params.strokeWeight = 0.005 + Math.random() * 0.03;
+  params.strokeOpacity = 0.5 + Math.random() * 0.5;
+  params.strokeGlow = Math.random() * 0.03;
   params.rotation = Math.random() * 360;
 
   // Randomize effect parameters
@@ -113,6 +136,15 @@ export function randomizeParams(): VisualParams {
   params.autoRotationSpeed = (Math.random() - 0.5) * 360;
   // Dilation (expansionFactor): use curve-mapping range 0.5–1.5 for presets
   params.expansionFactor = 0.8 + Math.random() * 0.4;
+
+  // Randomize post-processing
+  params.fishbowlShape = (Math.random() - 0.5) * 0.4;
+  params.fishbowlDilation = (Math.random() - 0.5) * 0.4;
+  params.radialPowerShape = 0.4 + Math.random() * 1.4;
+  params.radialPowerDilation = 0.4 + Math.random() * 1.4;
+  const sections = [0, 3, 4, 5, 6, 8];
+  params.kaleidoscopeSections = sections[Math.floor(Math.random() * sections.length)] ?? 0;
+  params.tunnelStrength = Math.random() * 0.5;
 
   // Randomize timing
   params.emanationRate = 2 + Math.random() * 198;

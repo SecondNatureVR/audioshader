@@ -7,6 +7,8 @@ export interface ShaderSources {
   starFragment: string;
   dilationVertex: string;
   dilationFragment: string;
+  postprocessVertex: string;
+  postprocessFragment: string;
 }
 
 /**
@@ -24,17 +26,22 @@ export async function loadShader(path: string): Promise<string> {
  * Load all required shaders
  */
 export async function loadAllShaders(): Promise<ShaderSources> {
-  const [starVertex, starFragment, dilationVertex, dilationFragment] = await Promise.all([
-    loadShader('shaders/star.vert'),
-    loadShader('shaders/star.frag'),
-    loadShader('shaders/dilation.vert'),
-    loadShader('shaders/dilation.frag'),
-  ]);
+  const [starVertex, starFragment, dilationVertex, dilationFragment, postprocessVertex, postprocessFragment] =
+    await Promise.all([
+      loadShader('shaders/star.vert'),
+      loadShader('shaders/star.frag'),
+      loadShader('shaders/dilation.vert'),
+      loadShader('shaders/dilation.frag'),
+      loadShader('shaders/postprocess.vert'),
+      loadShader('shaders/postprocess.frag'),
+    ]);
 
   return {
     starVertex,
     starFragment,
     dilationVertex,
     dilationFragment,
+    postprocessVertex,
+    postprocessFragment,
   };
 }

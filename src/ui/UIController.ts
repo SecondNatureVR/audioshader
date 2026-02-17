@@ -43,10 +43,12 @@ export interface UIControllerConfig {
 // Jiggle-enabled parameters
 const JIGGLE_PARAMS: (keyof VisualParams)[] = [
   'spikiness', 'spikeFrequency', 'spikeSharpness',
-  'hue', 'scale', 'fillSize', 'fillOpacity',
+  'hue', 'scale', 'fillSize', 'fillOpacity', 'strokeWeight',
   'expansionFactor', 'fadeAmount',
   'noiseAmount', 'noiseRate', 'blurAmount', 'blurRate',
   'autoRotationSpeed', 'hueShiftAmount', 'blendOpacity',
+  'fishbowlShape', 'fishbowlDilation', 'radialPowerShape', 'radialPowerDilation',
+  'kaleidoscopeSections', 'tunnelStrength',
 ];
 
 export class UIController {
@@ -130,6 +132,7 @@ export class UIController {
     this.setupModulationDrawer();
     this.setupRadarChart();
     this.setupMPanelRandomization();
+    this.setupColorPalette();
     this.setupCollapsibleSections();
     this.setupRecorders();
     this.setupKeyboardShortcuts();
@@ -228,6 +231,9 @@ export class UIController {
     this.setupParamSlider('scale', 0.05, 1, 0.01);
     this.setupParamSlider('fillSize', 0, 100, 1);
     this.setupParamSlider('fillOpacity', 0, 100, 1);
+    this.setupParamSlider('strokeWeight', 0, 100, 1);
+    this.setupParamSlider('strokeOpacity', 0, 100, 1);
+    this.setupParamSlider('strokeGlow', 0, 100, 1);
     this.setupParamSlider('blendOpacity', 0, 100, 1);
 
     // Emanation sliders
@@ -247,6 +253,14 @@ export class UIController {
 
     // Effects sliders
     this.setupParamSlider('hueShiftAmount', 0, 100, 1);
+
+    // Post-processing sliders
+    this.setupParamSlider('fishbowlShape', 0, 100, 1);
+    this.setupParamSlider('fishbowlDilation', 0, 100, 1);
+    this.setupParamSlider('radialPowerShape', 0, 100, 1);
+    this.setupParamSlider('radialPowerDilation', 0, 100, 1);
+    this.setupParamSlider('kaleidoscopeSections', 0, 16, 1);
+    this.setupParamSlider('tunnelStrength', 0, 100, 1);
 
     // Blend mode select
     this.setupBlendModeSelect();
@@ -686,6 +700,7 @@ export class UIController {
       this.updateAllSliders();
       this.updateEmanationRateSlider();
       this.updateBlendModeSelect();
+      this.updateColorPaletteUI();
       this.updateStatusIndicators();
       this.updateAllAudioButtonStates();
       this.config.onPresetLoad?.(name);
@@ -1015,7 +1030,7 @@ export class UIController {
 
     if (appearanceBtn !== null) {
       appearanceBtn.addEventListener('click', () => {
-        const appearanceParams = ['hue', 'scale', 'fillSize', 'fillOpacity'];
+        const appearanceParams = ['hue', 'scale', 'fillSize', 'fillOpacity', 'strokeWeight', 'strokeOpacity', 'strokeGlow'];
         this.setJiggleParamsTo(appearanceParams);
       });
     }
@@ -2063,7 +2078,7 @@ export class UIController {
     const smoothPct = Math.round(slot.smoothing * 100);
     const curveTen = Math.round(slot.curve * 10);
     return `
-      <div class="mod-slot-card" data-slot-index="${index}">
+      <div class="mod-slot-card${slot.locked ? ' mod-slot-card-locked' : ''}" data-slot-index="${index}">
         <div class="mod-slot-header">
           <span class="mod-slot-label">Slot ${index + 1}</span>
           <span class="mod-slot-toggles">
@@ -2952,6 +2967,121 @@ export class UIController {
       }
     }
     ctx.stroke();
+  }
+
+  /**
+   * Setup color palette designer controls
+   */
+  private setupColorPalette(): void {
+    const hueMin = document.getElementById('palette-hue-min') as HTMLInputElement | null;
+    const hueMax = document.getElementById('palette-hue-max') as HTMLInputElement | null;
+    const saturation = document.getElementById('palette-saturation') as HTMLInputElement | null;
+    const value = document.getElementById('palette-value') as HTMLInputElement | null;
+    const clearBtn = document.getElementById('palette-clear-dominant');
+    const resetBtn = document.getElementById('palette-reset');
+
+    const updatePaletteFromUI = () => {
+      const palette = this.app.getColorPalette();
+      palette.hueMin = parseFloat(hueMin?.value ?? '0');
+      palette.hueMax = parseFloat(hueMax?.value ?? '360');
+      palette.saturation = parseFloat(saturation?.value ?? '100') / 100;
+      palette.value = parseFloat(value?.value ?? '100') / 100;
+      this.app.setColorPalette(palette);
+    };
+
+    const updateUIFromPalette = () => {
+      const p = this.app.getColorPalette();
+      if (hueMin) { hueMin.value = String(p.hueMin); }
+      if (hueMax) { hueMax.value = String(p.hueMax); }
+      if (saturation) { saturation.value = String(Math.round(p.saturation * 100)); }
+      if (value) { value.value = String(Math.round(p.value * 100)); }
+      this.updatePaletteValueDisplays();
+      this.updatePaletteSwatches();
+    };
+
+    hueMin?.addEventListener('input', updatePaletteFromUI);
+    hueMax?.addEventListener('input', updatePaletteFromUI);
+    saturation?.addEventListener('input', updatePaletteFromUI);
+    value?.addEventListener('input', updatePaletteFromUI);
+
+    for (let i = 0; i < 5; i++) {
+      const input = document.getElementById(`palette-color-${i}`) as HTMLInputElement | null;
+      input?.addEventListener('input', () => {
+        const palette = this.app.getColorPalette();
+        const colors = [...palette.dominantColors];
+        while (colors.length <= i) colors.push('');
+        colors[i] = input.value;
+        this.app.setColorPalette({ dominantColors: colors });
+        this.updatePaletteSwatches();
+      });
+    }
+
+    clearBtn?.addEventListener('click', () => {
+      this.app.setColorPalette({ dominantColors: [] });
+      this.updatePaletteSwatches();
+      for (let i = 0; i < 5; i++) {
+        const input = document.getElementById(`palette-color-${i}`) as HTMLInputElement | null;
+        if (input) input.value = '#888888';
+      }
+    });
+
+    resetBtn?.addEventListener('click', () => {
+      this.app.setColorPalette({
+        hueMin: 0,
+        hueMax: 360,
+        saturation: 1,
+        value: 1,
+        dominantColors: [],
+      });
+      updateUIFromPalette();
+      for (let i = 0; i < 5; i++) {
+        const input = document.getElementById(`palette-color-${i}`) as HTMLInputElement | null;
+        if (input) input.value = '#888888';
+      }
+    });
+
+    this.app.onParamsChange(() => updateUIFromPalette());
+    updateUIFromPalette();
+  }
+
+  private updateColorPaletteUI(): void {
+    this.updatePaletteValueDisplays();
+    this.updatePaletteSwatches();
+    const hueMin = document.getElementById('palette-hue-min') as HTMLInputElement | null;
+    const hueMax = document.getElementById('palette-hue-max') as HTMLInputElement | null;
+    const saturation = document.getElementById('palette-saturation') as HTMLInputElement | null;
+    const value = document.getElementById('palette-value') as HTMLInputElement | null;
+    const p = this.app.getColorPalette();
+    if (hueMin) hueMin.value = String(p.hueMin);
+    if (hueMax) hueMax.value = String(p.hueMax);
+    if (saturation) saturation.value = String(Math.round(p.saturation * 100));
+    if (value) value.value = String(Math.round(p.value * 100));
+  }
+
+  private updatePaletteValueDisplays(): void {
+    const p = this.app.getColorPalette();
+    const hueMinVal = document.getElementById('palette-hue-min-value');
+    const hueMaxVal = document.getElementById('palette-hue-max-value');
+    const satVal = document.getElementById('palette-saturation-value');
+    const valVal = document.getElementById('palette-value-value');
+    if (hueMinVal) hueMinVal.textContent = String(Math.round(p.hueMin));
+    if (hueMaxVal) hueMaxVal.textContent = String(Math.round(p.hueMax));
+    if (satVal) satVal.textContent = `${Math.round(p.saturation * 100)}%`;
+    if (valVal) valVal.textContent = `${Math.round(p.value * 100)}%`;
+  }
+
+  private updatePaletteSwatches(): void {
+    const colors = this.app.getColorPalette().dominantColors;
+    for (let i = 0; i < 5; i++) {
+      const swatch = document.getElementById(`palette-swatch-${i}`) as HTMLElement | null;
+      const input = document.getElementById(`palette-color-${i}`) as HTMLInputElement | null;
+      if (swatch && input) {
+        const hex = colors[i] ?? '';
+        swatch.style.backgroundColor = hex || 'transparent';
+        swatch.style.backgroundImage = hex ? 'none' : '';
+        if (hex) input.value = hex;
+      }
+    }
   }
 
   /**

@@ -390,7 +390,7 @@ describe('AudioMapper class', () => {
       expect(result.hue).toBeCloseTo(40, 1);
     });
 
-    it('should clamp output to parameter range', () => {
+    it('should not clamp output — offset is summed with base (preset values preserved)', () => {
       for (const param of ALL_MAPPABLE_PARAMS) {
         mapper.updateModulation(param, { enabled: false });
       }
@@ -406,18 +406,19 @@ describe('AudioMapper class', () => {
           invert: false,
           curve: 1.0,
           rangeMin: 0,
-          rangeMax: 999,      // huge range to exceed param max
+          rangeMax: 0.5,     // offset 0 to 0.5
         }],
       });
 
       const baseParams = createDefaultParams();
-      baseParams.scale = PARAM_RANGES.scale.max;  // already at max
+      baseParams.scale = PARAM_RANGES.scale.max;  // base at max
 
       const result = mapper.applyMappings(baseParams, makeMetrics({ rms: 1 }));
-      expect(result.scale).toBe(PARAM_RANGES.scale.max);
+      // Offset mode: base + offset = max + 0.5 (no clamp)
+      expect(result.scale).toBeGreaterThan(PARAM_RANGES.scale.max);
     });
 
-    it('should handle emanationRate as a normal parameter', () => {
+    it('should handle emanationRate as offset summed with base', () => {
       for (const param of ALL_MAPPABLE_PARAMS) {
         mapper.updateModulation(param, { enabled: false });
       }
@@ -433,16 +434,66 @@ describe('AudioMapper class', () => {
           invert: false,
           curve: 1.0,
           rangeMin: 0,
-          rangeMax: 100,
+          rangeMax: 100,     // offset 0 to 100
         }],
       });
 
       const baseParams = createDefaultParams();
-      baseParams.emanationRate = 10;
+      baseParams.emanationRate = 0;
 
       const result = mapper.applyMappings(baseParams, makeMetrics({ bass: 0.5 }));
-      // Delta mode: slot output 0.5*100 = 50, delta 50-10 = 40, final 10+40 = 50
+      // Offset mode: base 0 + offset 50 = 50
       expect(result.emanationRate).toBeCloseTo(50, 1);
+    });
+
+    it('should produce correct expansionFactor modulation (offset mode)', () => {
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+
+      const baseParams = createDefaultParams();
+      baseParams.expansionFactor = 1.003;
+
+      mapper.setModulation('expansionFactor', {
+        enabled: true,
+        slots: [{
+          source: 'bass',
+          amount: 1.0,
+          offset: 0,
+          multiplier: 1,
+          smoothing: 0,
+          invert: false,
+          curve: 1.0,
+          rangeMin: 0,
+          rangeMax: 0.007,   // offset 0 to 0.007
+        }],
+      });
+
+      // bass=1.0 → slot offset 0.007, final 1.003 + 0.007 = 1.01
+      const result = mapper.applyMappings(baseParams, makeMetrics({ bass: 1.0 }));
+      expect(result.expansionFactor).toBeCloseTo(1.01, 3);
+    });
+
+    it('should produce additive offsets from multiple slots', () => {
+      for (const param of ALL_MAPPABLE_PARAMS) {
+        mapper.updateModulation(param, { enabled: false });
+      }
+
+      mapper.setModulation('fillSize', {
+        enabled: true,
+        slots: [
+          { source: 'bass', amount: 1.0, offset: 0, multiplier: 1, smoothing: 0, invert: false, curve: 1.0, rangeMin: 0, rangeMax: -0.3 },
+          { source: 'high', amount: 1.0, offset: 0, multiplier: 1, smoothing: 0, invert: false, curve: 1.0, rangeMin: 0, rangeMax: -0.2 },
+        ],
+      });
+
+      const baseParams = createDefaultParams();
+      baseParams.fillSize = 0.5;
+
+      // bass=1 → slot1 offset -0.3, high=1 → slot2 offset -0.2
+      // total offset = -0.5, final = 0.5 + (-0.5) = 0
+      const result = mapper.applyMappings(baseParams, makeMetrics({ bass: 1.0, high: 1.0 }));
+      expect(result.fillSize).toBeCloseTo(0, 2);
     });
   });
 
@@ -541,6 +592,18 @@ describe('AudioMapper class', () => {
       expect(mod!.slots[0]!.amount).toBe(0.77);
     });
 
+    it('should persist locked through export/import', () => {
+      mapper.updatePrimarySlot('spikiness', { locked: true });
+      mapper.updateModulation('spikiness', { enabled: true });
+
+      const json = mapper.exportMappings();
+      const newMapper = new AudioMapper();
+      expect(newMapper.importMappings(json)).toBe(true);
+
+      const slot = newMapper.getPrimarySlot('spikiness');
+      expect(slot.locked).toBe(true);
+    });
+
     it('should detect and migrate legacy format on import', () => {
       const legacyJson = JSON.stringify({
         spikiness: {
@@ -633,7 +696,7 @@ describe('AudioMapper class', () => {
       expect(result.scale).toBeCloseTo(0.6, 2);
     });
 
-    it('should clamp after multiplier application', () => {
+    it('multiplier and offset are post-range and can exceed range (no clamp)', () => {
       for (const param of ALL_MAPPABLE_PARAMS) {
         mapper.updateModulation(param, { enabled: false });
       }
@@ -643,7 +706,7 @@ describe('AudioMapper class', () => {
           source: 'rms',
           amount: 1.0,
           offset: 0,
-          multiplier: 5.0,   // way over 1
+          multiplier: 5.0,   // post-range: base * mult can exceed range
           smoothing: 0,
           invert: false,
           curve: 1.0,
@@ -655,12 +718,12 @@ describe('AudioMapper class', () => {
       const baseParams = createDefaultParams();
       baseParams.scale = 0;
 
-      // rms=0.5 → v=0.5 → *5 = 2.5 → clamp(0,1) = 1 → range [0,1] → 1
+      // rms=0.5 → base=0.5 → *5 = 2.5 (no clamp); result = 0 + 2.5 = 2.5
       const result = mapper.applyMappings(baseParams, makeMetrics({ rms: 0.5 }));
-      expect(result.scale).toBeCloseTo(1.0, 2);
+      expect(result.scale).toBeCloseTo(2.5, 2);
     });
 
-    it('should apply offset to shift the baseline', () => {
+    it('should apply offset to shift the baseline (post-range)', () => {
       for (const param of ALL_MAPPABLE_PARAMS) {
         mapper.updateModulation(param, { enabled: false });
       }
@@ -669,7 +732,7 @@ describe('AudioMapper class', () => {
         slots: [{
           source: 'rms',
           amount: 1.0,
-          offset: 0.5,       // shift baseline up
+          offset: 0.5,       // post-range: base * 1 + 0.5
           multiplier: 1.0,
           smoothing: 0,
           invert: false,
@@ -682,12 +745,12 @@ describe('AudioMapper class', () => {
       const baseParams = createDefaultParams();
       baseParams.scale = 0;
 
-      // rms=0 → v=0 → *1 + 0.5 = 0.5 → range [0,1] → 0.5
+      // rms=0 → base=0 → *1 + 0.5 = 0.5
       const result = mapper.applyMappings(baseParams, makeMetrics({ rms: 0 }));
       expect(result.scale).toBeCloseTo(0.5, 2);
     });
 
-    it('should combine multiplier and offset correctly', () => {
+    it('should combine multiplier and offset correctly (post-range)', () => {
       for (const param of ALL_MAPPABLE_PARAMS) {
         mapper.updateModulation(param, { enabled: false });
       }
@@ -709,9 +772,9 @@ describe('AudioMapper class', () => {
       const baseParams = createDefaultParams();
       baseParams.hue = 0;
 
-      // mid=0.6 → v=0.6 → *0.5 + 0.2 = 0.5 → range [0,100] → 50
+      // mid=0.6 → base=60 → *0.5 + 0.2 = 30.2
       const result = mapper.applyMappings(baseParams, makeMetrics({ mid: 0.6 }));
-      expect(result.hue).toBeCloseTo(50, 1);
+      expect(result.hue).toBeCloseTo(30.2, 1);
     });
 
     it('defaults (multiplier=1, offset=0) should be identity', () => {

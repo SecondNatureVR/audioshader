@@ -803,6 +803,11 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 6px;
 }
 
+.mod-slot-card.mod-slot-card-locked {
+    border-color: rgba(0, 170, 255, 0.3);
+    background: rgba(0, 170, 255, 0.04);
+}
+
 .mod-slot-header {
     display: flex;
     justify-content: space-between;
@@ -1003,6 +1008,9 @@ input[type="range"]::-moz-range-thumb {
 .mod-route-lock[aria-pressed="true"] { color: #0af; }
 .mod-route-mute[aria-pressed="true"] { color: #f84; }
 .mod-route-solo[aria-pressed="true"] { color: #8f8; }
+.mod-route-row-wrap.mod-route-locked {
+    background: rgba(0, 170, 255, 0.04);
+}
 .mod-route-row-wrap.mod-route-muted .mod-route-source,
 .mod-route-row-wrap.mod-route-muted .mod-route-target { opacity: 0.6; }
 .mod-route-row-wrap.mod-route-solo { background: rgba(0, 170, 255, 0.06); }
@@ -1247,4 +1255,25 @@ input[type="range"]::-moz-range-thumb {
 
 .curve-btn-primary:hover {
     background: #1bf;
+}
+
+/* Color Palette swatches */
+.palette-swatch {
+    display: inline-block;
+    cursor: pointer;
+    position: relative;
+}
+.palette-swatch-preview {
+    display: block;
+    width: 28px;
+    height: 28px;
+    border: 2px solid #444;
+    border-radius: 4px;
+    background: #333;
+    background-image: linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%);
+    background-size: 6px 6px;
+    background-position: 0 0, 0 3px, 3px -3px, -3px 0;
+}
+.palette-swatch:hover .palette-swatch-preview {
+    border-color: #0af;
 }

@@ -25,6 +25,9 @@ export const PARAM_LABELS: Record<keyof VisualParams, string> = {
   scale: 'Scale',
   fillSize: 'Fill Size',
   fillOpacity: 'Fill Opacity',
+  strokeWeight: 'Stroke Weight',
+  strokeOpacity: 'Stroke Opacity',
+  strokeGlow: 'Stroke Glow',
   blendOpacity: 'Blend Opacity',
   rotation: 'Rotation',
   autoRotationSpeed: 'Auto Rotation Speed',
@@ -45,6 +48,14 @@ export const PARAM_LABELS: Record<keyof VisualParams, string> = {
 
   // Jiggle parameters
   jiggleAmount: 'Jiggle Amount',
+
+  // Post-processing
+  fishbowlShape: 'Fishbowl (Shape)',
+  fishbowlDilation: 'Fishbowl (Trails)',
+  radialPowerShape: 'Radial Zoom (Shape)',
+  radialPowerDilation: 'Radial Zoom (Trails)',
+  kaleidoscopeSections: 'Kaleidoscope',
+  tunnelStrength: 'Tunnel',
 };
 
 /**

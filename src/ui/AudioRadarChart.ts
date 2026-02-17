@@ -51,8 +51,6 @@ export class AudioRadarChart {
   private radius: number;
   /** Rolling average per metric (all 15) */
   private rollingAvg: number[] = new Array(ALL_METRICS.length).fill(0);
-  /** Current top-5 metric indices (into ALL_METRICS) */
-  private topIndices: number[] = [];
   /** Smoothed values for the 5 displayed axes (for stable polygon when set changes) */
   private displayValues: number[] = new Array(TOP_N).fill(0);
   /** Last top-5 indices to detect set changes */
@@ -90,8 +88,6 @@ export class AudioRadarChart {
     const indices = ALL_METRICS.map((_, i) => i)
       .sort((a, b) => (this.rollingAvg[b] ?? 0) - (this.rollingAvg[a] ?? 0))
       .slice(0, TOP_N);
-
-    this.topIndices = indices;
 
     // Values for the 5 selected metrics (current raw, then normalize relative)
     const rawFive = indices.map((i) => this.rollingAvg[i] ?? 0);

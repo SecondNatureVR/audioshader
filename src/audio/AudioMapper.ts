@@ -7,7 +7,8 @@
  *
  * Signal flow per slot:
  *   metric * amount -> clamp(0,1) -> pow(curve) -> invert -> EMA smooth
- *     -> * multiplier + offset -> clamp(0,1) -> rangeMin + v * rangeSpan
+ *     -> rangeMin + v * rangeSpan (normalized range; amount % is relative to this)
+ *     -> * multiplier + offset (post-range; can exceed range, no clamp)
  */
 
 import type {
@@ -109,6 +110,8 @@ export const DEFAULT_AUDIO_SOURCES: Partial<Record<keyof VisualParams, keyof Aud
   rotation: 'stereoWidth',
   fillSize: 'rms',
   fillOpacity: 'coherence',
+  strokeOpacity: 'coherence',
+  strokeGlow: 'presence',
   blendOpacity: 'mud',
   autoRotationSpeed: 'high',
   noiseAmount: 'harshness',
@@ -116,6 +119,11 @@ export const DEFAULT_AUDIO_SOURCES: Partial<Record<keyof VisualParams, keyof Aud
   blurAmount: 'mud',
   blurRate: 'bass',
   jiggleAmount: 'rms',
+  fishbowlShape: 'rms',
+  fishbowlDilation: 'bass',
+  radialPowerShape: 'compression',
+  radialPowerDilation: 'bass',
+  kaleidoscopeSections: 'presence',
   emanationRate: 'bass',
 };
 
@@ -182,6 +190,9 @@ export const ALL_MAPPABLE_PARAMS: ReadonlyArray<keyof VisualParams> = [
   'blendOpacity',
   'fillSize',
   'fillOpacity',
+  'strokeWeight',
+  'strokeOpacity',
+  'strokeGlow',
   'expansionFactor',
   'fadeAmount',
   'hueShiftAmount',
@@ -190,6 +201,12 @@ export const ALL_MAPPABLE_PARAMS: ReadonlyArray<keyof VisualParams> = [
   'blurAmount',
   'blurRate',
   'jiggleAmount',
+  'fishbowlShape',
+  'fishbowlDilation',
+  'radialPowerShape',
+  'radialPowerDilation',
+  'kaleidoscopeSections',
+  'tunnelStrength',
   'emanationRate',
 ];
 
@@ -416,29 +433,28 @@ export class AudioMapper {
       }
 
       const param = paramName as keyof VisualParams;
-      const range = PARAM_RANGES[param];
       const baseValue = baseParams[param];
 
       // Mute/solo: if any slot has solo, only soloed slots contribute; else all non-muted slots
       const anySolo = mod.slots.some((s) => s?.solo === true);
-      const includeSlot = (slot: ModulationSlot | undefined, i: number): boolean => {
+      const includeSlot = (slot: ModulationSlot | undefined): boolean => {
         if (slot === undefined) return false;
         if (anySolo) return slot.solo === true;
         return slot.muted !== true;
       };
 
-      // Sum delta contributions: slot output is absolute; convert to offset from base so modulation stacks correctly
-      let totalModulation = 0;
+      // Sum offset contributions: slot output is an offset in [rangeMin, rangeMax]; add to base (no clamp)
+      // PARAM_RANGES defines the offset range only; preset/base values are preserved and summed with modulation
+      let totalOffset = 0;
       for (let i = 0; i < mod.slots.length; i++) {
         const slot = mod.slots[i];
-        if (slot !== undefined && includeSlot(slot, i)) {
-          const slotAbsolute = this.computeSlotValue(param, i, slot, metrics);
-          totalModulation += slotAbsolute - baseValue;
+        if (slot !== undefined && includeSlot(slot)) {
+          const slotOffset = this.computeSlotValue(param, i, slot, metrics);
+          totalOffset += slotOffset;
         }
       }
 
-      const finalValue = Math.max(range.min, Math.min(range.max, baseValue + totalModulation));
-      result[param] = finalValue;
+      result[param] = baseValue + totalOffset;
     }
 
     return result;
@@ -479,14 +495,14 @@ export class AudioMapper {
     const smoothed = prev + alpha * (v - prev);
     this.smoothedValues.set(smoothingKey, smoothed);
 
-    // 5. Apply multiplier and offset (linear transform)
+    // 5. Map to parameter-space range (normalized; amount % is relative to this)
+    const rangeSpan = slot.rangeMax - slot.rangeMin;
+    const base = slot.rangeMin + smoothed * rangeSpan;
+
+    // 6. Apply multiplier and offset (post-range; can exceed, no clamp)
     const mult = slot.multiplier ?? 1;
     const off = slot.offset ?? 0;
-    const transformed = Math.max(0, Math.min(1, smoothed * mult + off));
-
-    // 6. Map to parameter-space range
-    const rangeSpan = slot.rangeMax - slot.rangeMin;
-    return slot.rangeMin + transformed * rangeSpan;
+    return base * mult + off;
   }
 
   /**
