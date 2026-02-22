@@ -81,9 +81,9 @@ export const PARAM_RANGES: Record<keyof VisualParams, ParamRange> = {
   blurRate: { min: 0, max: 10000, step: 0.1, default: 0 },
   jiggleAmount: { min: 0, max: 1, step: 0.01, default: 0 },
   fishbowlShape: { min: -0.5, max: 0.5, step: 0.01, default: 0 },
-  fishbowlDilation: { min: -0.5, max: 0.5, step: 0.01, default: 0 },
+  fishbowlDilation: { min: -0.2, max: 0.2, step: 0.005, default: 0 },
   radialPowerShape: { min: 0.3, max: 3, step: 0.01, default: 1.0 },
-  radialPowerDilation: { min: 0.3, max: 3, step: 0.01, default: 1.0 },
+  radialPowerDilation: { min: 0.8, max: 1.2, step: 0.005, default: 1.0 },
   kaleidoscopeSections: { min: 0, max: 16, step: 1, default: 0 },
   tunnelStrength: { min: 0, max: 0.9, step: 0.01, default: 0 },
   emanationRate: { min: 2, max: 200, step: 1, default: 2.0 },
@@ -94,6 +94,41 @@ export const PARAM_RANGES: Record<keyof VisualParams, ParamRange> = {
  */
 export function clampParam(param: keyof VisualParams, value: number): number {
   const range = PARAM_RANGES[param];
+  return Math.max(range.min, Math.min(range.max, value));
+}
+
+/**
+ * Preset-aware ranges for Smart Jiggle / ResponsivityOptimizer.
+ * Wider than PARAM_RANGES to accommodate artistic preset values (e.g. expansionFactor 0.5–1.5,
+ * scale 2.13, jiggleAmount 2, fillSize 8.7). Uses PARAM_CURVE_DEFAULTS where wider.
+ */
+export const OPTIMIZER_PARAM_RANGES: Partial<Record<keyof VisualParams, { min: number; max: number }>> = {
+  expansionFactor: { min: 0.5, max: 1.5 },
+  scale: { min: 0.05, max: 2.5 },
+  spikiness: { min: 0, max: 15 },
+  spikeFrequency: { min: 2, max: 2500 },
+  fillSize: { min: 0, max: 10 },
+  jiggleAmount: { min: 0, max: 2 },
+  hueShiftAmount: { min: 0, max: 8 },
+  blurAmount: { min: 0, max: 30 },
+  autoRotationSpeed: { min: -360, max: 800 },
+};
+
+/**
+ * Get range for optimizer: use preset-aware range when available, else PARAM_RANGES.
+ */
+export function getOptimizerParamRange(param: keyof VisualParams): { min: number; max: number } {
+  const override = OPTIMIZER_PARAM_RANGES[param];
+  if (override !== undefined) return override;
+  const r = PARAM_RANGES[param];
+  return { min: r.min, max: r.max };
+}
+
+/**
+ * Clamp value for optimizer — respects preset-aware ranges.
+ */
+export function clampParamForOptimizer(param: keyof VisualParams, value: number): number {
+  const range = getOptimizerParamRange(param);
   return Math.max(range.min, Math.min(range.max, value));
 }
 
@@ -139,9 +174,9 @@ export function randomizeParams(): VisualParams {
 
   // Randomize post-processing
   params.fishbowlShape = (Math.random() - 0.5) * 0.4;
-  params.fishbowlDilation = (Math.random() - 0.5) * 0.4;
+  params.fishbowlDilation = (Math.random() - 0.5) * 0.2; // ±0.1 around 0
   params.radialPowerShape = 0.4 + Math.random() * 1.4;
-  params.radialPowerDilation = 0.4 + Math.random() * 1.4;
+  params.radialPowerDilation = 0.9 + Math.random() * 0.2; // 0.9–1.1, similar to dilation
   const sections = [0, 3, 4, 5, 6, 8];
   params.kaleidoscopeSections = sections[Math.floor(Math.random() * sections.length)] ?? 0;
   params.tunnelStrength = Math.random() * 0.5;

@@ -84,6 +84,27 @@ export class AudioAnalyzer {
   // Smoothing factor (EMA)
   private readonly smoothingFactor: number = 0.75;
 
+  // Rate-of-change: prev values and smoothed rates (dt ≈ 1/60 at 60fps)
+  private prevRms: number = 0;
+  private prevBass: number = 0;
+  private smoothedRmsRate: number = 0;
+  private smoothedBassRate: number = 0;
+  private lastMetricsTime: number = 0;
+
+  // Beat/rhythm detection: band-specific onset + tempo lock
+  private bandShortAvg: [number, number, number] = [0, 0, 0];
+  private readonly bandShortAlpha = 0.15; // ~50ms at 60fps
+  private onsetTimes: number[] = [];
+  private readonly maxOnsetHistory = 12;
+  private lastOnsetTime: number = -1e9;
+  private readonly onsetDebounceSec = 0.06;
+  private readonly onsetRatioThreshold = 1.35;
+  private readonly onsetMinEnergy = 0.06;
+  private beatOnsetValue: number = 0;
+  private readonly beatOnsetDecay = 0.4; // decay per frame
+  private tempoBpmValue: number = 120;
+  private beatConfidenceValue: number = 0;
+
   // Smoothed metric values
   private smoothedMetrics: SmoothedMetrics = {
     audioAmp: 0.0,
@@ -480,6 +501,17 @@ export class AudioAnalyzer {
     if (this.needsInitialization) {
       this.smoothedMetrics.audioAmp = audioAmp;
       this.smoothedMetrics.bandEnergy = [...bandEnergy];
+      this.prevRms = audioAmp;
+      this.prevBass = bandEnergy[0];
+      this.smoothedRmsRate = 0;
+      this.smoothedBassRate = 0;
+      this.lastMetricsTime = 0;
+      this.bandShortAvg = [...bandEnergy];
+      this.onsetTimes = [];
+      this.lastOnsetTime = -1e9;
+      this.beatOnsetValue = 0;
+      this.beatConfidenceValue = 0;
+      this.tempoBpmValue = 120;
       this.smoothedMetrics.harshness = harshness;
       this.smoothedMetrics.mud = mud;
       this.smoothedMetrics.compression = compression;
@@ -529,7 +561,28 @@ export class AudioAnalyzer {
     this.updateMinMax();
     this._normalizedMetrics = this.normalizeMetrics();
 
-    // Return metrics in the expected format (all 15 metrics exposed)
+    // Rate of change (dt from elapsed time, fallback 1/60)
+    const now = performance.now() / 1000;
+    const dt = this.lastMetricsTime > 0 ? Math.min(0.1, now - this.lastMetricsTime) : 1 / 60;
+    this.lastMetricsTime = now;
+
+    const rawRmsRate = dt > 0 ? (this.smoothedMetrics.audioAmp - this.prevRms) / dt : 0;
+    const rawBassRate = dt > 0 ? (this.smoothedMetrics.bandEnergy[0] - this.prevBass) / dt : 0;
+    this.prevRms = this.smoothedMetrics.audioAmp;
+    this.prevBass = this.smoothedMetrics.bandEnergy[0];
+
+    const rateSmoothing = 0.7;
+    this.smoothedRmsRate = this.smoothedRmsRate * rateSmoothing + rawRmsRate * (1 - rateSmoothing);
+    this.smoothedBassRate = this.smoothedBassRate * rateSmoothing + rawBassRate * (1 - rateSmoothing);
+
+    // Normalize rates to roughly 0-1 (typical range ±5 per second)
+    const rmsRateNorm = Math.max(-1, Math.min(1, this.smoothedRmsRate / 5));
+    const bassRateNorm = Math.max(-1, Math.min(1, this.smoothedBassRate / 5));
+
+    // Beat/rhythm detection
+    this.updateBeatMetrics(bandEnergy, now);
+
+    // Return metrics in the expected format (all metrics exposed)
     return {
       rms: this.smoothedMetrics.audioAmp,
       bass: this.smoothedMetrics.bandEnergy[0],
@@ -547,7 +600,67 @@ export class AudioAnalyzer {
       lowImbalance: this.smoothedMetrics.lowImbalance,
       emptiness: this.smoothedMetrics.emptiness,
       panPosition: (this.smoothedMetrics.panPosition[0] + this.smoothedMetrics.panPosition[1] + this.smoothedMetrics.panPosition[2]) / 3,
+      rmsRate: (rmsRateNorm + 1) / 2,
+      bassRate: (bassRateNorm + 1) / 2,
+      beatOnset: this.beatOnsetValue,
+      beatConfidence: this.beatConfidenceValue,
+      tempoBpm: this.tempoBpmValue,
+      tempoBpmNorm: Math.max(0, Math.min(1, (this.tempoBpmValue - 60) / 120)),
     };
+  }
+
+  /**
+   * Band-specific onset detection + tempo lock.
+   * Detects kick (bass), snare/clap (mid/high) transients; when 3+ regular intervals
+   * are seen, locks tempo and emits beatConfidence for backbeat-aware visuals.
+   */
+  private updateBeatMetrics(bandEnergy: [number, number, number], nowSec: number): void {
+    const [bass, mid, high] = bandEnergy;
+    const alpha = this.bandShortAlpha;
+
+    this.bandShortAvg[0] = this.bandShortAvg[0] + alpha * (bass - this.bandShortAvg[0]);
+    this.bandShortAvg[1] = this.bandShortAvg[1] + alpha * (mid - this.bandShortAvg[1]);
+    this.bandShortAvg[2] = this.bandShortAvg[2] + alpha * (high - this.bandShortAvg[2]);
+
+    const shortBass = Math.max(0.02, this.bandShortAvg[0]);
+    const shortMid = Math.max(0.02, this.bandShortAvg[1]);
+    const shortHigh = Math.max(0.02, this.bandShortAvg[2]);
+
+    const bassOnset = bass > shortBass * this.onsetRatioThreshold && bass > this.onsetMinEnergy;
+    const midOnset = mid > shortMid * this.onsetRatioThreshold && mid > this.onsetMinEnergy;
+    const highOnset = high > shortHigh * this.onsetRatioThreshold && high > this.onsetMinEnergy;
+    const anyOnset = bassOnset || midOnset || highOnset;
+
+    if (anyOnset && nowSec - this.lastOnsetTime >= this.onsetDebounceSec) {
+      this.lastOnsetTime = nowSec;
+      this.beatOnsetValue = 1;
+      this.onsetTimes.push(nowSec);
+      if (this.onsetTimes.length > this.maxOnsetHistory) this.onsetTimes.shift();
+    }
+
+    this.beatOnsetValue = Math.max(0, this.beatOnsetValue - this.beatOnsetDecay);
+
+    if (this.onsetTimes.length >= 4) {
+      const intervals: number[] = [];
+      for (let i = 1; i < this.onsetTimes.length; i++) {
+        intervals.push(this.onsetTimes[i]! - this.onsetTimes[i - 1]!);
+      }
+      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const variance = intervals.reduce((s, iv) => s + (iv - avgInterval) ** 2, 0) / intervals.length;
+      const stdRel = avgInterval > 0.01 ? Math.sqrt(variance) / avgInterval : 1;
+
+      if (stdRel < 0.25 && avgInterval >= 0.2 && avgInterval <= 2) {
+        let bpm = 60 / avgInterval;
+        while (bpm < 90) bpm *= 2;
+        while (bpm > 180) bpm /= 2;
+        this.tempoBpmValue = bpm;
+        this.beatConfidenceValue = Math.min(1, 0.5 + (0.25 - stdRel) * 2);
+      } else {
+        this.beatConfidenceValue = Math.max(0, this.beatConfidenceValue - 0.02);
+      }
+    } else {
+      this.beatConfidenceValue = Math.max(0, this.beatConfidenceValue - 0.01);
+    }
   }
 
   private smooth(current: number, target: number): number {

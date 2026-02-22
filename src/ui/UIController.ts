@@ -21,7 +21,10 @@ import { takeSnapshot, GifRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateAdjustedRange } from './valueUtils';
 import { getParamLabel } from '../config/paramLabels';
+import { DEFAULT_COLOR_HARMONY } from '../config/colorHarmony';
+import type { ColorHarmony } from '../config/colorHarmony';
 import type { ParamChangeEventDetail, CurveEditRequestEventDetail, AudioToggleRequestEventDetail } from '../components/types';
+import type { VisualMetrics } from '../visual/VisualMetrics';
 import type { ParamSlider } from '../components/param-slider/ParamSlider';
 
 export interface JiggleSettings {
@@ -73,6 +76,8 @@ export class UIController {
   /** Keys 'param_slotIndex' for route rows that are expanded; preserved across re-renders */
   private expandedRouteKeys: Set<string> = new Set();
   private static readonly MOD_WAVEFORM_SAMPLES = 60; // 1s at 60fps — same normalization time window for all
+  private static readonly CORRESPONDENCE_UI_THROTTLE_MS = 300; // Reduce jumpiness when Smart Jiggle running
+  private lastCorrespondenceUIUpdate = 0;
   private radarChart: AudioRadarChart | null = null;
   private activeMappingsCounter = 0;
   private currentCurveControlGroup: HTMLElement | null = null;
@@ -1250,6 +1255,65 @@ export class UIController {
         const isHidden = metricsContent.style.display === 'none';
         metricsContent.style.display = isHidden ? 'block' : 'none';
         metricsArrow?.classList.toggle('collapsed', !isHidden);
+      });
+    }
+
+    // Collapsible visual metrics section
+    const visualMetricsToggle = document.getElementById('visual-metrics-section-toggle');
+    const visualMetricsContent = document.getElementById('visual-metrics-collapsible');
+    const visualMetricsArrow = document.getElementById('visual-metrics-section-arrow');
+    if (visualMetricsToggle !== null && visualMetricsContent !== null) {
+      visualMetricsToggle.addEventListener('click', () => {
+        const isHidden = visualMetricsContent.style.display === 'none';
+        visualMetricsContent.style.display = isHidden ? 'block' : 'none';
+        visualMetricsArrow?.classList.toggle('collapsed', !isHidden);
+      });
+    }
+
+    // Collapsible correspondence (audio↔visual fitness) section
+    const correspondenceToggle = document.getElementById('correspondence-section-toggle');
+    const correspondenceContent = document.getElementById('correspondence-collapsible');
+    const correspondenceArrow = document.getElementById('correspondence-section-arrow');
+    if (correspondenceToggle !== null && correspondenceContent !== null) {
+      correspondenceToggle.addEventListener('click', () => {
+        const isHidden = correspondenceContent.style.display === 'none';
+        correspondenceContent.style.display = isHidden ? 'block' : 'none';
+        correspondenceArrow?.classList.toggle('collapsed', !isHidden);
+      });
+    }
+
+    // Smart Jiggle (responsivity optimizer) button
+    const smartJiggleBtn = document.getElementById('smart-jiggle-btn');
+    if (smartJiggleBtn !== null) {
+      smartJiggleBtn.addEventListener('click', () => this.toggleResponsivityOptimizer());
+    }
+
+    // Metric row click: open add-route form with this metric pre-selected
+    const metricsTable = document.getElementById('audio-metrics-table');
+    const addRouteFormForMetric = document.getElementById('mod-add-route-form');
+    const addRouteSourceForMetric = document.getElementById('add-route-source') as HTMLSelectElement | null;
+    if (metricsTable !== null && addRouteFormForMetric !== null && addRouteSourceForMetric !== null) {
+      metricsTable.querySelectorAll('tbody tr[data-metric]').forEach((row) => {
+        row.setAttribute('title', 'Click to create a mapping from this metric');
+      });
+      metricsTable.addEventListener('click', (e) => {
+        const row = (e.target as HTMLElement).closest?.('tr[data-metric]');
+        if (row === null) return;
+        const metric = row.getAttribute('data-metric') as keyof AudioMetrics | null;
+        if (metric === null || !AudioMapper.getAvailableMetrics().includes(metric)) return;
+        // Ensure M-panel is visible
+        const panel = document.getElementById('audio-mapping-panel');
+        if (panel !== null && !panel.classList.contains('visible')) {
+          this.toggleAudioMappingPanel();
+        }
+        // Expand metrics section if collapsed
+        if (metricsContent !== null && metricsContent.style.display === 'none') {
+          metricsContent.style.display = 'block';
+          metricsArrow?.classList.remove('collapsed');
+        }
+        // Show add-route form and pre-select this metric
+        addRouteSourceForMetric.value = metric;
+        addRouteFormForMetric.style.display = 'flex';
       });
     }
 
@@ -2593,6 +2657,9 @@ export class UIController {
       this.recordRouteWaveformHistory();
       this.updateRouteLiveBars();
       this.updateRouteWaveformsPanel();
+      this.updateVisualMetrics();
+      this.updateCorrespondenceUI();
+      this.updateStatusIndicators();
       this.mappingPanelLiveUpdateId = window.requestAnimationFrame(update);
     };
     this.mappingPanelLiveUpdateId = window.requestAnimationFrame(update);
@@ -2984,9 +3051,15 @@ export class UIController {
       const palette = this.app.getColorPalette();
       palette.hueMin = parseFloat(hueMin?.value ?? '0');
       palette.hueMax = parseFloat(hueMax?.value ?? '360');
-      palette.saturation = parseFloat(saturation?.value ?? '100') / 100;
-      palette.value = parseFloat(value?.value ?? '100') / 100;
+      const s = parseFloat(saturation?.value ?? '100') / 100;
+      const v = parseFloat(value?.value ?? '100') / 100;
+      palette.saturation = s;
+      palette.value = v;
       this.app.setColorPalette(palette);
+      const h = this.app.getColorHarmony();
+      if (h !== null) {
+        this.app.setColorHarmony({ ...h, saturation: s, value: v });
+      }
     };
 
     const updateUIFromPalette = () => {
@@ -3026,6 +3099,7 @@ export class UIController {
     });
 
     resetBtn?.addEventListener('click', () => {
+      this.app.setColorHarmony(null);
       this.app.setColorPalette({
         hueMin: 0,
         hueMax: 360,
@@ -3034,18 +3108,100 @@ export class UIController {
         dominantColors: [],
       });
       updateUIFromPalette();
+      this.updateHarmonyUI();
       for (let i = 0; i < 5; i++) {
         const input = document.getElementById(`palette-color-${i}`) as HTMLInputElement | null;
         if (input) input.value = '#888888';
       }
     });
 
+    this.setupColorHarmony();
     this.app.onParamsChange(() => updateUIFromPalette());
     updateUIFromPalette();
+    this.updateHarmonyUI();
+  }
+
+  private setupColorHarmony(): void {
+    const enabled = document.getElementById('harmony-enabled') as HTMLInputElement | null;
+    const typeSelect = document.getElementById('harmony-type') as HTMLSelectElement | null;
+    const baseHue = document.getElementById('harmony-base-hue') as HTMLInputElement | null;
+    const rotation = document.getElementById('harmony-rotation') as HTMLInputElement | null;
+    const spread = document.getElementById('harmony-spread') as HTMLInputElement | null;
+    const invert = document.getElementById('harmony-invert') as HTMLInputElement | null;
+
+    const applyHarmony = (partial: Partial<ColorHarmony>) => {
+      const current = this.app.getColorHarmony();
+      const base = current ?? { ...DEFAULT_COLOR_HARMONY };
+      const next: ColorHarmony = { ...base, ...partial };
+      this.app.setColorHarmony(next);
+      this.updatePaletteSwatches();
+    };
+
+    enabled?.addEventListener('change', () => {
+      if (enabled.checked) {
+        const h = this.app.getColorHarmony() ?? { ...DEFAULT_COLOR_HARMONY };
+        const p = this.app.getColorPalette();
+        h.saturation = p.saturation;
+        h.value = p.value;
+        this.app.setColorHarmony(h);
+      } else {
+        this.app.setColorHarmony(null);
+      }
+      this.updatePaletteSwatches();
+    });
+
+    typeSelect?.addEventListener('change', () => {
+      applyHarmony({ type: typeSelect.value as ColorHarmony['type'] });
+    });
+    baseHue?.addEventListener('input', () => {
+      applyHarmony({ baseHue: parseFloat(baseHue.value) });
+      const v = document.getElementById('harmony-base-hue-value');
+      if (v) v.textContent = baseHue.value;
+    });
+    rotation?.addEventListener('input', () => {
+      applyHarmony({ rotation: parseFloat(rotation.value) });
+      const v = document.getElementById('harmony-rotation-value');
+      if (v) v.textContent = rotation.value;
+    });
+    spread?.addEventListener('input', () => {
+      const s = parseFloat(spread.value) / 100;
+      applyHarmony({ spread: s });
+      const v = document.getElementById('harmony-spread-value');
+      if (v) v.textContent = s.toFixed(2);
+    });
+    invert?.addEventListener('change', () => {
+      applyHarmony({ invert: invert.checked });
+    });
+  }
+
+  private updateHarmonyUI(): void {
+    const h = this.app.getColorHarmony();
+    const enabled = document.getElementById('harmony-enabled') as HTMLInputElement | null;
+    const typeSelect = document.getElementById('harmony-type') as HTMLSelectElement | null;
+    const baseHue = document.getElementById('harmony-base-hue') as HTMLInputElement | null;
+    const rotation = document.getElementById('harmony-rotation') as HTMLInputElement | null;
+    const spread = document.getElementById('harmony-spread') as HTMLInputElement | null;
+    const invert = document.getElementById('harmony-invert') as HTMLInputElement | null;
+
+    if (enabled) enabled.checked = h !== null;
+    if (h) {
+      if (typeSelect) typeSelect.value = h.type;
+      if (baseHue) baseHue.value = String(Math.round(h.baseHue));
+      if (rotation) rotation.value = String(Math.round(h.rotation));
+      if (spread) spread.value = String(Math.round((h.spread ?? 1) * 100));
+      if (invert) invert.checked = h.invert ?? false;
+      const baseVal = document.getElementById('harmony-base-hue-value');
+      const rotVal = document.getElementById('harmony-rotation-value');
+      const spreadVal = document.getElementById('harmony-spread-value');
+      if (baseVal) baseVal.textContent = String(Math.round(h.baseHue));
+      if (rotVal) rotVal.textContent = String(Math.round(h.rotation));
+      if (spreadVal) spreadVal.textContent = (h.spread ?? 1).toFixed(2);
+    }
   }
 
   private updateColorPaletteUI(): void {
     this.updatePaletteValueDisplays();
+    this.updateHarmonyUI();
     this.updatePaletteSwatches();
     const hueMin = document.getElementById('palette-hue-min') as HTMLInputElement | null;
     const hueMax = document.getElementById('palette-hue-max') as HTMLInputElement | null;
@@ -3186,6 +3342,12 @@ export class UIController {
       case 'KeyM':
         if (!e.ctrlKey && !e.metaKey) {
           this.toggleAudioMappingPanel();
+        }
+        break;
+
+      case 'KeyO':
+        if (!e.ctrlKey && !e.metaKey) {
+          this.toggleResponsivityOptimizer();
         }
         break;
 
@@ -3361,6 +3523,20 @@ export class UIController {
   }
 
   /**
+   * Sync jiggle button with app state. When Smart Jiggle is running, jiggle is disabled.
+   */
+  private updateJiggleButtonState(): void {
+    const jiggleBtn = document.getElementById('jiggle-btn');
+    if (jiggleBtn === null) return;
+    const optimizerRunning = this.app.isResponsivityOptimizerRunning();
+    const jiggleEnabled = this.app.isJiggleEnabled();
+    jiggleBtn.textContent = jiggleEnabled ? 'Stop Jiggle' : 'Jiggle';
+    jiggleBtn.style.background = jiggleEnabled ? '#a00' : '#a0a';
+    (jiggleBtn as HTMLButtonElement).disabled = optimizerRunning;
+    jiggleBtn.setAttribute('title', optimizerRunning ? 'Disabled while Smart Jiggle is running' : '');
+  }
+
+  /**
    * Update status indicators
    */
   updateStatusIndicators(): void {
@@ -3379,9 +3555,13 @@ export class UIController {
       freeze.style.display = this.app.isDilationFrozen() ? 'inline-block' : 'none';
     }
 
-    // Note: jiggle state would be tracked separately
     if (jiggle !== null) {
-      // jiggle.style.display = this.jiggleEnabled ? 'inline-block' : 'none';
+      jiggle.style.display = this.app.isJiggleEnabled() ? 'inline-block' : 'none';
+    }
+
+    const smartJiggle = document.getElementById('smart-jiggle-indicator');
+    if (smartJiggle !== null) {
+      smartJiggle.style.display = this.app.isResponsivityOptimizerRunning() ? 'inline-block' : 'none';
     }
 
     if (unsaved !== null) {
@@ -3414,6 +3594,12 @@ export class UIController {
         emptiness: { name: 'emptiness' },
         panPosition: { name: 'panPosition', index: 0 }, // Use low band
       };
+      const metricDisplayRanges: Record<string, { min: number; max: number }> = {
+        beatOnset: { min: 0, max: 1 },
+        beatConfidence: { min: 0, max: 1 },
+        tempoBpm: { min: 60, max: 180 },
+        tempoBpmNorm: { min: 0, max: 1 },
+      };
 
       // Update each metric row
       for (const [name, value] of Object.entries(metrics)) {
@@ -3427,14 +3613,15 @@ export class UIController {
         const valueCell = row.querySelector('.metric-value');
         if (valueCell !== null) {
           try {
-            valueCell.textContent = typeof value === 'number' ? value.toFixed(3) : String(value);
+            const fmt = name === 'tempoBpm' ? (v: number) => v.toFixed(0) : (v: number) => v.toFixed(3);
+            valueCell.textContent = typeof value === 'number' ? fmt(value) : String(value);
           } catch (err: unknown) {
             console.warn(`Failed to update metric value for ${name}:`, err);
           }
         }
 
-        // Get min/max from AudioAnalyzer if available
-        let minMax = { min: 0, max: 1 };
+        // Get min/max from AudioAnalyzer if available, else use display ranges
+        let minMax = metricDisplayRanges[name] ?? { min: 0, max: 1 };
         const analyzerMapping = metricToAnalyzerName[name];
         if (this.audioAnalyzer !== null && analyzerMapping !== undefined) {
           try {
@@ -3443,7 +3630,6 @@ export class UIController {
               analyzerMapping.index
             );
           } catch (err: unknown) {
-            // Use defaults if getMinMax fails
             console.debug(`Failed to get min/max for metric ${name}:`, err);
           }
         }
@@ -3451,26 +3637,25 @@ export class UIController {
         // Update range display text
         const rangeCell = row.querySelector('.metric-range');
         if (rangeCell !== null) {
-          rangeCell.textContent = `${minMax.min.toFixed(2)}-${minMax.max.toFixed(2)}`;
+          rangeCell.textContent = minMax.max <= 2
+            ? `${minMax.min.toFixed(2)}-${minMax.max.toFixed(2)}`
+            : `${Math.round(minMax.min)}-${Math.round(minMax.max)}`;
         }
 
         // Update bar visualization
         if (typeof value === 'number') {
-          // Update range bar (shows min-max as filled area)
+          const span = minMax.max - minMax.min;
+          const normalized = span > 0 ? (value - minMax.min) / span : 0;
+          const percentage = Math.max(0, Math.min(100, normalized * 100));
           const rangeBar = row.querySelector('.metric-bar-range') as HTMLElement | null;
           if (rangeBar !== null) {
-            const rangeStart = Math.max(0, Math.min(100, minMax.min * 100));
-            const rangeWidth = Math.max(0, Math.min(100 - rangeStart, (minMax.max - minMax.min) * 100));
-            rangeBar.style.left = `${rangeStart}%`;
-            rangeBar.style.width = `${rangeWidth}%`;
+            rangeBar.style.left = '0%';
+            rangeBar.style.width = '100%';
           }
-
-          // Update current value marker
           const currentBar = row.querySelector('.metric-bar-current') as HTMLElement | null;
           if (currentBar !== null) {
-            const percentage = Math.max(0, Math.min(100, value * 100));
             currentBar.style.left = `${percentage}%`;
-            currentBar.style.background = value > 0.3 ? '#0fa' : '#0af';
+            currentBar.style.background = normalized > 0.3 ? '#0fa' : '#0af';
           }
         }
       }
@@ -3485,6 +3670,164 @@ export class UIController {
     this.activeMappingsCounter = (this.activeMappingsCounter + 1) % 10;
     if (this.activeMappingsCounter === 0) {
       this.updateActiveMappingsOverview();
+    }
+  }
+
+  /**
+   * Update audio↔visual correspondence (fitness) display.
+   * Throttled when Smart Jiggle is running to avoid 1s-interval jumps.
+   */
+  private updateCorrespondenceUI(): void {
+    const now = performance.now();
+    const optimizerRunning = this.app.isResponsivityOptimizerRunning();
+    const throttle = optimizerRunning ? UIController.CORRESPONDENCE_UI_THROTTLE_MS : 0;
+    if (throttle > 0 && now - this.lastCorrespondenceUIUpdate < throttle) {
+      return;
+    }
+    this.lastCorrespondenceUIUpdate = now;
+
+    const result = this.app.getCorrespondence();
+    const bar = document.getElementById('correspondence-fitness-bar') as HTMLElement | null;
+    const valueEl = document.getElementById('correspondence-fitness-value');
+    const boredomEl = document.getElementById('correspondence-boredom-value');
+    const scoresEl = document.getElementById('correspondence-route-scores');
+
+    if (result === null) {
+      if (bar !== null) bar.style.width = '0%';
+      if (valueEl !== null) valueEl.textContent = '—';
+      if (boredomEl !== null) boredomEl.textContent = '—';
+      if (scoresEl !== null) scoresEl.innerHTML = '<span style="color:#555;">Need audio + visuals...</span>';
+    } else {
+      const pct = Math.round(result.fitness * 100);
+      if (bar !== null) bar.style.width = `${pct}%`;
+      if (valueEl !== null) valueEl.textContent = result.fitness.toFixed(2);
+      if (boredomEl !== null) boredomEl.textContent = result.boredom.toFixed(2);
+
+      if (scoresEl !== null) {
+        if (result.routeScores.length === 0) {
+          scoresEl.innerHTML = '<span style="color:#555;">No active mappings. Add routes above.</span>';
+        } else {
+          scoresEl.innerHTML = result.routeScores
+            .map(({ param, source, correlation }) => {
+              const corrNorm = ((correlation + 1) / 2 * 100).toFixed(0);
+              return `<div>${source}→${param}: ${corrNorm}%</div>`;
+            })
+            .join('');
+        }
+      }
+    }
+
+    // Smart Jiggle: button, status, and deltas from baseline
+    const smartJiggleStatus = document.getElementById('smart-jiggle-status');
+    const smartJiggleBtn = document.getElementById('smart-jiggle-btn');
+    const smartJiggleDeltas = document.getElementById('smart-jiggle-deltas');
+
+    if (smartJiggleBtn !== null) {
+      smartJiggleBtn.textContent = optimizerRunning ? 'Stop Smart Jiggle' : 'Smart Jiggle';
+      smartJiggleBtn.style.background = optimizerRunning ? '#a33' : '';
+    }
+
+    const status = this.app.getResponsivityOptimizerStatus();
+    const baseline = this.app.getResponsivityOptimizerBaseline();
+    const deltas = this.app.getResponsivityOptimizerDeltas();
+    const slotDeltas = this.app.getResponsivityOptimizerSlotDeltas();
+
+    if (smartJiggleStatus !== null) {
+      smartJiggleStatus.textContent = `Best: ${status.bestFitness.toFixed(2)} · Evals: ${status.trialCount}`;
+    }
+
+    if (smartJiggleDeltas !== null) {
+      const hasAny = deltas.length > 0 || slotDeltas.length > 0;
+      if (baseline === null || !hasAny) {
+        smartJiggleDeltas.innerHTML = '<span style="color:#555;">Δ from baseline — start Smart Jiggle to see changes</span>';
+      } else {
+        const paramLines = deltas.map(({ param, baseline: b, current, deltaPct }) => {
+          const label = getParamLabel(param);
+          const sign = deltaPct >= 0 ? '+' : '';
+          const pctStr = `${sign}${deltaPct.toFixed(1)}%`;
+          const fromTo = `${b.toFixed(2)} → ${current.toFixed(2)}`;
+          return `<div title="${fromTo}"><span style="color:#0af;">${label}</span> <span style="color:${deltaPct >= 0 ? '#0fa' : '#f80'}">${pctStr}</span></div>`;
+        });
+        const slotLines = slotDeltas.map(({ param, source, field, baseline: b, current, deltaPct }) => {
+          const paramLabel = getParamLabel(param);
+          const srcLabel = AudioMapper.getMetricLabel(source as keyof AudioMetrics);
+          const sign = deltaPct >= 0 ? '+' : '';
+          const pctStr = `${sign}${deltaPct.toFixed(1)}%`;
+          const fromTo = `${b.toFixed(2)} → ${current.toFixed(2)}`;
+          return `<div title="${fromTo}"><span style="color:#a8f;">${srcLabel}→${paramLabel} ${field}</span> <span style="color:${deltaPct >= 0 ? '#0fa' : '#f80'}">${pctStr}</span></div>`;
+        });
+        smartJiggleDeltas.innerHTML = [...paramLines, ...slotLines].join('');
+      }
+    }
+
+    const smartJiggleLog = document.getElementById('smart-jiggle-log');
+    if (smartJiggleLog !== null) {
+      const entries = this.app.getResponsivityOptimizerLogEntries();
+      if (entries.length === 0) {
+        smartJiggleLog.textContent = '—';
+      } else {
+        smartJiggleLog.innerHTML = entries
+          .map((e) => {
+            const color = e.level === 'warn' ? '#f80' : e.level === 'event' ? '#0af' : '#666';
+            const safe = String(e.message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `<div style="color:${color}">${safe}</div>`;
+          })
+          .join('');
+        smartJiggleLog.scrollTop = smartJiggleLog.scrollHeight;
+      }
+    }
+  }
+
+  /**
+   * Toggle responsivity optimizer (Smart Jiggle)
+   */
+  private toggleResponsivityOptimizer(): void {
+    if (this.app.isResponsivityOptimizerRunning()) {
+      this.app.stopResponsivityOptimizer();
+      this.updateAllSliders();
+      this.updateJiggleButtonState();
+    } else {
+      this.app.startResponsivityOptimizer();
+      this.updateJiggleButtonState();
+    }
+    this.updateCorrespondenceUI();
+  }
+
+  /**
+   * Update visual metrics display (from pixel analysis)
+   */
+  private updateVisualMetrics(): void {
+    const metrics = this.app.getVisualMetrics();
+    const table = document.getElementById('visual-metrics-table');
+    if (table === null || metrics === null) return;
+
+    const keys: Array<keyof VisualMetrics> = [
+      'luminanceVariance',
+      'colorEntropy',
+      'edgeDensity',
+      'saturationMean',
+      'fillRatio',
+      'temporalFlux',
+      'novelty',
+      'fitness',
+    ];
+
+    for (const name of keys) {
+      const value = metrics[name];
+      const row = table.querySelector(`[data-visual-metric="${name}"]`);
+      if (row === null || typeof value !== 'number') continue;
+
+      const valueCell = row.querySelector('.metric-value');
+      if (valueCell !== null) {
+        valueCell.textContent = value.toFixed(3);
+      }
+
+      const currentBar = row.querySelector('.metric-bar-current') as HTMLElement | null;
+      if (currentBar !== null) {
+        const percentage = Math.max(0, Math.min(100, value * 100));
+        currentBar.style.left = `${percentage}%`;
+        currentBar.style.background = value > 0.3 ? '#0fa' : '#0af';
+      }
     }
   }
 

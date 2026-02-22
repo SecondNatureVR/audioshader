@@ -48,7 +48,7 @@
                 <label style="font-size: 9px;">Power</label>
                 <div class="control-row">
                     <input type="range" id="curve-power" min="0.1" max="5" step="0.1" value="1.0">
-                    <span class="value" id="curve-power-value">1.0</span>
+                    <span class="value" id="curve-power-value" contenteditable="true" title="Click to type value (0.1–5)">1.0</span>
                 </div>
             </div>
             
@@ -131,6 +131,7 @@
         <span id="pause-indicator" style="display: none; background: #f80; color: #fff;">PAUSE</span>
         <span id="freeze-indicator" style="display: none; background: #0af; color: #fff;">FREEZE</span>
         <span id="jiggle-indicator" style="display: none; background: #a0a; color: #fff;">JIGGLE</span>
+        <span id="smart-jiggle-indicator" style="display: none; background: #0a8; color: #fff;">SMART JIGGLE</span>
         <span id="unsaved-indicator" style="display: none; background: #fa0; color: #fff;">UNSAVED</span>
         <span id="record-indicator" style="display: none; background: #e33; color: #fff;">RECORD</span>
     </div>
@@ -525,6 +526,51 @@
                     <span class="value" id="palette-value-value" contenteditable="true">100%</span>
                 </div>
             </div>
+            <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Color Harmony</div>
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="harmony-enabled" style="margin: 0;">
+                    <span>Use Harmony</span>
+                </label>
+            </div>
+            <div class="control-group">
+                <label>Harmony Type</label>
+                <select id="harmony-type" style="width: 100%; padding: 4px; background: #0a0a0a; border: 1px solid #333; color: #fff; border-radius: 3px;">
+                    <option value="complementary">Complementary</option>
+                    <option value="analogous">Analogous</option>
+                    <option value="triadic">Triadic</option>
+                    <option value="splitComplementary">Split Complementary</option>
+                    <option value="square">Square</option>
+                    <option value="tetradic">Tetradic</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Base Hue</label>
+                <div class="control-row">
+                    <input type="range" id="harmony-base-hue" min="0" max="360" value="200">
+                    <span class="value" id="harmony-base-hue-value" contenteditable="true">200</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Rotation</label>
+                <div class="control-row">
+                    <input type="range" id="harmony-rotation" min="0" max="360" value="0">
+                    <span class="value" id="harmony-rotation-value" contenteditable="true">0</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Spread</label>
+                <div class="control-row">
+                    <input type="range" id="harmony-spread" min="0" max="100" value="100">
+                    <span class="value" id="harmony-spread-value" contenteditable="true">1.0</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label style="display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="harmony-invert" style="margin: 0;">
+                    <span>Invert</span>
+                </label>
+            </div>
             <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Dominant Colors</div>
             <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;">
                 <label class="palette-swatch" title="Color 1">
@@ -758,6 +804,46 @@
             </div>
         </div>
 
+        <!-- Audio-Visual Correspondence (fitness / responsivity) -->
+        <div id="correspondence-section" style="margin-top: 10px;">
+            <div class="mod-section-toggle" id="correspondence-section-toggle">
+                <h5 style="margin:0;">Audio↔Visual Fitness</h5>
+                <span class="mod-section-arrow collapsed" id="correspondence-section-arrow">&#9660;</span>
+            </div>
+            <div id="correspondence-collapsible" style="display:none;">
+                <div style="font-size: 9px; color: #bbb; margin-bottom: 6px;">Measures how well audio-driven params produce corresponding visuals. Higher = more responsive.</div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                    <span style="font-size: 9px; color: #aaa;">Fitness:</span>
+                    <div style="flex:1; height: 12px; background: #111; border-radius: 3px; overflow: hidden;">
+                        <div id="correspondence-fitness-bar" style="height:100%; width:0%; background: linear-gradient(90deg, #0a0, #0fa); transition: width 0.1s;"></div>
+                    </div>
+                    <span id="correspondence-fitness-value" style="font-size: 9px; font-family: monospace; color: #0fa; min-width: 36px;">0.00</span>
+                </div>
+                <div style="font-size: 8px; color: #666; margin-bottom: 4px;">
+                    <span style="color: #666;">Boredom:</span> <span id="correspondence-boredom-value" style="font-family: monospace;">0.00</span>
+                    <span style="color: #555; font-size: 7px;"> (penalizes repetitive visuals)</span>
+                </div>
+                <div id="correspondence-route-scores" style="font-size: 8px; color: #666; max-height: 80px; overflow-y: auto;">
+                    <!-- Per-route scores populated dynamically -->
+                </div>
+                <div style="margin-top: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <button type="button" id="smart-jiggle-btn" class="curve-btn-action" style="font-size: 9px; padding: 4px 10px;" title="Automatically discover more responsive params (requires audio + mappings)">
+                            Smart Jiggle
+                        </button>
+                        <span id="smart-jiggle-status" style="font-size: 8px; color: #666;">Best: 0.00 · Evals: 0</span>
+                    </div>
+                    <div id="smart-jiggle-deltas" style="font-size: 8px; color: #888; max-height: 100px; overflow-y: auto; transition: opacity 0.2s;">
+                        <!-- Δ from baseline: populated when Smart Jiggle has run -->
+                    </div>
+                    <div style="margin-top: 6px; font-size: 7px; color: #555;">Log:</div>
+                    <div id="smart-jiggle-log" style="font-size: 7px; font-family: monospace; color: #666; max-height: 120px; overflow-y: auto; background: #0a0a0a; border-radius: 3px; padding: 4px; line-height: 1.3;">
+                        <!-- Smart Jiggle log entries -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Audio Metrics (collapsible, collapsed by default) -->
         <div id="audio-metrics-section" style="margin-top: 10px;">
             <div class="mod-section-toggle" id="metrics-section-toggle">
@@ -790,6 +876,41 @@
                         <tr data-metric="lowImbalance"><td class="metric-name">Low Imbalance</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
                         <tr data-metric="emptiness"><td class="metric-name">Emptiness</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
                         <tr data-metric="panPosition"><td class="metric-name">Pan Position</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="rmsRate"><td class="metric-name">RMS Rate</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="bassRate"><td class="metric-name">Bass Rate</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="beatOnset"><td class="metric-name">Beat Onset</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="beatConfidence"><td class="metric-name">Beat Conf.</td><td class="metric-value">0.000</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="tempoBpm"><td class="metric-name">Tempo BPM</td><td class="metric-value">120</td><td class="metric-range">90-180</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-metric="tempoBpmNorm"><td class="metric-name">Tempo (norm)</td><td class="metric-value">0.500</td><td class="metric-range">0-1</td><td><div class="metric-bar-container"><div class="metric-bar-range"></div><div class="metric-bar-current"></div></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Visual Metrics (collapsible) -->
+        <div id="visual-metrics-section" style="margin-top: 10px;">
+            <div class="mod-section-toggle" id="visual-metrics-section-toggle">
+                <h5 style="margin:0;">Visual Metrics</h5>
+                <span class="mod-section-arrow collapsed" id="visual-metrics-section-arrow">&#9660;</span>
+            </div>
+            <div id="visual-metrics-collapsible" style="display:none;">
+                <table class="metrics-table" id="visual-metrics-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Bar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-visual-metric="luminanceVariance"><td class="metric-name">Luminance Var</td><td class="metric-value">0.000</td><td><div class="metric-bar-container"><div class="metric-bar-range" style="left:0%;width:100%"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-visual-metric="colorEntropy"><td class="metric-name">Color Entropy</td><td class="metric-value">0.000</td><td><div class="metric-bar-container"><div class="metric-bar-range" style="left:0%;width:100%"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-visual-metric="edgeDensity"><td class="metric-name">Edge Density</td><td class="metric-value">0.000</td><td><div class="metric-bar-container"><div class="metric-bar-range" style="left:0%;width:100%"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-visual-metric="saturationMean"><td class="metric-name">Saturation</td><td class="metric-value">0.000</td><td><div class="metric-bar-container"><div class="metric-bar-range" style="left:0%;width:100%"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-visual-metric="fillRatio"><td class="metric-name">Fill Ratio</td><td class="metric-value">0.000</td><td><div class="metric-bar-container"><div class="metric-bar-range" style="left:0%;width:100%"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-visual-metric="temporalFlux"><td class="metric-name">Temporal Flux</td><td class="metric-value">0.000</td><td><div class="metric-bar-container"><div class="metric-bar-range" style="left:0%;width:100%"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-visual-metric="novelty"><td class="metric-name">Novelty</td><td class="metric-value">0.000</td><td><div class="metric-bar-container"><div class="metric-bar-range" style="left:0%;width:100%"></div><div class="metric-bar-current"></div></div></td></tr>
+                        <tr data-visual-metric="fitness"><td class="metric-name">Fitness</td><td class="metric-value">0.000</td><td><div class="metric-bar-container"><div class="metric-bar-range" style="left:0%;width:100%"></div><div class="metric-bar-current"></div></div></td></tr>
                     </tbody>
                 </table>
             </div>

@@ -10,7 +10,8 @@ import { AudioMapper } from '../audio/AudioMapper';
 const ALL_METRICS: Array<keyof AudioMetrics> = [
   'rms', 'bass', 'mid', 'high', 'presence', 'harshness',
   'mud', 'compression', 'collision', 'coherence', 'stereoWidth', 'phaseRisk',
-  'lowImbalance', 'emptiness', 'panPosition',
+  'lowImbalance', 'emptiness', 'panPosition', 'rmsRate', 'bassRate',
+  'beatOnset', 'beatConfidence', 'tempoBpm', 'tempoBpmNorm',
 ];
 
 const TOP_N = 5;
@@ -35,6 +36,12 @@ const METRIC_BAND: Record<keyof AudioMetrics, Band> = {
   lowImbalance: 'mid',
   emptiness: 'dynamics',
   panPosition: 'mid',
+  rmsRate: 'dynamics',
+  bassRate: 'bass',
+  beatOnset: 'dynamics',
+  beatConfidence: 'dynamics',
+  tempoBpm: 'dynamics',
+  tempoBpmNorm: 'dynamics',
 };
 
 const BAND_COLORS: Record<Band, { fill: string; stroke: string }> = {

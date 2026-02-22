@@ -222,6 +222,16 @@ body {
     font-family: monospace;
 }
 
+.metrics-table tbody tr[data-metric],
+.metrics-table tbody tr[data-visual-metric] {
+    cursor: pointer;
+}
+
+.metrics-table tbody tr[data-metric]:hover,
+.metrics-table tbody tr[data-visual-metric]:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
 .metrics-table tr:hover {
     background: rgba(255, 255, 255, 0.03);
 }

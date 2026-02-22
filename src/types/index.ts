@@ -85,6 +85,16 @@ export interface AudioMetrics {
   lowImbalance: number;    // deviation from ideal bass ratio, detects bass drops vs sparse sections
   emptiness: number;       // fraction of silent frequency bins, detects breakdowns/intros
   panPosition: number;     // L/R panning average (stereo only), detects stereo movement
+  rmsRate: number;         // rate of change of RMS (smoothed derivative)
+  bassRate: number;        // rate of change of bass energy
+  /** 0-1 pulse on band onset (kick/snare/clap). Decays quickly. Use for beat-reactive visuals. */
+  beatOnset: number;
+  /** 0-1 confidence that we're locked to a periodic backbeat (3+ regular intervals) */
+  beatConfidence: number;
+  /** Estimated tempo in BPM when beatConfidence > 0.5 (for display) */
+  tempoBpm: number;
+  /** 0-1 normalized tempo (60–180 BPM → 0–1) for mapping */
+  tempoBpmNorm: number;
 }
 
 /** Single modulation source slot (mod-matrix ready) */
@@ -143,6 +153,7 @@ export interface Preset {
   emanationRate?: number | undefined;
   audioMappings?: AudioMappings | undefined;
   colorPalette?: ColorPalette | undefined;
+  colorHarmony?: import('../config/colorHarmony').ColorHarmony | undefined;
   /** @deprecated Old flat-config format. Kept for migration of old presets. */
   legacyAudioMappings?: LegacyAudioMappings | undefined;
   createdAt?: string | undefined;

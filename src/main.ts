@@ -6,6 +6,7 @@
 import { App } from './App';
 import { UIController } from './ui/UIController';
 import { AudioAnalyzer } from './audio/AudioAnalyzer';
+import { AudioEventDetector } from './audio/AudioEventDetector';
 
 // Register Lit web components
 import './components';
@@ -16,6 +17,7 @@ declare global {
     app: App;
     ui: UIController;
     audioAnalyzer: AudioAnalyzer;
+    audioEventDetector: AudioEventDetector;
   }
 }
 
@@ -32,8 +34,9 @@ async function init(): Promise<void> {
   const app = new App({ canvas });
   await app.init();
 
-  // Create audio analyzer
+  // Create audio analyzer and event detector
   const audioAnalyzer = new AudioAnalyzer();
+  const audioEventDetector = new AudioEventDetector();
 
   // Create and initialize the UI controller
   const ui = new UIController({ app, audioAnalyzer });
@@ -43,6 +46,7 @@ async function init(): Promise<void> {
   window.app = app;
   window.ui = ui;
   window.audioAnalyzer = audioAnalyzer;
+  window.audioEventDetector = audioEventDetector;
 
   // Start the render loop
   app.start();
@@ -55,6 +59,11 @@ async function init(): Promise<void> {
         if (metrics !== null) {
           app.setAudioMetrics(metrics);
           ui.updateAudioMetrics(metrics);
+          const t = performance.now() / 1000;
+          const events = audioEventDetector.update(metrics, t);
+          if (events.length > 0) {
+            app.handleAudioEvents(events);
+          }
         }
       }
     } catch (error: unknown) {

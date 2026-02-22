@@ -76,6 +76,13 @@ export {
 } from './mapping/CurveMapping';
 export type { CurveSettings } from './mapping/CurveMapping';
 
+// Visual analysis (for optimization / fitness)
+export { VisualAnalyzer } from './visual/VisualAnalyzer';
+export { AudioVisualCorrespondence } from './visual/AudioVisualCorrespondence';
+export type { VisualMetrics, VisualMetricKey } from './visual/VisualMetrics';
+export type { CorrespondenceResult } from './visual/AudioVisualCorrespondence';
+export { DEFAULT_FITNESS_WEIGHTS } from './visual/VisualMetrics';
+
 // Capture utilities
 export { takeSnapshot, GifRecorder, ScreenRecorder } from './capture/Capture';
 export type { CaptureConfig } from './capture/Capture';

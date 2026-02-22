@@ -576,6 +576,12 @@ export class AudioMapper {
       'lowImbalance',
       'emptiness',
       'panPosition',
+      'rmsRate',
+      'bassRate',
+      'beatOnset',
+      'beatConfidence',
+      'tempoBpm',
+      'tempoBpmNorm',
     ];
   }
 
@@ -597,6 +603,12 @@ export class AudioMapper {
       lowImbalance: 'Low Imbalance',
       emptiness: 'Emptiness',
       panPosition: 'Pan Position',
+      rmsRate: 'RMS Rate',
+      bassRate: 'Bass Rate',
+      beatOnset: 'Beat Onset',
+      beatConfidence: 'Beat Confidence',
+      tempoBpm: 'Tempo BPM',
+      tempoBpmNorm: 'Tempo (norm)',
     };
     return labels[metric];
   }

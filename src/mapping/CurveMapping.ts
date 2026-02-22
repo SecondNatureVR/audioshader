@@ -68,11 +68,11 @@ export const PARAM_CURVE_DEFAULTS: Partial<Record<keyof VisualParams | 'dilation
 
   // Post-processing
   fishbowlShape: { min: -0.5, max: 0.5, power: 1.0 },
-  fishbowlDilation: { min: -0.5, max: 0.5, power: 1.0 },
-  radialPowerShape: { min: 0.3, max: 3, power: 2.0 },
-  radialPowerDilation: { min: 0.3, max: 3, power: 2.0 },
+  fishbowlDilation: { min: -0.2, max: 0.2, power: 1.5 },
+  radialPowerShape: { min: 3, max: 0.3, power: 2.0 }, // Inverted: slider right = zoom in (power < 1)
+  radialPowerDilation: { min: 0.8, max: 1.2, power: 1.5 },
   kaleidoscopeSections: { min: 0, max: 16, power: 1.0 },
-  tunnelStrength: { min: 0, max: 0.9, power: 1.0 },
+  tunnelStrength: { min: 0, max: 0.9, power: 2.0 }, // Power > 1: more gradual 0–0.1, finer low-end control
 };
 
 /**
@@ -255,6 +255,61 @@ export const DilationMapping = {
 };
 
 /**
+ * Fishbowl trail mapping — symmetric around 0, tighter range (±0.2), power curve for gradual control near zero.
+ * Interesting zone: ±0.1. Slider 50 = 0 (no effect).
+ */
+export const FishbowlDilationMapping = {
+  MIN: -0.2,
+  MAX: 0.2,
+  POWER: 1.5,
+
+  valueToSlider(value: number): number {
+    const halfRange = this.MAX;
+    if (value >= halfRange) return 100;
+    if (value <= -halfRange) return 0;
+    const offset = value / halfRange; // -1 to 1
+    const curved = Math.sign(offset) * Math.pow(Math.abs(offset), 1 / this.POWER);
+    return 50 + 50 * curved;
+  },
+
+  sliderToValue(sliderValue: number): number {
+    const offset = (sliderValue - 50) / 50; // -1 to 1
+    if (Math.abs(offset) < 1e-9) return 0;
+    const curved = Math.sign(offset) * Math.pow(Math.abs(offset), this.POWER);
+    return curved * this.MAX;
+  },
+};
+
+/**
+ * Radial power trail mapping — symmetric around 1.0, tighter range (0.8–1.2), power curve for gradual control near 1.
+ * Interesting zone: 0.9–1.1. Slider 50 = 1.0 (no effect).
+ * Inverted: slider left = power > 1 (zoom out), slider right = power < 1 (zoom in) — matches "zoom in = more" UX.
+ */
+export const RadialPowerDilationMapping = {
+  MIN: 0.8,
+  MAX: 1.2,
+  NEUTRAL: 1.0,
+  POWER: 1.5,
+
+  valueToSlider(value: number): number {
+    const halfRange = (this.MAX - this.MIN) / 2; // 0.2
+    const offset = (value - this.NEUTRAL) / halfRange; // -1 to 1
+    if (offset >= 1) return 0;   // value 1.2 -> slider 0 (zoom out)
+    if (offset <= -1) return 100; // value 0.8 -> slider 100 (zoom in)
+    const curved = Math.sign(offset) * Math.pow(Math.abs(offset), 1 / this.POWER);
+    return 50 - 50 * curved; // Inverted: negative offset -> higher slider
+  },
+
+  sliderToValue(sliderValue: number): number {
+    const offset = (50 - sliderValue) / 50; // Inverted: slider 0 = offset 1, slider 100 = offset -1
+    if (Math.abs(offset) < 1e-9) return this.NEUTRAL;
+    const halfRange = (this.MAX - this.MIN) / 2;
+    const curved = Math.sign(offset) * Math.pow(Math.abs(offset), this.POWER);
+    return this.NEUTRAL + curved * halfRange;
+  },
+};
+
+/**
  * Fade amount mapping (exponential for fine control at low values)
  */
 export const FadeMapping = {
@@ -405,6 +460,20 @@ function buildSpecialMappings(): Record<string, SpecialMappingEntry> {
       defaultPower: 1.0,
       sliderToValue: (s, settings) => RotationSpeedMapping.sliderToSpeed(s, settings.min, settings.max),
       valueToSlider: (v, settings) => RotationSpeedMapping.speedToSlider(v, settings.min, settings.max),
+    },
+    fishbowlDilation: {
+      defaultMin: FishbowlDilationMapping.MIN,
+      defaultMax: FishbowlDilationMapping.MAX,
+      defaultPower: FishbowlDilationMapping.POWER,
+      sliderToValue: (s) => FishbowlDilationMapping.sliderToValue(s),
+      valueToSlider: (v) => FishbowlDilationMapping.valueToSlider(v),
+    },
+    radialPowerDilation: {
+      defaultMin: RadialPowerDilationMapping.MIN,
+      defaultMax: RadialPowerDilationMapping.MAX,
+      defaultPower: RadialPowerDilationMapping.POWER,
+      sliderToValue: (s) => RadialPowerDilationMapping.sliderToValue(s),
+      valueToSlider: (v) => RadialPowerDilationMapping.valueToSlider(v),
     },
   };
 }

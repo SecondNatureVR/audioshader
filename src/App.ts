@@ -8,9 +8,20 @@ import { loadAllShaders } from './render/shaders';
 import { ParameterInterpolator } from './render/ParameterInterpolator';
 import { createDefaultParams, mergeParams, PARAM_RANGES, applyJiggle, randomizeParams } from './render/Parameters';
 import { PresetManager } from './presets/PresetManager';
-import { AudioMapper } from './audio/AudioMapper';
+import { AudioMapper, createDefaultSlot } from './audio/AudioMapper';
 import { DEFAULT_PALETTE, mergePalette } from './config/colorPalette';
+import {
+  harmonyToDominantColors,
+  DEFAULT_COLOR_HARMONY,
+  type ColorHarmony,
+} from './config/colorHarmony';
 import type { VisualParams, AudioMetrics, RenderState, ParameterModulation, BlendMode, ColorPalette } from './types';
+import type { AudioEvent } from './audio/AudioEventDetector';
+import { VisualAnalyzer } from './visual/VisualAnalyzer';
+import { AudioVisualCorrespondence } from './visual/AudioVisualCorrespondence';
+import { ResponsivityOptimizer, type OptimizerDelta, type OptimizerLogEntry, type OptimizerSlotDelta } from './visual/ResponsivityOptimizer';
+import type { VisualMetrics } from './visual/VisualMetrics';
+import type { CorrespondenceResult } from './visual/AudioVisualCorrespondence';
 
 export interface AppConfig {
   canvas: HTMLCanvasElement;
@@ -42,6 +53,7 @@ export class App {
   private lastCaptureTime: number = 0;
   private totalRotation: number = 0;
   private colorPalette: ColorPalette = { ...DEFAULT_PALETTE };
+  private colorHarmony: ColorHarmony | null = null;
 
   // Use fixed interval timing like lucas.html for consistent behavior across browsers
   private static readonly TARGET_FPS = 60;
@@ -50,6 +62,14 @@ export class App {
   private lastFrameTime: number = 0;
 
   private audioMetrics: AudioMetrics | null = null;
+  private lastAudioEventTime: number = -1e9;
+
+  private visualAnalyzer: VisualAnalyzer;
+  private audioVisualCorrespondence: AudioVisualCorrespondence;
+  private responsivityOptimizer: ResponsivityOptimizer;
+  private frameNumber: number = 0;
+  private lastVisualMetrics: VisualMetrics | null = null;
+  private lastCorrespondence: CorrespondenceResult | null = null;
 
   private onParamsChangeCallbacks: Array<(params: VisualParams) => void> = [];
 
@@ -62,6 +82,41 @@ export class App {
     this.params = createDefaultParams();
     this.baseParams = createDefaultParams();
     this.targetParams = createDefaultParams();
+    this.visualAnalyzer = new VisualAnalyzer({ throttleFrames: 3 });
+    this.audioVisualCorrespondence = new AudioVisualCorrespondence();
+    this.responsivityOptimizer = new ResponsivityOptimizer({
+      setParams: (p, immediate) => this.setParams(p, immediate ?? false),
+      getParams: () => this.getBaseParams(),
+      resetCorrespondence: () => this.audioVisualCorrespondence.reset(),
+      evaluateFitness: () => this.lastCorrespondence?.fitness ?? 0,
+      evaluateInterest: () => this.lastCorrespondence?.interest ?? this.lastCorrespondence?.fitness ?? 0,
+      getAudioMappings: () => this.audioMapper.getMappings(),
+      setAudioMappings: (m) => this.audioMapper.setMappings(m),
+      getActiveRoutes: () => this.audioMapper.getActiveRoutes(),
+      getSlot: (param, slotIndex) => this.audioMapper.getSlot(param, slotIndex),
+      updateAudioSlot: (param, slotIndex, partial) => this.audioMapper.updateSlot(param, slotIndex, partial),
+      addAudioRoute: (param, source) => {
+        this.audioMapper.addSlot(param, createDefaultSlot(source, param));
+        this.audioMapper.updateModulation(param, { enabled: true });
+        return this.audioMapper.getSlotCount(param) - 1;
+      },
+      removeAudioRoute: (param, slotIndex) => this.audioMapper.removeSlot(param, slotIndex),
+      getAvailableAudioSources: () => AudioMapper.getAvailableMetrics(),
+      loadPresetByName: (name, smooth) => this.loadPreset(name, smooth),
+      getPresetNames: () => this.presetManager.getPresetNames(),
+      getPresetParams: (name) => this.presetManager.getPreset(name)?.params ?? null,
+      getBoredom: () => this.lastCorrespondence?.boredom ?? 0,
+      getVisualMetrics: () => this.getVisualMetrics(),
+      onCommit: (params, mappings) => {
+        this.setParams(params, false);
+        if (mappings !== null) this.audioMapper.setMappings(mappings);
+        this.audioVisualCorrespondence.resetBoredom();
+      },
+      onLog: (message, level) => {
+        const prefix = level === 'warn' ? '[SJ warn]' : level === 'event' ? '[SJ]' : '[SJ]';
+        console.log(`${prefix} ${message}`);
+      },
+    }, { baseStepSize: 0.002, evaluationInterval: 2.0, commitMaxRunSec: 20 });
   }
 
   /**
@@ -74,6 +129,8 @@ export class App {
       shaders.starFragment,
       shaders.dilationVertex,
       shaders.dilationFragment,
+      shaders.copyFragment,
+      shaders.centerBlendFragment,
       shaders.postprocessVertex,
       shaders.postprocessFragment
     );
@@ -124,6 +181,13 @@ export class App {
     if (!this.renderState.frozen) {
       this.update(deltaTime);
       this.render();
+      this.frameNumber += 1;
+      if (this.visualAnalyzer.shouldAnalyze(this.frameNumber)) {
+        const pixels = this.renderer.readPixelsCenter(64, 64);
+        if (pixels !== null) {
+          this.lastVisualMetrics = this.visualAnalyzer.analyze(pixels, 64, 64);
+        }
+      }
     }
   };
 
@@ -148,6 +212,27 @@ export class App {
     if (this.audioMetrics !== null) {
       const audioModifications = this.audioMapper.applyMappings(this.baseParams, this.audioMetrics);
       Object.assign(this.params, audioModifications);
+    }
+
+    // Record (audio, visual) for correspondence evaluation
+    if (this.audioMetrics !== null && this.lastVisualMetrics !== null) {
+      this.audioVisualCorrespondence.record(this.audioMetrics, this.lastVisualMetrics);
+      this.lastCorrespondence = this.audioVisualCorrespondence.evaluate(
+        this.audioMapper.getMappings()
+      );
+    }
+
+    // Responsivity optimizer (fitness-guided discovery)
+    if (this.responsivityOptimizer.isRunning()) {
+      const nowSec = performance.now() / 1000;
+      const audioContext =
+        this.audioMetrics !== null
+          ? {
+              metrics: this.audioMetrics,
+              lastEventTime: this.lastAudioEventTime,
+            }
+          : undefined;
+      this.responsivityOptimizer.tick(nowSec, audioContext);
     }
 
     // Calculate total rotation for captured shapes (matches lucas.html approach)
@@ -294,10 +379,17 @@ export class App {
   }
 
   /**
-   * Get current parameters
+   * Get current parameters (effective: base + jiggle + audio)
    */
   getParams(): VisualParams {
     return { ...this.params };
+  }
+
+  /**
+   * Get base parameters (before jiggle/audio). Used by ResponsivityOptimizer.
+   */
+  getBaseParams(): VisualParams {
+    return { ...this.baseParams };
   }
 
   /**
@@ -312,6 +404,109 @@ export class App {
    */
   setAudioMetrics(metrics: AudioMetrics | null): void {
     this.audioMetrics = metrics;
+  }
+
+  /**
+   * Get last computed visual metrics (from pixel analysis).
+   * Updated every 4th frame when not frozen.
+   */
+  getVisualMetrics(): VisualMetrics | null {
+    return this.lastVisualMetrics;
+  }
+
+  /**
+   * Get the visual analyzer (for debugging).
+   */
+  getVisualAnalyzer(): VisualAnalyzer {
+    return this.visualAnalyzer;
+  }
+
+  /**
+   * Get last correspondence result (audio↔visual fitness).
+   */
+  getCorrespondence(): CorrespondenceResult | null {
+    return this.lastCorrespondence;
+  }
+
+  /**
+   * Get the audio-visual correspondence evaluator.
+   */
+  getAudioVisualCorrespondence(): AudioVisualCorrespondence {
+    return this.audioVisualCorrespondence;
+  }
+
+  /**
+   * Start fitness-guided parameter discovery (smarter jiggle).
+   * Requires audio capture + mappings for meaningful fitness.
+   */
+  startResponsivityOptimizer(): void {
+    this.jiggleEnabled = false; // Disable jiggle when optimizing
+    this.responsivityOptimizer.start();
+  }
+
+  /**
+   * Stop responsivity optimizer, keep best params found.
+   */
+  stopResponsivityOptimizer(): void {
+    this.responsivityOptimizer.stop();
+  }
+
+  /**
+   * Whether responsivity optimizer is running.
+   */
+  isResponsivityOptimizerRunning(): boolean {
+    return this.responsivityOptimizer.isRunning();
+  }
+
+  /**
+   * Get optimizer trial count and best fitness (for UI).
+   */
+  getResponsivityOptimizerStatus(): { trialCount: number; bestFitness: number } {
+    return {
+      trialCount: this.responsivityOptimizer.getTrialCount(),
+      bestFitness: this.responsivityOptimizer.getBestFitness(),
+    };
+  }
+
+  /**
+   * Get baseline params and deltas for Smart Jiggle UI.
+   */
+  getResponsivityOptimizerDeltas(): OptimizerDelta[] {
+    return this.responsivityOptimizer.getOptimizerDeltas(1);
+  }
+
+  /**
+   * Get audio slot deltas for Smart Jiggle UI.
+   */
+  getResponsivityOptimizerSlotDeltas(): OptimizerSlotDelta[] {
+    return this.responsivityOptimizer.getOptimizerSlotDeltas(2);
+  }
+
+  /**
+   * Get baseline params (pre-Smart Jiggle). Null if never started.
+   */
+  getResponsivityOptimizerBaseline(): VisualParams | null {
+    return this.responsivityOptimizer.getBaselineParams();
+  }
+
+  /**
+   * Get Smart Jiggle log entries for UI.
+   */
+  getResponsivityOptimizerLogEntries(): readonly OptimizerLogEntry[] {
+    return this.responsivityOptimizer.getLogEntries();
+  }
+
+  /**
+   * Handle audio events (drop, breakdown, silence, etc.)
+   * Called from main loop when event detector fires.
+   * Future: trigger preset changes, emanation rate jumps, etc.
+   */
+  handleAudioEvents(events: AudioEvent[]): void {
+    for (const e of events) {
+      if (e.type === 'drop' || e.type === 'breakdown') {
+        this.notifyParamsChange();
+      }
+    }
   }
 
   /**
@@ -518,6 +713,30 @@ export class App {
     this.notifyParamsChange();
   }
 
+  getColorHarmony(): ColorHarmony | null {
+    return this.colorHarmony;
+  }
+
+  setColorHarmony(harmony: ColorHarmony | null): void {
+    this.colorHarmony = harmony;
+    if (harmony !== null) {
+      const colors = harmonyToDominantColors(harmony);
+      this.colorPalette = mergePalette({
+        ...this.colorPalette,
+        dominantColors: colors,
+        saturation: harmony.saturation,
+        value: harmony.value,
+      });
+    } else {
+      // Reset to hue range mode (hueMin/hueMax) when harmony is off
+      this.colorPalette = mergePalette({
+        ...this.colorPalette,
+        dominantColors: [],
+      });
+    }
+    this.notifyParamsChange();
+  }
+
   // Default emanation rate used when preset doesn't specify one
   private static readonly DEFAULT_EMANATION_RATE = 30;
 
@@ -546,13 +765,14 @@ export class App {
 
   /**
    * Load a preset by name
+   * @param smooth - If true, interpolate params smoothly (for Smart Jiggle escape)
    */
-  loadPreset(name: string): boolean {
+  loadPreset(name: string, smooth: boolean = false): boolean {
     const preset = this.presetManager.loadPreset(name);
     if (preset === null) return false;
 
     const merged = this.mergePresetParams(preset.params, preset.emanationRate);
-    this.setParams(merged);
+    this.setParams(merged, smooth);
     // Set blendMode from preset or default to 'additive'
     this.blendMode = preset.blendMode ?? 'additive';
     if (preset.audioMappings !== undefined) {
@@ -560,6 +780,18 @@ export class App {
     }
     if (preset.colorPalette !== undefined) {
       this.colorPalette = mergePalette(preset.colorPalette);
+    }
+    if (preset.colorHarmony !== undefined) {
+      this.colorHarmony = { ...DEFAULT_COLOR_HARMONY, ...preset.colorHarmony };
+      const colors = harmonyToDominantColors(this.colorHarmony);
+      this.colorPalette = mergePalette({
+        ...this.colorPalette,
+        dominantColors: colors,
+        saturation: this.colorHarmony.saturation,
+        value: this.colorHarmony.value,
+      });
+    } else {
+      this.colorHarmony = null;
     }
     return true;
   }

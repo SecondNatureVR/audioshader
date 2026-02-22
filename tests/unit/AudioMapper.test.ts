@@ -43,6 +43,12 @@ function makeMetrics(overrides: Partial<AudioMetrics> = {}): AudioMetrics {
     lowImbalance: 0,
     emptiness: 0,
     panPosition: 0,
+    rmsRate: 0.5,
+    bassRate: 0.5,
+    beatOnset: 0,
+    beatConfidence: 0,
+    tempoBpm: 120,
+    tempoBpmNorm: 0.5,
     ...overrides,
   };
 }
@@ -636,12 +642,18 @@ describe('AudioMapper class', () => {
   // ── static methods ───────────────────────────────────────────────
 
   describe('static methods', () => {
-    it('getAvailableMetrics should return all 15 metrics', () => {
+    it('getAvailableMetrics should return all metrics including rmsRate, bassRate, beatOnset', () => {
       const metrics = AudioMapper.getAvailableMetrics();
-      expect(metrics).toHaveLength(15);
+      expect(metrics).toHaveLength(21);
       expect(metrics).toContain('lowImbalance');
       expect(metrics).toContain('emptiness');
+      expect(metrics).toContain('rmsRate');
+      expect(metrics).toContain('bassRate');
       expect(metrics).toContain('panPosition');
+      expect(metrics).toContain('beatOnset');
+      expect(metrics).toContain('beatConfidence');
+      expect(metrics).toContain('tempoBpm');
+      expect(metrics).toContain('tempoBpmNorm');
     });
 
     it('getMetricLabel should return labels for all metrics', () => {

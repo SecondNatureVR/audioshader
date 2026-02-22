@@ -4,6 +4,7 @@
  */
 
 import type { VisualParams, AudioMappings, Preset, BlendMode, ColorPalette, LegacyAudioMappings } from '../types';
+import type { ColorHarmony } from '../config/colorHarmony';
 import { DEFAULT_PARAMS } from '../render/Parameters';
 import { getDefaultPresetsMap, migrateOldLocalStorage, getDefaultEmanationRate, getDefaultBlendMode } from './defaultPresets';
 import { migrateLegacyMappings, normalizeSlot } from '../audio/AudioMapper';
@@ -149,7 +150,8 @@ export class PresetManager {
     audioMappings?: AudioMappings,
     emanationRate?: number,
     blendMode?: BlendMode,
-    colorPalette?: ColorPalette
+    colorPalette?: ColorPalette,
+    colorHarmony?: ColorHarmony | null
   ): void {
     const now = new Date().toISOString();
     const existing = this.presets.get(name);
@@ -161,6 +163,7 @@ export class PresetManager {
       emanationRate: emanationRate ?? existing?.emanationRate,
       audioMappings: audioMappings !== undefined ? { ...audioMappings } : undefined,
       colorPalette: colorPalette ?? existing?.colorPalette,
+      colorHarmony: colorHarmony ?? existing?.colorHarmony,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };

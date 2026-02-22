@@ -54,6 +54,8 @@ export class Renderer {
   private gl: WebGLRenderingContext;
   private program: WebGLProgram | null = null;
   private dilationProgram: WebGLProgram | null = null;
+  private copyProgram: WebGLProgram | null = null;
+  private centerBlendProgram: WebGLProgram | null = null;
   private postprocessProgram: WebGLProgram | null = null;
   private quadBuffer: WebGLBuffer | null = null;
   private historyTexture: WebGLTexture | null = null;
@@ -249,6 +251,8 @@ export class Renderer {
     fragmentSource: string,
     dilationVertexSource: string,
     dilationFragmentSource: string,
+    copyFragmentSource: string,
+    centerBlendFragmentSource: string,
     postprocessVertexSource: string,
     postprocessFragmentSource: string
   ): Promise<void> {
@@ -286,6 +290,38 @@ export class Renderer {
     if (gl.getProgramParameter(this.dilationProgram, gl.LINK_STATUS) !== true) {
       const info = gl.getProgramInfoLog(this.dilationProgram);
       throw new Error(`Dilation program linking error: ${info ?? 'unknown error'}`);
+    }
+
+    // Compile copy shader program (reuses dilation vertex)
+    const copyFragmentShader = this.compileShader(copyFragmentSource, gl.FRAGMENT_SHADER);
+
+    this.copyProgram = gl.createProgram();
+    if (this.copyProgram === null) {
+      throw new Error('Failed to create copy program');
+    }
+    gl.attachShader(this.copyProgram, dilationVertexShader);
+    gl.attachShader(this.copyProgram, copyFragmentShader);
+    gl.linkProgram(this.copyProgram);
+
+    if (gl.getProgramParameter(this.copyProgram, gl.LINK_STATUS) !== true) {
+      const info = gl.getProgramInfoLog(this.copyProgram);
+      throw new Error(`Copy program linking error: ${info ?? 'unknown error'}`);
+    }
+
+    // Compile center blend shader program (reuses dilation vertex)
+    const centerBlendFragmentShader = this.compileShader(centerBlendFragmentSource, gl.FRAGMENT_SHADER);
+
+    this.centerBlendProgram = gl.createProgram();
+    if (this.centerBlendProgram === null) {
+      throw new Error('Failed to create center blend program');
+    }
+    gl.attachShader(this.centerBlendProgram, dilationVertexShader);
+    gl.attachShader(this.centerBlendProgram, centerBlendFragmentShader);
+    gl.linkProgram(this.centerBlendProgram);
+
+    if (gl.getProgramParameter(this.centerBlendProgram, gl.LINK_STATUS) !== true) {
+      const info = gl.getProgramInfoLog(this.centerBlendProgram);
+      throw new Error(`Center blend program linking error: ${info ?? 'unknown error'}`);
     }
 
     // Compile postprocess shader program
@@ -421,6 +457,8 @@ export class Renderer {
     if (
       this.program === null ||
       this.dilationProgram === null ||
+      this.copyProgram === null ||
+      this.centerBlendProgram === null ||
       this.postprocessProgram === null ||
       this.quadBuffer === null ||
       this.compositeFramebuffer === null
@@ -464,11 +502,43 @@ export class Renderer {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-    // Clear center pixels to prevent white accumulation
+    // Copy current to composite (needed so we can read from it for center blend without read-write conflict)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.compositeFramebuffer);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.useProgram(this.copyProgram!);
+    const copyPositionLocation = gl.getAttribLocation(this.copyProgram!, 'a_position');
+    gl.enableVertexAttribArray(copyPositionLocation);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+    gl.vertexAttribPointer(copyPositionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.currentTexture);
+    const copyInputLocation = gl.getUniformLocation(this.copyProgram!, 'u_input');
+    gl.uniform1i(copyInputLocation, 0);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Clear center on current, then draw blended center (reads from composite copy)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.currentFramebuffer);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.enable(gl.SCISSOR_TEST);
     gl.scissor(centerX - 1, centerY - 1, 2, 2);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Draw blended center (average of neighbors from composite) so it blends into image
+    gl.useProgram(this.centerBlendProgram!);
+    const centerBlendPositionLocation = gl.getAttribLocation(this.centerBlendProgram!, 'a_position');
+    gl.enableVertexAttribArray(centerBlendPositionLocation);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuffer);
+    gl.vertexAttribPointer(centerBlendPositionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.compositeTexture);
+    const centerBlendInputLocation = gl.getUniformLocation(this.centerBlendProgram!, 'u_input');
+    gl.uniform1i(centerBlendInputLocation, 0);
+    this.setUniform('u_resolution', [this.canvas.width, this.canvas.height], this.centerBlendProgram!);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
     gl.disable(gl.SCISSOR_TEST);
 
     // Step 2: Draw current shape (only if capturing)
@@ -589,6 +659,32 @@ export class Renderer {
 
   getContext(): WebGLRenderingContext {
     return this.gl;
+  }
+
+  /**
+   * Read pixels from the default framebuffer (canvas).
+   * Call after render() when the final image is on screen.
+   * Reads center region; WebGL origin is bottom-left.
+   */
+  readPixels(x: number, y: number, width: number, height: number): Uint8Array {
+    const gl = this.gl;
+    const buffer = new Uint8Array(width * height * 4);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, buffer);
+    return buffer;
+  }
+
+  /**
+   * Read center region of the canvas for visual analysis.
+   * Returns RGBA pixels, or null if canvas too small.
+   */
+  readPixelsCenter(sampleWidth: number = 64, sampleHeight: number = 64): Uint8Array | null {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    if (w < sampleWidth || h < sampleHeight) return null;
+    const x = Math.floor((w - sampleWidth) / 2);
+    const y = Math.floor((h - sampleHeight) / 2);
+    return this.readPixels(x, y, sampleWidth, sampleHeight);
   }
 
   /**
