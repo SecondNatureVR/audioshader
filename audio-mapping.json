@@ -1,0 +1,33 @@
+LUCAS values
+
+spikiness 0.3 0.50
+
+spikeFrequency 2.1 0.72
+
+spikeSharpness 3.0 0.61
+
+hue 3.0 0.57
+
+scale 3.0 0.84
+
+emanationRate 2.5 0.85
+
+dilationSpeed 1.9 0.90
+
+fadeAmount 2.9 0.85
+
+fillOpacity 1.0 0.85
+
+autoRotationSpeed 0.0 0.50
+
+hueShiftAmount 0.8 0.55
+
+noiseAmount 1.0 0.80
+
+blendOpacity 1.0 0.90
+
+fillSize 3.0 0.99
+
+noiseRate 2.9 0.54
+
+blurRate 3.0 0.50

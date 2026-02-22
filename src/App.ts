@@ -1,0 +1,805 @@
+/**
+ * AudioShader Application
+ * Main application state and render loop management
+ */
+
+import { Renderer, type RenderOptions } from './render/Renderer';
+import { loadAllShaders } from './render/shaders';
+import { ParameterInterpolator } from './render/ParameterInterpolator';
+import { createDefaultParams, mergeParams, PARAM_RANGES, applyJiggle, randomizeParams } from './render/Parameters';
+import { PresetManager } from './presets/PresetManager';
+import { AudioMapper, createDefaultSlot } from './audio/AudioMapper';
+import { DEFAULT_PALETTE, mergePalette } from './config/colorPalette';
+import {
+  harmonyToDominantColors,
+  DEFAULT_COLOR_HARMONY,
+  type ColorHarmony,
+} from './config/colorHarmony';
+import type { VisualParams, AudioMetrics, RenderState, ParameterModulation, BlendMode, ColorPalette } from './types';
+import type { AudioEvent } from './audio/AudioEventDetector';
+import { VisualAnalyzer } from './visual/VisualAnalyzer';
+import { AudioVisualCorrespondence } from './visual/AudioVisualCorrespondence';
+import { ResponsivityOptimizer, type OptimizerDelta, type OptimizerLogEntry, type OptimizerSlotDelta } from './visual/ResponsivityOptimizer';
+import type { VisualMetrics } from './visual/VisualMetrics';
+import type { CorrespondenceResult } from './visual/AudioVisualCorrespondence';
+
+export interface AppConfig {
+  canvas: HTMLCanvasElement;
+}
+
+export class App {
+  private renderer: Renderer;
+  private interpolator: ParameterInterpolator;
+  private presetManager: PresetManager;
+  private audioMapper: AudioMapper;
+
+  private params: VisualParams;
+  private baseParams: VisualParams;
+  private targetParams: VisualParams;
+
+  private renderState: RenderState = {
+    time: 0,
+    frozen: false,
+    recording: false,
+  };
+
+  private jiggleEnabled: boolean = false;
+  private jiggleAmount: number = 0;
+
+  // Dilation freeze - when true, expansionFactor is set to 1.0 (no dilation)
+  private dilationFrozen: boolean = false;
+
+  private blendMode: BlendMode = 'additive';
+  private lastCaptureTime: number = 0;
+  private totalRotation: number = 0;
+  private colorPalette: ColorPalette = { ...DEFAULT_PALETTE };
+  private colorHarmony: ColorHarmony | null = null;
+
+  // Use fixed interval timing like lucas.html for consistent behavior across browsers
+  private static readonly TARGET_FPS = 60;
+  private static readonly FRAME_TIME = 1000 / App.TARGET_FPS;  // ~16.67ms per frame
+  private intervalId: number | null = null;
+  private lastFrameTime: number = 0;
+
+  private audioMetrics: AudioMetrics | null = null;
+  private lastAudioEventTime: number = -1e9;
+
+  private visualAnalyzer: VisualAnalyzer;
+  private audioVisualCorrespondence: AudioVisualCorrespondence;
+  private responsivityOptimizer: ResponsivityOptimizer;
+  private frameNumber: number = 0;
+  private lastVisualMetrics: VisualMetrics | null = null;
+  private lastCorrespondence: CorrespondenceResult | null = null;
+
+  private onParamsChangeCallbacks: Array<(params: VisualParams) => void> = [];
+
+  constructor(config: AppConfig) {
+    this.renderer = new Renderer(config.canvas);
+    this.interpolator = new ParameterInterpolator();
+    this.presetManager = new PresetManager();
+    this.audioMapper = new AudioMapper();
+
+    this.params = createDefaultParams();
+    this.baseParams = createDefaultParams();
+    this.targetParams = createDefaultParams();
+    this.visualAnalyzer = new VisualAnalyzer({ throttleFrames: 3 });
+    this.audioVisualCorrespondence = new AudioVisualCorrespondence();
+    this.responsivityOptimizer = new ResponsivityOptimizer({
+      setParams: (p, immediate) => this.setParams(p, immediate ?? false),
+      getParams: () => this.getBaseParams(),
+      resetCorrespondence: () => this.audioVisualCorrespondence.reset(),
+      evaluateFitness: () => this.lastCorrespondence?.fitness ?? 0,
+      evaluateInterest: () => this.lastCorrespondence?.interest ?? this.lastCorrespondence?.fitness ?? 0,
+      getAudioMappings: () => this.audioMapper.getMappings(),
+      setAudioMappings: (m) => this.audioMapper.setMappings(m),
+      getActiveRoutes: () => this.audioMapper.getActiveRoutes(),
+      getSlot: (param, slotIndex) => this.audioMapper.getSlot(param, slotIndex),
+      updateAudioSlot: (param, slotIndex, partial) => this.audioMapper.updateSlot(param, slotIndex, partial),
+      addAudioRoute: (param, source) => {
+        this.audioMapper.addSlot(param, createDefaultSlot(source, param));
+        this.audioMapper.updateModulation(param, { enabled: true });
+        return this.audioMapper.getSlotCount(param) - 1;
+      },
+      removeAudioRoute: (param, slotIndex) => this.audioMapper.removeSlot(param, slotIndex),
+      getAvailableAudioSources: () => AudioMapper.getAvailableMetrics(),
+      loadPresetByName: (name, smooth) => this.loadPreset(name, smooth),
+      getPresetNames: () => this.presetManager.getPresetNames(),
+      getPresetParams: (name) => this.presetManager.getPreset(name)?.params ?? null,
+      getBoredom: () => this.lastCorrespondence?.boredom ?? 0,
+      getVisualMetrics: () => this.getVisualMetrics(),
+      onCommit: (params, mappings) => {
+        this.setParams(params, false);
+        if (mappings !== null) this.audioMapper.setMappings(mappings);
+        this.audioVisualCorrespondence.resetBoredom();
+      },
+      onLog: (message, level) => {
+        const prefix = level === 'warn' ? '[SJ warn]' : level === 'event' ? '[SJ]' : '[SJ]';
+        console.log(`${prefix} ${message}`);
+      },
+    }, { baseStepSize: 0.002, evaluationInterval: 2.0, commitMaxRunSec: 20 });
+  }
+
+  /**
+   * Initialize the application
+   */
+  async init(): Promise<void> {
+    const shaders = await loadAllShaders();
+    await this.renderer.init(
+      shaders.starVertex,
+      shaders.starFragment,
+      shaders.dilationVertex,
+      shaders.dilationFragment,
+      shaders.copyFragment,
+      shaders.centerBlendFragment,
+      shaders.postprocessVertex,
+      shaders.postprocessFragment
+    );
+
+    // Load last used preset if available
+    const lastPreset = this.presetManager.getCurrentPresetName();
+    if (lastPreset !== null) {
+      const preset = this.presetManager.loadPreset(lastPreset);
+      if (preset !== null) {
+        const merged = this.mergePresetParams(preset.params, preset.emanationRate);
+        this.setParams(merged);
+        if (preset.audioMappings !== undefined) {
+          this.audioMapper.setMappings(preset.audioMappings);
+        }
+      }
+    }
+  }
+
+  /**
+   * Start the render loop using fixed interval timing (like lucas.html)
+   */
+  start(): void {
+    if (this.intervalId !== null) return;
+    this.lastFrameTime = performance.now();
+    // Use setInterval for fixed 60fps like lucas.html - more consistent across browsers
+    this.intervalId = window.setInterval(this.tick, App.FRAME_TIME);
+    this.tick(); // Initial render
+  }
+
+  /**
+   * Stop the render loop
+   */
+  stop(): void {
+    if (this.intervalId !== null) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+  }
+
+  /**
+   * Main render loop tick
+   */
+  private tick = (): void => {
+    const now = performance.now();
+    const deltaTime = (now - this.lastFrameTime) / 1000;
+    this.lastFrameTime = now;
+
+    if (!this.renderState.frozen) {
+      this.update(deltaTime);
+      this.render();
+      this.frameNumber += 1;
+      if (this.visualAnalyzer.shouldAnalyze(this.frameNumber)) {
+        const pixels = this.renderer.readPixelsCenter(64, 64);
+        if (pixels !== null) {
+          this.lastVisualMetrics = this.visualAnalyzer.analyze(pixels, 64, 64);
+        }
+      }
+    }
+  };
+
+  /**
+   * Update state
+   */
+  private update(deltaTime: number): void {
+    this.renderState.time += deltaTime;
+
+    // Update interpolation
+    this.interpolator.update();
+
+    // Apply interpolated values to params
+    this.applyInterpolatedParams();
+
+    // Apply jiggle effect
+    if (this.jiggleEnabled && this.jiggleAmount > 0) {
+      this.applyJiggleEffect();
+    }
+
+    // Apply audio mapping
+    if (this.audioMetrics !== null) {
+      const audioModifications = this.audioMapper.applyMappings(this.baseParams, this.audioMetrics);
+      Object.assign(this.params, audioModifications);
+    }
+
+    // Record (audio, visual) for correspondence evaluation
+    if (this.audioMetrics !== null && this.lastVisualMetrics !== null) {
+      this.audioVisualCorrespondence.record(this.audioMetrics, this.lastVisualMetrics);
+      this.lastCorrespondence = this.audioVisualCorrespondence.evaluate(
+        this.audioMapper.getMappings()
+      );
+    }
+
+    // Responsivity optimizer (fitness-guided discovery)
+    if (this.responsivityOptimizer.isRunning()) {
+      const nowSec = performance.now() / 1000;
+      const audioContext =
+        this.audioMetrics !== null
+          ? {
+              metrics: this.audioMetrics,
+              lastEventTime: this.lastAudioEventTime,
+            }
+          : undefined;
+      this.responsivityOptimizer.tick(nowSec, audioContext);
+    }
+
+    // Calculate total rotation for captured shapes (matches lucas.html approach)
+    // Use absolute time * speed rather than accumulating, prevents drift
+    this.totalRotation = this.params.rotation + (this.renderState.time * this.params.autoRotationSpeed);
+  }
+
+  /**
+   * Apply interpolated values from the interpolator
+   */
+  private applyInterpolatedParams(): void {
+    const paramNames = Object.keys(this.params) as Array<keyof VisualParams>;
+
+    for (const name of paramNames) {
+      const value = this.interpolator.getCurrent(name);
+      if (value !== null) {
+        this.params[name] = value;
+      }
+    }
+  }
+
+  /**
+   * Apply jiggle effect to all parameters
+   */
+  private applyJiggleEffect(): void {
+    const paramNames = Object.keys(this.baseParams) as Array<keyof VisualParams>;
+
+    for (const name of paramNames) {
+      if (name === 'jiggleAmount') continue; // Don't jiggle the jiggle amount
+
+      const range = PARAM_RANGES[name];
+      this.params[name] = applyJiggle(
+        this.baseParams[name],
+        this.renderState.time,
+        this.jiggleAmount,
+        name,
+        range
+      );
+    }
+  }
+
+  /**
+   * Render the current frame
+   */
+  private render(): void {
+    const now = this.renderState.time;
+    const captureInterval = 1 / this.params.emanationRate;
+    const shouldCaptureShape = now - this.lastCaptureTime >= captureInterval;
+
+    if (shouldCaptureShape) {
+      this.lastCaptureTime = now;
+    }
+
+    const options: RenderOptions = {
+      uniforms: {
+        u_time: this.renderState.time,
+        u_spikiness: this.params.spikiness,
+        u_spikeFrequency: this.params.spikeFrequency,
+        u_spikeSharpness: this.params.spikeSharpness,
+        u_hue: this.params.hue,
+        u_scale: this.params.scale,
+        u_rotation: this.params.rotation,
+        u_autoRotationSpeed: this.params.autoRotationSpeed,
+        u_blendOpacity: this.params.blendOpacity,
+        u_fillSize: this.params.fillSize,
+        u_fillOpacity: this.params.fillOpacity,
+        u_strokeWeight: this.params.strokeWeight,
+        u_strokeOpacity: this.params.strokeOpacity,
+        u_strokeGlow: this.params.strokeGlow,
+      },
+      dilationFactor: this.dilationFrozen ? 1.0 : this.params.expansionFactor,
+      shouldCaptureShape,
+      fadeAmount: this.params.fadeAmount,
+      hueShiftAmount: this.params.hueShiftAmount,
+      emanationRate: this.params.emanationRate,
+      noiseAmount: this.params.noiseAmount,
+      noiseRate: this.params.noiseRate,
+      blurAmount: this.params.blurAmount,
+      blurRate: this.params.blurRate,
+      fishbowlShape: this.params.fishbowlShape,
+      fishbowlDilation: this.params.fishbowlDilation,
+      radialPowerShape: this.params.radialPowerShape,
+      radialPowerDilation: this.params.radialPowerDilation,
+      kaleidoscopeSections: this.params.kaleidoscopeSections,
+      tunnelStrength: this.params.tunnelStrength,
+      colorPalette: this.colorPalette,
+      rotation: this.params.rotation,
+      blendMode: this.blendMode,
+      blendOpacity: this.params.blendOpacity,
+      autoRotationSpeed: this.params.autoRotationSpeed,
+      totalRotation: this.totalRotation,
+    };
+
+    this.renderer.render(options);
+  }
+
+  /**
+   * Set all parameters at once
+   * @param params - Parameters to set
+   * @param immediate - If true, snap to values immediately (no interpolation)
+   */
+  setParams(params: Partial<VisualParams>, immediate: boolean = true): void {
+    Object.assign(this.params, params);
+    Object.assign(this.baseParams, params);
+    Object.assign(this.targetParams, params);
+
+    // Update interpolator - snap or set targets based on immediate flag
+    for (const [name, value] of Object.entries(params)) {
+      if (immediate) {
+        this.interpolator.snapTo(name, value as number);
+      } else if (name === 'rotation') {
+        this.interpolator.setTargetRotation(name, value as number);
+      } else {
+        this.interpolator.setTarget(name, value as number);
+      }
+    }
+
+    this.notifyParamsChange();
+  }
+
+  /**
+   * Set a single parameter with interpolation
+   */
+  setParam(name: keyof VisualParams, value: number, immediate: boolean = false): void {
+    this.targetParams[name] = value;
+
+    if (immediate) {
+      this.params[name] = value;
+      this.baseParams[name] = value;
+      this.interpolator.snapTo(name, value);
+    } else {
+      if (name === 'rotation') {
+        this.interpolator.setTargetRotation(name, value);
+      } else {
+        this.interpolator.setTarget(name, value);
+      }
+    }
+
+    if (!this.jiggleEnabled) {
+      this.baseParams[name] = value;
+    }
+
+    this.notifyParamsChange();
+  }
+
+  /**
+   * Get current parameters (effective: base + jiggle + audio)
+   */
+  getParams(): VisualParams {
+    return { ...this.params };
+  }
+
+  /**
+   * Get base parameters (before jiggle/audio). Used by ResponsivityOptimizer.
+   */
+  getBaseParams(): VisualParams {
+    return { ...this.baseParams };
+  }
+
+  /**
+   * Get a single parameter value
+   */
+  getParam(name: keyof VisualParams): number {
+    return this.params[name];
+  }
+
+  /**
+   * Set audio metrics for visualization
+   */
+  setAudioMetrics(metrics: AudioMetrics | null): void {
+    this.audioMetrics = metrics;
+  }
+
+  /**
+   * Get last computed visual metrics (from pixel analysis).
+   * Updated every 4th frame when not frozen.
+   */
+  getVisualMetrics(): VisualMetrics | null {
+    return this.lastVisualMetrics;
+  }
+
+  /**
+   * Get the visual analyzer (for debugging).
+   */
+  getVisualAnalyzer(): VisualAnalyzer {
+    return this.visualAnalyzer;
+  }
+
+  /**
+   * Get last correspondence result (audio↔visual fitness).
+   */
+  getCorrespondence(): CorrespondenceResult | null {
+    return this.lastCorrespondence;
+  }
+
+  /**
+   * Get the audio-visual correspondence evaluator.
+   */
+  getAudioVisualCorrespondence(): AudioVisualCorrespondence {
+    return this.audioVisualCorrespondence;
+  }
+
+  /**
+   * Start fitness-guided parameter discovery (smarter jiggle).
+   * Requires audio capture + mappings for meaningful fitness.
+   */
+  startResponsivityOptimizer(): void {
+    this.jiggleEnabled = false; // Disable jiggle when optimizing
+    this.responsivityOptimizer.start();
+  }
+
+  /**
+   * Stop responsivity optimizer, keep best params found.
+   */
+  stopResponsivityOptimizer(): void {
+    this.responsivityOptimizer.stop();
+  }
+
+  /**
+   * Whether responsivity optimizer is running.
+   */
+  isResponsivityOptimizerRunning(): boolean {
+    return this.responsivityOptimizer.isRunning();
+  }
+
+  /**
+   * Get optimizer trial count and best fitness (for UI).
+   */
+  getResponsivityOptimizerStatus(): { trialCount: number; bestFitness: number } {
+    return {
+      trialCount: this.responsivityOptimizer.getTrialCount(),
+      bestFitness: this.responsivityOptimizer.getBestFitness(),
+    };
+  }
+
+  /**
+   * Get baseline params and deltas for Smart Jiggle UI.
+   */
+  getResponsivityOptimizerDeltas(): OptimizerDelta[] {
+    return this.responsivityOptimizer.getOptimizerDeltas(1);
+  }
+
+  /**
+   * Get audio slot deltas for Smart Jiggle UI.
+   */
+  getResponsivityOptimizerSlotDeltas(): OptimizerSlotDelta[] {
+    return this.responsivityOptimizer.getOptimizerSlotDeltas(2);
+  }
+
+  /**
+   * Get baseline params (pre-Smart Jiggle). Null if never started.
+   */
+  getResponsivityOptimizerBaseline(): VisualParams | null {
+    return this.responsivityOptimizer.getBaselineParams();
+  }
+
+  /**
+   * Get Smart Jiggle log entries for UI.
+   */
+  getResponsivityOptimizerLogEntries(): readonly OptimizerLogEntry[] {
+    return this.responsivityOptimizer.getLogEntries();
+  }
+
+  /**
+   * Handle audio events (drop, breakdown, silence, etc.)
+   * Called from main loop when event detector fires.
+   * Future: trigger preset changes, emanation rate jumps, etc.
+   */
+  handleAudioEvents(events: AudioEvent[]): void {
+    for (const e of events) {
+      if (e.type === 'drop' || e.type === 'breakdown') {
+        this.notifyParamsChange();
+      }
+    }
+  }
+
+  /**
+   * Enable/disable audio reactive mode
+   */
+  setAudioReactiveEnabled(enabled: boolean): void {
+    this.audioMapper.setEnabled(enabled);
+  }
+
+  /**
+   * Set audio modulation configuration for a parameter
+   */
+  setAudioModulation(param: keyof VisualParams, mod: ParameterModulation): void {
+    this.audioMapper.setModulation(param, mod);
+  }
+
+  /**
+   * Partially update audio modulation for a parameter
+   */
+  updateAudioModulation(param: keyof VisualParams, partial: Partial<ParameterModulation>): void {
+    this.audioMapper.updateModulation(param, partial);
+  }
+
+  /**
+   * Toggle freeze state
+   */
+  toggleFreeze(): boolean {
+    this.renderState.frozen = !this.renderState.frozen;
+    return this.renderState.frozen;
+  }
+
+  /**
+   * Set freeze state
+   */
+  setFrozen(frozen: boolean): void {
+    this.renderState.frozen = frozen;
+  }
+
+  /**
+   * Check if paused (render loop stopped)
+   */
+  isFrozen(): boolean {
+    return this.renderState.frozen;
+  }
+
+  /**
+   * Toggle dilation freeze (sets dilation to 1.0 = no expansion)
+   * This is different from pause - the shape still updates, only dilation stops
+   */
+  toggleDilationFreeze(): boolean {
+    this.dilationFrozen = !this.dilationFrozen;
+    return this.dilationFrozen;
+  }
+
+  /**
+   * Set dilation freeze state
+   */
+  setDilationFrozen(frozen: boolean): void {
+    this.dilationFrozen = frozen;
+  }
+
+  /**
+   * Check if dilation is frozen
+   */
+  isDilationFrozen(): boolean {
+    return this.dilationFrozen;
+  }
+
+  /**
+   * Check if jiggle is enabled
+   */
+  isJiggleEnabled(): boolean {
+    return this.jiggleEnabled;
+  }
+
+  /**
+   * Enable/disable jiggle
+   */
+  setJiggleEnabled(enabled: boolean): void {
+    this.jiggleEnabled = enabled;
+
+    if (!enabled) {
+      // Preserve current values when disabling jiggle
+      Object.assign(this.baseParams, this.params);
+    }
+  }
+
+  /**
+   * Set jiggle amount
+   */
+  setJiggleAmount(amount: number): void {
+    this.jiggleAmount = amount;
+  }
+
+  /**
+   * Get blend mode
+   */
+  getBlendMode(): BlendMode {
+    return this.blendMode;
+  }
+
+  /**
+   * Set blend mode
+   */
+  setBlendMode(mode: BlendMode): void {
+    this.blendMode = mode;
+  }
+
+  /**
+   * Get emanation rate (convenience — same as getParam('emanationRate'))
+   */
+  getEmanationRate(): number {
+    return this.params.emanationRate;
+  }
+
+  /**
+   * Set emanation rate (convenience — same as setParam('emanationRate', rate, true))
+   */
+  setEmanationRate(rate: number): void {
+    this.setParam('emanationRate', rate, true);
+  }
+
+  /**
+   * Randomize all parameters
+   */
+  randomize(): void {
+    const newParams = randomizeParams();
+    this.setParams(newParams);
+  }
+
+  /**
+   * Get the preset manager
+   */
+  getPresetManager(): PresetManager {
+    return this.presetManager;
+  }
+
+  /**
+   * Get the audio mapper
+   */
+  getAudioMapper(): AudioMapper {
+    return this.audioMapper;
+  }
+
+  /**
+   * Get the interpolator
+   */
+  getInterpolator(): ParameterInterpolator {
+    return this.interpolator;
+  }
+
+  /**
+   * Get the renderer
+   */
+  getRenderer(): Renderer {
+    return this.renderer;
+  }
+
+  /**
+   * Get current render state
+   */
+  getRenderState(): RenderState {
+    return { ...this.renderState };
+  }
+
+  /**
+   * Register callback for parameter changes
+   */
+  onParamsChange(callback: (params: VisualParams) => void): () => void {
+    this.onParamsChangeCallbacks.push(callback);
+    return () => {
+      const index = this.onParamsChangeCallbacks.indexOf(callback);
+      if (index >= 0) {
+        this.onParamsChangeCallbacks.splice(index, 1);
+      }
+    };
+  }
+
+  private notifyParamsChange(): void {
+    const params = this.getParams();
+    this.onParamsChangeCallbacks.forEach((cb) => cb(params));
+  }
+
+  /**
+   * Save current state as a preset
+   */
+  savePreset(name: string): void {
+    this.presetManager.savePreset(
+      name,
+      this.params,
+      this.audioMapper.getMappings(),
+      undefined,
+      this.blendMode,
+      this.colorPalette
+    );
+  }
+
+  getColorPalette(): ColorPalette {
+    return { ...this.colorPalette };
+  }
+
+  setColorPalette(palette: Partial<ColorPalette>): void {
+    this.colorPalette = mergePalette({ ...this.colorPalette, ...palette });
+    this.notifyParamsChange();
+  }
+
+  getColorHarmony(): ColorHarmony | null {
+    return this.colorHarmony;
+  }
+
+  setColorHarmony(harmony: ColorHarmony | null): void {
+    this.colorHarmony = harmony;
+    if (harmony !== null) {
+      const colors = harmonyToDominantColors(harmony);
+      this.colorPalette = mergePalette({
+        ...this.colorPalette,
+        dominantColors: colors,
+        saturation: harmony.saturation,
+        value: harmony.value,
+      });
+    } else {
+      // Reset to hue range mode (hueMin/hueMax) when harmony is off
+      this.colorPalette = mergePalette({
+        ...this.colorPalette,
+        dominantColors: [],
+      });
+    }
+    this.notifyParamsChange();
+  }
+
+  // Default emanation rate used when preset doesn't specify one
+  private static readonly DEFAULT_EMANATION_RATE = 30;
+
+  /**
+   * Merge preset params with defaults for backwards compatibility.
+   * Presets that don't define new params get no-effect values (fishbowl: 0, radialPower: 1, kaleidoscope: 0).
+   */
+  private mergePresetParams(
+    presetParams: Partial<VisualParams>,
+    presetEmanationRate?: number
+  ): VisualParams {
+    const params = { ...presetParams };
+    if (params.emanationRate === undefined || params.emanationRate === 2.0) {
+      params.emanationRate = presetEmanationRate ?? App.DEFAULT_EMANATION_RATE;
+    }
+    // Migrate legacy fishbowlAmount -> fishbowlShape/fishbowlDilation
+    const legacy = presetParams as Partial<VisualParams> & { fishbowlAmount?: number };
+    if (legacy.fishbowlAmount !== undefined && params.fishbowlShape === undefined) {
+      params.fishbowlShape = legacy.fishbowlAmount;
+    }
+    if (legacy.fishbowlAmount !== undefined && params.fishbowlDilation === undefined) {
+      params.fishbowlDilation = legacy.fishbowlAmount;
+    }
+    return mergeParams(params);
+  }
+
+  /**
+   * Load a preset by name
+   * @param smooth - If true, interpolate params smoothly (for Smart Jiggle escape)
+   */
+  loadPreset(name: string, smooth: boolean = false): boolean {
+    const preset = this.presetManager.loadPreset(name);
+    if (preset === null) return false;
+
+    const merged = this.mergePresetParams(preset.params, preset.emanationRate);
+    this.setParams(merged, smooth);
+    // Set blendMode from preset or default to 'additive'
+    this.blendMode = preset.blendMode ?? 'additive';
+    if (preset.audioMappings !== undefined) {
+      this.audioMapper.setMappings(preset.audioMappings);
+    }
+    if (preset.colorPalette !== undefined) {
+      this.colorPalette = mergePalette(preset.colorPalette);
+    }
+    if (preset.colorHarmony !== undefined) {
+      this.colorHarmony = { ...DEFAULT_COLOR_HARMONY, ...preset.colorHarmony };
+      const colors = harmonyToDominantColors(this.colorHarmony);
+      this.colorPalette = mergePalette({
+        ...this.colorPalette,
+        dominantColors: colors,
+        saturation: this.colorHarmony.saturation,
+        value: this.colorHarmony.value,
+      });
+    } else {
+      this.colorHarmony = null;
+    }
+    return true;
+  }
+
+  /**
+   * Check if there are unsaved changes
+   */
+  hasUnsavedChanges(): boolean {
+    return this.presetManager.hasUnsavedChanges(this.params, this.colorPalette);
+  }
+}

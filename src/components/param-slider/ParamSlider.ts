@@ -1,0 +1,402 @@
+import { LitElement, html, css, PropertyValues } from 'lit';
+import { customElement, property, state, query } from 'lit/decorators.js';
+import { parseNumericValue } from '../../ui/valueUtils';
+import { VALUE_FORMATTERS, type ValueFormatter } from '../editable-value/EditableValue';
+import { getParamLabel } from '../../config/paramLabels';
+import type { ParamChangeEventDetail, CurveEditRequestEventDetail, AudioToggleRequestEventDetail } from '../types';
+
+/**
+ * Parameter slider component with editable value display and curve button
+ *
+ * Encapsulates the common pattern of:
+ * - Range slider input
+ * - Editable value display
+ * - Curve edit button (optional)
+ *
+ * @fires param-change - When slider or value input changes
+ * @fires curve-edit-request - When curve button is clicked
+ *
+ * @example
+ * <param-slider
+ *   param-name="spikiness"
+ *   label="Spikiness"
+ *   .value=${0.5}
+ *   min="0"
+ *   max="100"
+ *   format="decimal2"
+ *   show-curve-btn
+ * ></param-slider>
+ */
+@customElement('param-slider')
+export class ParamSlider extends LitElement {
+  /** Parameter name (used in events) */
+  @property({ type: String, attribute: 'param-name' })
+  paramName = '';
+
+  /** Display label */
+  @property({ type: String })
+  label = '';
+
+  /** Current parameter value (actual value, not slider position) */
+  @property({ type: Number })
+  value = 0;
+
+  /** Slider minimum position */
+  @property({ type: Number })
+  min = 0;
+
+  /** Slider maximum position */
+  @property({ type: Number })
+  max = 100;
+
+  /** Slider step */
+  @property({ type: Number })
+  step = 1;
+
+  /** Show curve edit button */
+  @property({ type: Boolean, attribute: 'show-curve-btn' })
+  showCurveBtn = true;
+
+  /** Show audio toggle button */
+  @property({ type: Boolean, attribute: 'show-audio-btn' })
+  showAudioBtn = true;
+
+  /** Whether audio mapping is active for this parameter */
+  @property({ type: Boolean, attribute: 'audio-active' })
+  audioActive = false;
+
+  /** Value display format */
+  @property({ type: String })
+  format: keyof typeof VALUE_FORMATTERS | 'custom' = 'decimal2';
+
+  /** Custom formatter function (used when format='custom') */
+  @property({ attribute: false })
+  formatter?: ValueFormatter;
+
+  /** Slider position (internal, synced via external controller) */
+  @state()
+  private sliderValue = 50;
+
+  @state()
+  private isEditing = false;
+
+  @query('input[type="range"]')
+  private sliderEl!: HTMLInputElement;
+
+  @query('.value-display')
+  private valueDisplayEl!: HTMLElement;
+
+  static styles = css`
+    :host {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 10px;
+      color: #bbb;
+      font-weight: 500;
+    }
+
+    .curve-btn {
+      display: none;
+      width: 18px;
+      height: 18px;
+      margin-left: 6px;
+      cursor: pointer;
+      background: #333;
+      border: 1px solid #555;
+      border-radius: 3px;
+      color: #aaa;
+      font-size: 14px;
+      line-height: 16px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    :host(:hover) .curve-btn {
+      display: inline-block;
+    }
+
+    .curve-btn:hover {
+      background: #444;
+      border-color: #0af;
+      color: #0af;
+    }
+
+    .audio-btn {
+      display: none;
+      width: 18px;
+      height: 18px;
+      margin-left: 4px;
+      cursor: pointer;
+      background: #333;
+      border: 1px solid #555;
+      border-radius: 3px;
+      color: #888;
+      font-size: 11px;
+      line-height: 16px;
+      text-align: center;
+      font-weight: bold;
+      font-family: monospace;
+    }
+
+    :host(:hover) .audio-btn {
+      display: inline-block;
+    }
+
+    .audio-btn:hover {
+      background: #444;
+      border-color: #0af;
+      color: #0af;
+    }
+
+    .audio-btn.active {
+      display: inline-block;
+      background: rgba(0, 170, 255, 0.15);
+      border-color: #0af;
+      color: #0af;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+      outline: none;
+      margin: 0;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #0af;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: #0af;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+
+    .value-display {
+      min-width: 45px;
+      font-size: 10px;
+      color: #888;
+      font-family: monospace;
+      text-align: right;
+      padding: 2px 4px;
+      border: 1px solid transparent;
+      border-radius: 2px;
+      cursor: text;
+      user-select: text;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .value-display:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #555;
+    }
+
+    .value-display:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #0af;
+      color: #fff;
+    }
+  `;
+
+  protected override updated(_changedProperties: PropertyValues): void {
+    super.updated(_changedProperties);
+    // Imperatively update the value display text.
+    // We CANNOT use a Lit template expression inside the contenteditable span because
+    // contenteditable destroys Lit's internal marker nodes when textContent is set
+    // (by user typing or imperative code), causing "ChildPart has no parentNode" errors.
+    // Instead, we manage the span's text entirely outside of Lit's template system.
+    if (!this.isEditing && this.valueDisplayEl) {
+      const formatted = this.formatValue(this.value);
+      // Only update if text actually changed to avoid cursor jumps during editing
+      if (this.valueDisplayEl.textContent !== formatted) {
+        this.valueDisplayEl.textContent = formatted;
+      }
+    }
+  }
+
+  /**
+   * Get display label - uses explicit label or derives from paramName
+   */
+  private get displayLabel(): string {
+    return this.label || getParamLabel(this.paramName);
+  }
+
+  render() {
+    return html`
+      <label>
+        ${this.displayLabel}
+        ${this.showCurveBtn ? html`
+          <span class="curve-btn" @click=${this.handleCurveClick} title="Edit curve">~</span>
+        ` : ''}
+        ${this.showAudioBtn ? html`
+          <span
+            class="audio-btn ${this.audioActive ? 'active' : ''}"
+            @click=${this.handleAudioClick}
+            title="${this.audioActive ? 'Audio mapping active — click to configure' : 'Configure audio mapping'}"
+          >A</span>
+        ` : ''}
+      </label>
+      <div class="control-row">
+        <input
+          type="range"
+          .min=${String(this.min)}
+          .max=${String(this.max)}
+          .step=${String(this.step)}
+          .value=${String(this.sliderValue)}
+          @input=${this.handleSliderInput}
+        />
+        <span
+          class="value-display"
+          contenteditable="true"
+          @blur=${this.handleValueBlur}
+          @keydown=${this.handleValueKeydown}
+          @focus=${this.handleValueFocus}
+        ></span>
+      </div>
+    `;
+  }
+
+  private formatValue(value: number): string {
+    if (this.format === 'custom' && this.formatter) {
+      return this.formatter(value);
+    }
+    const formatter = VALUE_FORMATTERS[this.format];
+    return formatter ? formatter(value) : value.toFixed(2);
+  }
+
+  private handleSliderInput(e: Event): void {
+    const target = e.target as HTMLInputElement;
+    this.sliderValue = parseFloat(target.value);
+
+    // Dispatch event synchronously so UIController can set component.value immediately
+    // which triggers updated() to refresh the value display.
+    // This is safe now that we no longer use Lit expressions inside the contenteditable span.
+    if (this.isConnected) {
+      this.dispatchEvent(new CustomEvent<ParamChangeEventDetail>('param-change', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          paramName: this.paramName,
+          value: this.sliderValue,
+          sliderValue: this.sliderValue,
+          source: 'slider',
+        },
+      }));
+    }
+  }
+
+  private handleValueFocus(): void {
+    this.isEditing = true;
+  }
+
+  private handleValueBlur(e: FocusEvent): void {
+    const target = e.target as HTMLElement;
+    const text = target.textContent?.trim() ?? '';
+    const numValue = parseNumericValue(text);
+
+    if (numValue !== null) {
+      // Range adjustment is handled by UIController via adjustSliderRange()
+      // The HTML slider should always stay 0-100, only the curve mapping range expands
+      // Do NOT update this.min/max here - that would break the curve mapping which assumes 0-100
+
+      // Update component's value immediately so display shows the new value
+      // This ensures the display updates right away, before async processing
+      this.value = numValue;
+      
+      // Update display immediately to show the exact entered value
+      if (this.valueDisplayEl) {
+        this.valueDisplayEl.textContent = this.formatValue(this.value);
+      }
+      
+      // Mark as not editing AFTER updating value and display
+      this.isEditing = false;
+
+      this.dispatchEvent(new CustomEvent<ParamChangeEventDetail>('param-change', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          paramName: this.paramName,
+          value: numValue,
+          sliderValue: this.sliderValue,
+          source: 'input',
+        },
+      }));
+    } else {
+      // Invalid input - reset display to formatted current value
+      this.isEditing = false;
+      target.textContent = this.formatValue(this.value);
+    }
+  }
+
+  private handleValueKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      (e.target as HTMLElement).blur();
+    }
+  }
+
+  private handleCurveClick(e: Event): void {
+    e.stopPropagation();
+    this.dispatchEvent(new CustomEvent<CurveEditRequestEventDetail>('curve-edit-request', {
+      bubbles: true,
+      composed: true,
+      detail: { paramName: this.paramName },
+    }));
+  }
+
+  private handleAudioClick(e: Event): void {
+    e.stopPropagation();
+    this.dispatchEvent(new CustomEvent<AudioToggleRequestEventDetail>('audio-toggle-request', {
+      bubbles: true,
+      composed: true,
+      detail: { paramName: this.paramName },
+    }));
+  }
+
+  /**
+   * Set slider position directly (called by UIController after curve mapping)
+   */
+  setSliderPosition(position: number): void {
+    // Only update if component is connected to DOM
+    if (!this.isConnected) {
+      return;
+    }
+    
+    this.sliderValue = position;
+    if (this.sliderEl) {
+      this.sliderEl.value = String(position);
+    }
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'param-slider': ParamSlider;
+  }
+}

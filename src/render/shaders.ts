@@ -1,0 +1,53 @@
+/**
+ * Shader loading utilities
+ */
+
+export interface ShaderSources {
+  starVertex: string;
+  starFragment: string;
+  dilationVertex: string;
+  dilationFragment: string;
+  copyFragment: string;
+  centerBlendFragment: string;
+  postprocessVertex: string;
+  postprocessFragment: string;
+}
+
+/**
+ * Load a shader file from the given path
+ */
+export async function loadShader(path: string): Promise<string> {
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new Error(`Failed to load shader: ${path} (${response.status})`);
+  }
+  return response.text();
+}
+
+/**
+ * Load all required shaders
+ */
+export async function loadAllShaders(): Promise<ShaderSources> {
+  const [starVertex, starFragment, dilationVertex, dilationFragment, copyFragment, centerBlendFragment, postprocessVertex, postprocessFragment] =
+    await Promise.all([
+      loadShader('shaders/star.vert'),
+      loadShader('shaders/star.frag'),
+      loadShader('shaders/dilation.vert'),
+      loadShader('shaders/dilation.frag'),
+      loadShader('shaders/copy.frag'),
+      loadShader('shaders/centerBlend.frag'),
+      loadShader('shaders/postprocess.vert'),
+      loadShader('shaders/postprocess.frag'),
+    ]);
+
+  return {
+    starVertex,
+    starFragment,
+    dilationVertex,
+    dilationFragment,
+    copyFragment,
+    centerBlendFragment,
+    postprocessVertex,
+    postprocessFragment,
+  };
+}

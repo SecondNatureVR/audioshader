@@ -16,16 +16,12 @@ class AudioAnalyzer {
         this.source = null;
         this.stream = null;
         this.isEnabled = false;
-        this.isTabCapture = false;  // True when capturing from browser tab
-
+        
         // FFT buffer
         this.fftSize = 2048;
         this.frequencyData = null;
         this.timeData = null;
         this.prevFrequencyData = null; // For spectral flux calculation
-        this.prevTimeData = null; // For transient detection
-        this.rhythmicEnergyHistory = []; // For tempo change detection
-        this.maxRhythmicHistory = 30; // Keep last 30 frames (~0.5s at 60fps)
         
         // Stereo analysis
         this.analyserLeft = null;
@@ -53,74 +49,30 @@ class AudioAnalyzer {
             lowImbalance: 0.0,
             emptiness: 0.0,
             coherence: 1.0,
-            rhythmicEnergy: 0.0, // 0 = ambient/calm, 1 = high-energy/jungle
             // Spatial metrics (v2)
             stereoWidth: [0.0, 0.0, 0.0],  // [low, mid, high]
             panPosition: [0.0, 0.0, 0.0],   // [low, mid, high] (-1 to 1)
             spatialDepth: [0.0, 0.0, 0.0]   // [low, mid, high] (0-1)
         };
-        
-        // Min/max normalization tracking
-        this.minMaxWindowSize = 1800; // ~30 seconds at 60fps
-        this.metricHistory = {
-            audioAmp: [],
-            bandEnergy: [[], [], []],
-            harshness: [],
-            mud: [],
-            compression: [],
-            phaseRisk: [],
-            collision: [],
-            lowImbalance: [],
-            emptiness: [],
-            coherence: [],
-            stereoWidth: [[], [], []],
-            panPosition: [[], [], []],
-            spatialDepth: [[], [], []]
-        };
-        this.minMax = {
-            audioAmp: { min: 0, max: 1 },
-            bandEnergy: [{ min: 0, max: 1 }, { min: 0, max: 1 }, { min: 0, max: 1 }],
-            harshness: { min: 0, max: 1 },
-            mud: { min: 0, max: 1 },
-            compression: { min: 0, max: 1 },
-            phaseRisk: { min: 0, max: 1 },
-            collision: { min: 0, max: 1 },
-            lowImbalance: { min: 0, max: 1 },
-            emptiness: { min: 0, max: 1 },
-            coherence: { min: 0, max: 1 },
-            stereoWidth: [{ min: 0, max: 1 }, { min: 0, max: 1 }, { min: 0, max: 1 }],
-            panPosition: [{ min: -1, max: 1 }, { min: -1, max: 1 }, { min: -1, max: 1 }],
-            spatialDepth: [{ min: 0, max: 1 }, { min: 0, max: 1 }, { min: 0, max: 1 }]
-        };
-        this.normalizedMetrics = null; // Will store normalized values
     }
     
     /**
      * Get list of available audio input devices
-     * @param {boolean} requestPermission - If true, request mic permission first (shows prompt)
      * @returns {Promise<Array>} Array of device info objects
      */
-    async getAudioDevices(requestPermission = false) {
+    async getAudioDevices() {
         try {
-            // Only request permission if explicitly asked
-            // This avoids showing a mic prompt when user just wants to see device list
-            // or when they're going to use tab capture instead
-            if (requestPermission) {
-                await navigator.mediaDevices.getUserMedia({ audio: true });
-            }
-
+            // Request permission first (required for device enumeration)
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+            
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const audioDevices = devices
+            return devices
                 .filter(device => device.kind === 'audioinput')
                 .map(device => ({
                     deviceId: device.deviceId,
-                    // Without permission, labels may be empty - show placeholder
-                    label: device.label || (device.deviceId ? `Audio Input (${device.deviceId.substring(0, 8)}...)` : 'Unknown Device'),
-                    groupId: device.groupId,
-                    hasLabel: !!device.label  // Track if we have the real label
+                    label: device.label || `Microphone ${device.deviceId.substring(0, 8)}...`,
+                    groupId: device.groupId
                 }));
-
-            return audioDevices;
         } catch (error) {
             console.error('Error enumerating devices:', error);
             return [];
@@ -223,141 +175,7 @@ class AudioAnalyzer {
             throw error;
         }
     }
-
-    /**
-     * Enable audio capture from a browser tab using getDisplayMedia
-     * This allows capturing audio from YouTube, Spotify Web, etc.
-     * @returns {Promise<void>}
-     */
-    async enableTabAudio() {
-        if (this.isEnabled) {
-            return;
-        }
-
-        try {
-            // Create AudioContext
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-            // Check browser support
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-                throw new Error('Your browser does not support screen/tab capture. Please use Chrome or Edge.');
-            }
-
-            // Request screen/tab capture with audio
-            // The user will be prompted to select a tab
-            // Note: Chrome shows "Share tab audio" checkbox only for Tab selection, not Window/Screen
-            const displayMediaOptions = {
-                video: {
-                    displaySurface: "browser",  // Prefer browser tab
-                    width: { max: 1 },  // Minimize video (we only want audio)
-                    height: { max: 1 },
-                    frameRate: { max: 1 }
-                },
-                audio: {
-                    echoCancellation: false,
-                    noiseSuppression: false,
-                    autoGainControl: false,
-                    channelCount: 2,
-                    sampleRate: 44100
-                },
-                preferCurrentTab: false,
-                selfBrowserSurface: "include",
-                systemAudio: "include",
-                surfaceSwitching: "include",
-                monitorTypeSurfaces: "exclude"  // Exclude monitor to encourage tab selection
-            };
-
-            console.log('Requesting tab audio capture...');
-            console.log('TIP: Select a TAB (not window/screen) and check "Also share tab audio"');
-
-            this.stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
-
-            // Log what we got
-            const videoTracks = this.stream.getVideoTracks();
-            const audioTracks = this.stream.getAudioTracks();
-
-            console.log('Capture result:', {
-                videoTracks: videoTracks.length,
-                audioTracks: audioTracks.length,
-                videoLabel: videoTracks[0]?.label,
-                audioLabel: audioTracks[0]?.label
-            });
-
-            // Check if we got audio tracks
-            if (audioTracks.length === 0) {
-                // Clean up video track before throwing
-                videoTracks.forEach(track => track.stop());
-                this.stream = null;
-
-                // Provide browser-specific guidance
-                const isChrome = navigator.userAgent.includes('Chrome');
-                const isFirefox = navigator.userAgent.includes('Firefox');
-                const isEdge = navigator.userAgent.includes('Edg');
-
-                let hint = '';
-                if (isChrome || isEdge) {
-                    hint = '\n\nIn Chrome/Edge:\n1. Click "Chrome Tab" at the top of the dialog\n2. Select a tab that is playing audio\n3. Check "Also share tab audio" at the bottom\n4. Click Share';
-                } else if (isFirefox) {
-                    hint = '\n\nFirefox has limited tab audio support. Try using Chrome or Edge for best results.';
-                }
-
-                throw new Error('No audio track captured.' + hint);
-            }
-
-            const settings = audioTracks[0]?.getSettings();
-            const channelCount = settings?.channelCount || 1;
-            this.isStereo = channelCount >= 2;
-
-            console.log(`Tab audio enabled: ${this.isStereo ? 'STEREO' : 'MONO'} (${channelCount} channels)`);
-            console.log('Audio track settings:', settings);
-            console.log('Audio track label:', audioTracks[0]?.label);
-
-            // Mark as tab capture mode
-            this.isTabCapture = true;
-
-            // Stop video track - we only need audio
-            videoTracks.forEach(track => track.stop());
-
-            // Handle track ending (user stops sharing)
-            audioTracks[0].addEventListener('ended', () => {
-                console.log('Tab audio capture ended by user');
-                this.disableAudio();
-                // Dispatch event so UI can update
-                window.dispatchEvent(new CustomEvent('tabAudioEnded'));
-            });
-
-            // Connect stream to audio graph
-            this.source = this.audioContext.createMediaStreamSource(this.stream);
-
-            if (this.isStereo) {
-                this.setupStereoAnalysis();
-            } else {
-                this.setupMonoAnalysis();
-            }
-
-            this.isEnabled = true;
-            this._needsInitialization = true;
-
-            // Check audio levels
-            this.checkAudioLevel();
-
-        } catch (error) {
-            console.error('Error enabling tab audio:', error);
-
-            // Clean up on error
-            if (this.audioContext) {
-                this.audioContext.close();
-                this.audioContext = null;
-            }
-
-            if (error.name === 'NotAllowedError') {
-                throw new Error('Tab capture was cancelled or denied. Please try again and select a tab with audio.');
-            }
-
-            throw error;
-        }
-    }
-
+    
     /**
      * Check if audio is actually coming through (for debugging)
      */
@@ -520,8 +338,6 @@ class AudioAnalyzer {
         
         const lowImbalance = this.calculateLowImbalance(bandEnergy);
         const emptiness = this.calculateEmptiness();
-        const rhythmicEnergy = this.calculateRhythmicEnergy();
-        const tempoChange = this.detectTempoChange(rhythmicEnergy);
         
         // Initialize smoothed metrics to first calculated values for immediate response
         if (this._needsInitialization) {
@@ -533,24 +349,8 @@ class AudioAnalyzer {
             this.smoothedMetrics.collision = collision;
             this.smoothedMetrics.lowImbalance = lowImbalance;
             this.smoothedMetrics.emptiness = emptiness;
-            this.smoothedMetrics.rhythmicEnergy = rhythmicEnergy;
             this._needsInitialization = false;
             console.log('✓ Initialized smoothed metrics to first calculated values');
-        }
-        
-        // Store current data for next frame (for spectral flux and transient detection)
-        if (this.frequencyData) {
-            if (!this.prevFrequencyData) {
-                this.prevFrequencyData = new Uint8Array(this.frequencyData.length);
-            }
-            this.prevFrequencyData.set(this.frequencyData);
-        }
-        
-        if (this.timeData) {
-            if (!this.prevTimeData) {
-                this.prevTimeData = new Uint8Array(this.timeData.length);
-            }
-            this.prevTimeData.set(this.timeData);
         }
         
         // Calculate coherence as inverse of problems
@@ -585,7 +385,6 @@ class AudioAnalyzer {
         this.smoothedMetrics.collision = this.smooth(this.smoothedMetrics.collision, collision, smoothingFactor);
         this.smoothedMetrics.lowImbalance = this.smooth(this.smoothedMetrics.lowImbalance, lowImbalance, smoothingFactor);
         this.smoothedMetrics.emptiness = this.smooth(this.smoothedMetrics.emptiness, emptiness, smoothingFactor);
-        this.smoothedMetrics.rhythmicEnergy = this.smooth(this.smoothedMetrics.rhythmicEnergy || rhythmicEnergy, rhythmicEnergy, smoothingFactor);
         
         // Smooth spatial metrics if stereo
         if (this.isStereo) {
@@ -615,12 +414,6 @@ class AudioAnalyzer {
         );
         this.smoothedMetrics.coherence = smoothedCoherence;
         
-        // Update min/max normalization
-        this.updateMinMax();
-        
-        // Normalize metrics based on min/max
-        this.normalizedMetrics = this.normalizeMetrics();
-        
         const result = {
             u_audioAmp: this.smoothedMetrics.audioAmp,
             u_bandEnergy: this.smoothedMetrics.bandEnergy,
@@ -631,9 +424,7 @@ class AudioAnalyzer {
             u_collision: this.smoothedMetrics.collision,
             u_lowImbalance: this.smoothedMetrics.lowImbalance,
             u_emptiness: this.smoothedMetrics.emptiness,
-            u_coherence: smoothedCoherence,
-            u_rhythmicEnergy: this.smoothedMetrics.rhythmicEnergy,
-            u_tempoChange: tempoChange
+            u_coherence: smoothedCoherence
         };
         
         // Add spatial metrics if stereo
@@ -830,147 +621,6 @@ class AudioAnalyzer {
         }
         
         return emptyBins / this.frequencyData.length;
-    }
-    
-    /**
-     * Calculate rhythmic energy (0-1): combines spectral flux and transient density
-     * 0 = calm/ambient (slow, gradual changes)
-     * 1 = high-energy/jungle beats (fast, complex, rapid changes)
-     */
-    calculateRhythmicEnergy() {
-        let spectralFlux = 0.0;
-        let transientCount = 0;
-        let highFreqVariance = 0.0;
-        let ampVariance = 0.0;
-        
-        // 1. Spectral Flux: rate of change in frequency content
-        if (this.prevFrequencyData) {
-            let fluxSum = 0.0;
-            for (let i = 0; i < this.frequencyData.length; i++) {
-                const diff = this.frequencyData[i] - this.prevFrequencyData[i];
-                if (diff > 0) { // Only positive changes (energy increase)
-                    fluxSum += diff;
-                }
-            }
-            // Normalize by buffer size and max value (255)
-            spectralFlux = Math.min(1.0, fluxSum / (this.frequencyData.length * 255));
-        }
-        
-        // 2. Transient Detection: count sudden amplitude spikes
-        if (this.prevTimeData && this.timeData) {
-            const transientThreshold = 0.3; // Threshold for detecting transients
-            let prevAmp = 0.0;
-            let currentAmp = 0.0;
-            
-            // Calculate RMS of previous and current time domain
-            let prevRMS = 0.0;
-            let currentRMS = 0.0;
-            for (let i = 0; i < this.timeData.length; i++) {
-                const prevSample = (this.prevTimeData[i] - 128) / 128.0;
-                const currentSample = (this.timeData[i] - 128) / 128.0;
-                prevRMS += prevSample * prevSample;
-                currentRMS += currentSample * currentSample;
-            }
-            prevRMS = Math.sqrt(prevRMS / this.timeData.length);
-            currentRMS = Math.sqrt(currentRMS / this.timeData.length);
-            
-            // Detect sudden increase (transient)
-            const ampChange = currentRMS - prevRMS;
-            if (ampChange > transientThreshold) {
-                transientCount = 1.0; // Transient detected
-            }
-        }
-        
-        // 3. High-frequency variance (complexity in highs)
-        const highFreqStart = Math.floor(this.frequencyData.length * 0.7); // Top 30% of spectrum
-        let highFreqSum = 0.0;
-        let highFreqSqSum = 0.0;
-        let highFreqCount = 0;
-        
-        for (let i = highFreqStart; i < this.frequencyData.length; i++) {
-            const value = this.frequencyData[i];
-            highFreqSum += value;
-            highFreqSqSum += value * value;
-            highFreqCount++;
-        }
-        
-        if (highFreqCount > 0) {
-            const mean = highFreqSum / highFreqCount;
-            const variance = (highFreqSqSum / highFreqCount) - (mean * mean);
-            highFreqVariance = Math.min(1.0, variance / (255 * 255)); // Normalize
-        }
-        
-        // 4. Amplitude variance (dynamic range)
-        if (this.timeData) {
-            let ampSum = 0.0;
-            let ampSqSum = 0.0;
-            for (let i = 0; i < this.timeData.length; i++) {
-                const sample = Math.abs((this.timeData[i] - 128) / 128.0);
-                ampSum += sample;
-                ampSqSum += sample * sample;
-            }
-            const mean = ampSum / this.timeData.length;
-            const variance = (ampSqSum / this.timeData.length) - (mean * mean);
-            ampVariance = Math.min(1.0, variance * 4.0); // Scale up
-        }
-        
-        // Combine metrics (weighted)
-        const rhythmicEnergy = Math.min(1.0, 
-            spectralFlux * 0.4 +      // 40% weight on spectral flux
-            transientCount * 0.3 +    // 30% weight on transients
-            highFreqVariance * 0.2 +  // 20% weight on high-freq complexity
-            ampVariance * 0.1         // 10% weight on amplitude variance
-        );
-        
-        return rhythmicEnergy;
-    }
-    
-    /**
-     * Detect sudden tempo change (for dilation direction flip)
-     * Returns true if rhythmic energy changed significantly
-     */
-    detectTempoChange(currentRhythmicEnergy) {
-        if (this.rhythmicEnergyHistory.length === 0) {
-            this.rhythmicEnergyHistory.push(currentRhythmicEnergy);
-            return false;
-        }
-        
-        // Add current value to history
-        this.rhythmicEnergyHistory.push(currentRhythmicEnergy);
-        if (this.rhythmicEnergyHistory.length > this.maxRhythmicHistory) {
-            this.rhythmicEnergyHistory.shift();
-        }
-        
-        // Check for sudden change: compare recent average to older average
-        if (this.rhythmicEnergyHistory.length < 10) {
-            return false; // Need enough history
-        }
-        
-        const recentWindow = 5; // Last 5 frames
-        const olderWindow = 10; // Previous 10 frames before recent
-        
-        const recentStart = Math.max(0, this.rhythmicEnergyHistory.length - recentWindow);
-        const olderStart = Math.max(0, this.rhythmicEnergyHistory.length - olderWindow - recentWindow);
-        const olderEnd = this.rhythmicEnergyHistory.length - recentWindow;
-        
-        let recentAvg = 0.0;
-        let olderAvg = 0.0;
-        
-        for (let i = recentStart; i < this.rhythmicEnergyHistory.length; i++) {
-            recentAvg += this.rhythmicEnergyHistory[i];
-        }
-        recentAvg /= recentWindow;
-        
-        if (olderEnd > olderStart) {
-            for (let i = olderStart; i < olderEnd; i++) {
-                olderAvg += this.rhythmicEnergyHistory[i];
-            }
-            olderAvg /= (olderEnd - olderStart);
-        }
-        
-        // Detect change threshold: 0.3 difference
-        const change = Math.abs(recentAvg - olderAvg);
-        return change > 0.3;
     }
     
     /**
@@ -1176,188 +826,11 @@ class AudioAnalyzer {
             u_lowImbalance: 0.0,                // Low-end imbalance
             u_emptiness: 0.0,                   // Spectral gaps
             u_coherence: 1.0,                   // Overall coherence (inverse of problems)
-            u_rhythmicEnergy: 0.5,              // 0 = ambient, 1 = high-energy
-            u_tempoChange: false,                // Sudden tempo change detected
             // Spatial metrics (v2) - placeholder values
             u_stereoWidth: [0.0, 0.0, 0.0],    // [low, mid, high] width
             u_panPosition: [0.0, 0.0, 0.0],     // [low, mid, high] pan (-1 to 1)
             u_spatialDepth: [0.0, 0.0, 0.0]     // [low, mid, high] depth (0-1)
         };
-    }
-    
-    /**
-     * Update min/max tracking for normalization
-     */
-    updateMinMax() {
-        // Add current smoothed values to history
-        this.metricHistory.audioAmp.push(this.smoothedMetrics.audioAmp);
-        this.metricHistory.harshness.push(this.smoothedMetrics.harshness);
-        this.metricHistory.mud.push(this.smoothedMetrics.mud);
-        this.metricHistory.compression.push(this.smoothedMetrics.compression);
-        this.metricHistory.collision.push(this.smoothedMetrics.collision);
-        this.metricHistory.lowImbalance.push(this.smoothedMetrics.lowImbalance);
-        this.metricHistory.emptiness.push(this.smoothedMetrics.emptiness);
-        this.metricHistory.coherence.push(this.smoothedMetrics.coherence);
-        
-        // Array metrics
-        for (let i = 0; i < 3; i++) {
-            this.metricHistory.bandEnergy[i].push(this.smoothedMetrics.bandEnergy[i]);
-            if (this.isStereo) {
-                this.metricHistory.stereoWidth[i].push(this.smoothedMetrics.stereoWidth[i]);
-                this.metricHistory.panPosition[i].push(this.smoothedMetrics.panPosition[i]);
-                this.metricHistory.spatialDepth[i].push(this.smoothedMetrics.spatialDepth[i]);
-            }
-        }
-        
-        if (this.isStereo) {
-            this.metricHistory.phaseRisk.push(this.smoothedMetrics.phaseRisk);
-        }
-        
-        // Trim history to window size
-        const trimHistory = (arr) => {
-            if (arr.length > this.minMaxWindowSize) {
-                arr.shift();
-            }
-        };
-        
-        trimHistory(this.metricHistory.audioAmp);
-        trimHistory(this.metricHistory.harshness);
-        trimHistory(this.metricHistory.mud);
-        trimHistory(this.metricHistory.compression);
-        trimHistory(this.metricHistory.collision);
-        trimHistory(this.metricHistory.lowImbalance);
-        trimHistory(this.metricHistory.emptiness);
-        trimHistory(this.metricHistory.coherence);
-        
-        for (let i = 0; i < 3; i++) {
-            trimHistory(this.metricHistory.bandEnergy[i]);
-            if (this.isStereo) {
-                trimHistory(this.metricHistory.stereoWidth[i]);
-                trimHistory(this.metricHistory.panPosition[i]);
-                trimHistory(this.metricHistory.spatialDepth[i]);
-            }
-        }
-        
-        if (this.isStereo) {
-            trimHistory(this.metricHistory.phaseRisk);
-        }
-        
-        // Update min/max with slow EMA to adapt gradually
-        const updateMinMaxForMetric = (metricName, isArray = false, index = null) => {
-            const history = isArray ? this.metricHistory[metricName][index] : this.metricHistory[metricName];
-            if (history.length < 10) return; // Need some data
-            
-            const currentMin = Math.min(...history);
-            const currentMax = Math.max(...history);
-            
-            const minMax = isArray ? this.minMax[metricName][index] : this.minMax[metricName];
-            
-            // Slow EMA for min/max (0.99 = very slow adaptation)
-            minMax.min = minMax.min * 0.99 + currentMin * 0.01;
-            minMax.max = minMax.max * 0.99 + currentMax * 0.01;
-            
-            // Ensure min < max
-            if (minMax.min >= minMax.max) {
-                minMax.max = minMax.min + 0.001;
-            }
-        };
-        
-        updateMinMaxForMetric('audioAmp');
-        updateMinMaxForMetric('harshness');
-        updateMinMaxForMetric('mud');
-        updateMinMaxForMetric('compression');
-        updateMinMaxForMetric('collision');
-        updateMinMaxForMetric('lowImbalance');
-        updateMinMaxForMetric('emptiness');
-        updateMinMaxForMetric('coherence');
-        
-        for (let i = 0; i < 3; i++) {
-            updateMinMaxForMetric('bandEnergy', true, i);
-            if (this.isStereo) {
-                updateMinMaxForMetric('stereoWidth', true, i);
-                updateMinMaxForMetric('panPosition', true, i);
-                updateMinMaxForMetric('spatialDepth', true, i);
-            }
-        }
-        
-        if (this.isStereo) {
-            updateMinMaxForMetric('phaseRisk');
-        }
-    }
-    
-    /**
-     * Normalize metrics based on min/max
-     * Returns normalized values (0-1 for most metrics)
-     */
-    normalizeMetrics() {
-        const normalize = (value, min, max) => {
-            if (max <= min) return 0.5;
-            return Math.max(0, Math.min(1, (value - min) / (max - min)));
-        };
-        
-        const result = {
-            audioAmp: normalize(this.smoothedMetrics.audioAmp, this.minMax.audioAmp.min, this.minMax.audioAmp.max),
-            bandEnergy: [
-                normalize(this.smoothedMetrics.bandEnergy[0], this.minMax.bandEnergy[0].min, this.minMax.bandEnergy[0].max),
-                normalize(this.smoothedMetrics.bandEnergy[1], this.minMax.bandEnergy[1].min, this.minMax.bandEnergy[1].max),
-                normalize(this.smoothedMetrics.bandEnergy[2], this.minMax.bandEnergy[2].min, this.minMax.bandEnergy[2].max)
-            ],
-            harshness: normalize(this.smoothedMetrics.harshness, this.minMax.harshness.min, this.minMax.harshness.max),
-            mud: normalize(this.smoothedMetrics.mud, this.minMax.mud.min, this.minMax.mud.max),
-            compression: normalize(this.smoothedMetrics.compression, this.minMax.compression.min, this.minMax.compression.max),
-            collision: normalize(this.smoothedMetrics.collision, this.minMax.collision.min, this.minMax.collision.max),
-            lowImbalance: normalize(this.smoothedMetrics.lowImbalance, this.minMax.lowImbalance.min, this.minMax.lowImbalance.max),
-            emptiness: normalize(this.smoothedMetrics.emptiness, this.minMax.emptiness.min, this.minMax.emptiness.max),
-            coherence: normalize(this.smoothedMetrics.coherence, this.minMax.coherence.min, this.minMax.coherence.max)
-        };
-        
-        if (this.isStereo) {
-            result.phaseRisk = normalize(this.smoothedMetrics.phaseRisk, this.minMax.phaseRisk.min, this.minMax.phaseRisk.max);
-            result.stereoWidth = [
-                normalize(this.smoothedMetrics.stereoWidth[0], this.minMax.stereoWidth[0].min, this.minMax.stereoWidth[0].max),
-                normalize(this.smoothedMetrics.stereoWidth[1], this.minMax.stereoWidth[1].min, this.minMax.stereoWidth[1].max),
-                normalize(this.smoothedMetrics.stereoWidth[2], this.minMax.stereoWidth[2].min, this.minMax.stereoWidth[2].max)
-            ];
-            result.panPosition = [
-                normalize((this.smoothedMetrics.panPosition[0] + 1) / 2, (this.minMax.panPosition[0].min + 1) / 2, (this.minMax.panPosition[0].max + 1) / 2),
-                normalize((this.smoothedMetrics.panPosition[1] + 1) / 2, (this.minMax.panPosition[1].min + 1) / 2, (this.minMax.panPosition[1].max + 1) / 2),
-                normalize((this.smoothedMetrics.panPosition[2] + 1) / 2, (this.minMax.panPosition[2].min + 1) / 2, (this.minMax.panPosition[2].max + 1) / 2)
-            ];
-            result.spatialDepth = [
-                normalize(this.smoothedMetrics.spatialDepth[0], this.minMax.spatialDepth[0].min, this.minMax.spatialDepth[0].max),
-                normalize(this.smoothedMetrics.spatialDepth[1], this.minMax.spatialDepth[1].min, this.minMax.spatialDepth[1].max),
-                normalize(this.smoothedMetrics.spatialDepth[2], this.minMax.spatialDepth[2].min, this.minMax.spatialDepth[2].max)
-            ];
-        }
-        
-        return result;
-    }
-    
-    /**
-     * Get current min/max values for a metric
-     * @param {string} metricName - Name of the metric
-     * @param {number} index - Optional index for array metrics
-     * @returns {Object} {min, max} object
-     */
-    getMinMax(metricName, index = null) {
-        if (index !== null) {
-            return { ...this.minMax[metricName][index] };
-        }
-        return { ...this.minMax[metricName] };
-    }
-    
-    /**
-     * Get normalized metric value
-     * @param {string} metricName - Name of the metric
-     * @param {number} index - Optional index for array metrics
-     * @returns {number} Normalized value (0-1)
-     */
-    getNormalizedMetric(metricName, index = null) {
-        if (!this.normalizedMetrics) return 0.5;
-        if (index !== null) {
-            return this.normalizedMetrics[metricName][index];
-        }
-        return this.normalizedMetrics[metricName];
     }
     
     /**
@@ -1381,7 +854,6 @@ class AudioAnalyzer {
         
         this.analyser = null;
         this.isEnabled = false;
-        this.isTabCapture = false;
         console.log('Audio disabled');
     }
 }

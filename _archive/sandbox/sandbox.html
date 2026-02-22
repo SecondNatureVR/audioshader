@@ -91,6 +91,194 @@
             border-radius: 3px;
         }
         
+        #ux-toolbox {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+            color: #fff;
+            font-size: 10px;
+            z-index: 1003;
+            font-family: monospace;
+            min-width: 220px;
+            max-width: 280px;
+            max-height: calc(100vh - 20px);
+            overflow-y: auto;
+        }
+        
+        #ux-toolbox h4 {
+            margin: 0 0 8px 0;
+            font-size: 10px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            border-bottom: 1px solid #333;
+            padding-bottom: 6px;
+        }
+        
+        #ux-toolbox .control-group {
+            margin-bottom: 10px;
+        }
+        
+        #ux-toolbox .control-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 9px;
+            color: #bbb;
+            font-weight: 500;
+        }
+        
+        #ux-toolbox .control-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        #ux-toolbox .control-row input[type="range"] {
+            flex: 1;
+        }
+        
+        #ux-toolbox .value {
+            min-width: 50px;
+            font-size: 9px;
+            color: #0af;
+            text-align: right;
+        }
+        
+        #audio-mapping-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 12px;
+            color: #fff;
+            min-width: 400px;
+            max-width: 500px;
+            max-height: calc(100vh - 20px);
+            overflow-y: auto;
+            z-index: 1004;
+            font-size: 10px;
+            display: none;
+        }
+        
+        #audio-mapping-panel.visible {
+            display: block;
+        }
+        
+        #audio-mapping-panel h4 {
+            margin: 0 0 10px 0;
+            font-size: 11px;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            border-bottom: 1px solid #333;
+            padding-bottom: 6px;
+        }
+        
+        .mapping-param-group {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+        
+        .mapping-param-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        
+        .mapping-param-header input[type="checkbox"] {
+            cursor: pointer;
+        }
+        
+        .mapping-param-name {
+            font-weight: 600;
+            font-size: 10px;
+            color: #fff;
+        }
+        
+        .mapping-source {
+            font-size: 8px;
+            color: #888;
+            margin-left: auto;
+        }
+        
+        .mapping-diagnostic {
+            margin: 8px 0;
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+            font-size: 8px;
+        }
+        
+        .mapping-range-display {
+            height: 60px;
+            margin: 6px 0;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mapping-minmax-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+            color: #888;
+            margin-top: 4px;
+        }
+        
+        .mapping-control {
+            margin: 6px 0;
+        }
+        
+        .mapping-control label {
+            display: block;
+            font-size: 9px;
+            color: #bbb;
+            margin-bottom: 3px;
+        }
+        
+        .mapping-control-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .mapping-control-row input[type="range"] {
+            flex: 1;
+        }
+        
+        .mapping-control-row input[type="number"] {
+            width: 80px;
+            font-size: 9px;
+            padding: 3px;
+            background: #333;
+            color: #eee;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+        
+        .mapping-current-value {
+            font-size: 9px;
+            color: #0af;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: right;
+        }
+        
         #dev-toolbox {
             position: fixed;
             top: 10px;
@@ -181,6 +369,11 @@
             background: rgba(255, 255, 255, 0.15);
             border-color: #0af;
             color: #fff;
+        }
+        
+        .resolution-btn.active {
+            background: #0af !important;
+            color: #000 !important;
         }
         
         .control-group input[type="range"] {
@@ -793,6 +986,14 @@
             <span class="hotkey-key">G</span>
             <span class="hotkey-desc">Record GIF (max 10s)</span>
         </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">1</span>
+            <span class="hotkey-desc">Toggle Interpolation</span>
+        </div>
+        <div class="hotkey-item">
+            <span class="hotkey-key">H</span>
+            <span class="hotkey-desc">Toggle UI</span>
+        </div>
     </div>
     
     <div id="status-indicators">
@@ -800,6 +1001,71 @@
         <span id="jiggle-indicator" style="display: none; background: #a0a; color: #fff;">JIGGLE</span>
         <span id="unsaved-indicator" style="display: none; background: #fa0; color: #fff;">UNSAVED</span>
         <span id="record-indicator" style="display: none; background: #e33; color: #fff;">RECORD</span>
+    </div>
+    
+    <div id="ux-toolbox">
+        <h4>Experimental</h4>
+        
+        <div class="section-header collapsed" id="interpolation-settings-header" style="margin-top: 0; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
+            <span>Smooth Interpolation</span>
+        </div>
+        <div id="interpolation-settings-content" style="display: none; padding-left: 8px;">
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="interpolation-enabled" checked>
+                    <span style="margin-left: 6px;">Enabled</span>
+                </label>
+            </div>
+            
+            <div class="control-group">
+                <label for="interpolation-duration-slider">Duration (s)</label>
+                <div class="control-row">
+                    <input type="range" id="interpolation-duration-slider" min="0.05" max="2.0" value="0.5" step="0.05">
+                    <div class="value" contenteditable="true" id="interpolation-duration-value">0.50</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="interpolation-easing-select">Easing Type</label>
+                <select id="interpolation-easing-select" style="width: 100%; font-size: 9px; padding: 3px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px;">
+                    <option value="linear">Linear</option>
+                    <option value="easeInOut" selected>Ease In-Out</option>
+                    <option value="easeIn">Ease In</option>
+                    <option value="easeOut">Ease Out</option>
+                    <option value="spring">Spring</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="interpolation-spring-slider">Spring Constant</label>
+                <div class="control-row">
+                    <input type="range" id="interpolation-spring-slider" min="0.01" max="0.5" value="0.1" step="0.01">
+                    <div class="value" contenteditable="true" id="interpolation-spring-value">0.10</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="interpolation-damping-slider">Damping</label>
+                <div class="control-row">
+                    <input type="range" id="interpolation-damping-slider" min="0.5" max="0.99" value="0.8" step="0.01">
+                    <div class="value" contenteditable="true" id="interpolation-damping-value">0.80</div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="interpolation-rotation-spring" checked>
+                    <span style="margin-left: 6px;">Use Spring for Rotation</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <div id="audio-mapping-panel">
+        <h4>Audio Mapping</h4>
+        <div id="audio-mapping-content">
+            <!-- Audio mapping controls will be generated dynamically -->
+        </div>
     </div>
     
     <div id="dev-toolbox">
@@ -820,6 +1086,17 @@
                 <label for="import-presets-input" style="font-size: 10px; padding: 3px 6px; background: #fa0; color: #fff; border: none; border-radius: 3px; cursor: pointer; display: inline-block; height: auto; line-height: normal; box-sizing: border-box;">Import</label>
                 <input type="file" id="import-presets-input" accept=".json,.txt" style="display: none;">
             </div>
+        </div>
+        
+        <div class="section-header">Resolution</div>
+        <div class="control-group">
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <button id="res-4k-btn" class="resolution-btn" data-resolution="4k" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">4K UHD</button>
+                <button id="res-pc-btn" class="resolution-btn" data-resolution="pc" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Full HD</button>
+                <button id="res-mobile-btn" class="resolution-btn" data-resolution="mobile" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Mobile</button>
+                <button id="res-window-btn" class="resolution-btn" data-resolution="window" style="font-size: 10px; padding: 4px 8px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Window</button>
+            </div>
+            <div id="current-resolution-display" style="margin-top: 4px; font-size: 9px; color: #aaa;">Current: Window Size</div>
         </div>
         
         <div class="section-header">Shape</div>
@@ -1004,10 +1281,131 @@
                 <input type="range" id="jiggle-amount-slider" min="0" max="100" value="10" step="1">
                 <div class="value" contenteditable="true" id="jiggle-amount-value">10%</div>
             </div>
+            
+            <div class="section-header collapsed" id="jiggle-settings-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
+                <span>Jiggle Settings</span>
+            </div>
+            <div id="jiggle-settings-content" style="display: none; padding-left: 8px;">
+                <div style="display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap;">
+                    <button id="jiggle-all-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">All</button>
+                    <button id="jiggle-none-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">None</button>
+                    <button id="jiggle-shape-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Shape</button>
+                    <button id="jiggle-appearance-btn" style="font-size: 9px; padding: 3px 6px; background: #333; color: #eee; border: 1px solid #555; border-radius: 3px; cursor: pointer;">Appearance</button>
+                </div>
+                <div style="font-size: 9px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Shape</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-spikiness" checked>
+                    <span>Spikiness</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-spikeFrequency" checked>
+                    <span>Frequency</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-spikeSharpness" checked>
+                    <span>Sharpness</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Appearance</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-hue" checked>
+                    <span>Hue</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-scale" checked>
+                    <span>Scale</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-fillSize" checked>
+                    <span>Fill Size</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-fillOpacity" checked>
+                    <span>Fill Opacity</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Emanation</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-dilationSpeed" checked>
+                    <span>Dilation Speed</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-fadeAmount" checked>
+                    <span>Fade Amount</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-emanationRate" checked>
+                    <span>Rate</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Filters</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-noiseAmount" checked>
+                    <span>Noise Amount</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-noiseRate" checked>
+                    <span>Noise Rate</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-blurAmount" checked>
+                    <span>Blur Amount</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-blurRate" checked>
+                    <span>Blur Rate</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Rotation</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-autoRotationSpeed" checked>
+                    <span>Auto Rotation</span>
+                </label>
+                
+                <div style="font-size: 9px; color: #888; margin-top: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Effects</div>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-hueShiftAmount" checked>
+                    <span>Hue Shift</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 9px; margin-bottom: 4px; cursor: pointer;">
+                    <input type="checkbox" id="jiggle-param-blendOpacity" checked>
+                    <span>Blend Opacity</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="section-header collapsed" id="debug-values-header" style="margin-top: 8px; margin-bottom: 6px; padding-top: 8px; border-top: 1px solid #333; cursor: pointer;">
+            <span>Debug Values</span>
+        </div>
+        <div id="debug-values-content" style="display: none; padding-left: 8px;">
+            <div id="debug-output" style="font-size: 8px; font-family: monospace; color: #aaa; line-height: 1.4; max-height: 400px; overflow-y: auto; background: #1a1a1a; padding: 6px; border-radius: 3px; border: 1px solid #333; white-space: pre-wrap;">
+                <!-- Debug values will be populated here -->
+            </div>
         </div>
     </div>
     
+    <script src="audio/analyzer.js"></script>
     <script>
+        // Resolution configuration
+        const RESOLUTIONS = {
+            '4k': { width: 3840, height: 2160, name: '4K UHD' },
+            'pc': { width: 1920, height: 1080, name: 'Full HD' },
+            'mobile': { width: 1080, height: 1920, name: 'Mobile' },
+            'window': { width: null, height: null, name: 'Window Size' }
+        };
+        
+        // Parse URL parameters
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        
+        // Get current resolution setting
+        let currentResolution = getUrlParam('resolution') || 'window';
+        if (!RESOLUTIONS[currentResolution]) {
+            currentResolution = 'window';
+        }
+        
         // Simple WebGL renderer
         class SimpleRenderer {
             constructor(canvas) {
@@ -1024,8 +1422,16 @@
             }
             
             resize() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
+                const res = RESOLUTIONS[currentResolution];
+                if (res.width && res.height) {
+                    // Fixed resolution
+                    this.canvas.width = res.width;
+                    this.canvas.height = res.height;
+                } else {
+                    // Window size
+                    this.canvas.width = window.innerWidth;
+                    this.canvas.height = window.innerHeight;
+                }
                 this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
                 
                 // Resize textures if they exist
@@ -1724,6 +2130,123 @@
             const jiggleAmountSlider = document.getElementById('jiggle-amount-slider');
             const jiggleAmountValue = document.getElementById('jiggle-amount-value');
             
+            // Jiggle settings drawer
+            const jiggleSettingsHeader = document.getElementById('jiggle-settings-header');
+            const jiggleSettingsContent = document.getElementById('jiggle-settings-content');
+            
+            // Initialize jiggle enabled params (all enabled by default)
+            const jiggleParamNames = [
+                'spikiness', 'spikeFrequency', 'spikeSharpness',
+                'hue', 'scale', 'fillSize', 'fillOpacity',
+                'dilationSpeed', 'fadeAmount', 'emanationRate',
+                'noiseAmount', 'noiseRate', 'blurAmount', 'blurRate',
+                'autoRotationSpeed', 'hueShiftAmount', 'blendOpacity'
+            ];
+            
+            // Initialize jiggleEnabledParams object - all enabled by default
+            let jiggleEnabledParams = {};
+            jiggleParamNames.forEach(param => {
+                jiggleEnabledParams[param] = true;
+            });
+            
+            // Toggle jiggle settings drawer - set up handler
+            // Note: This header is excluded from the generic section-header handler below
+            function setupJiggleDrawerHandler() {
+                const header = document.getElementById('jiggle-settings-header');
+                const content = document.getElementById('jiggle-settings-content');
+                if (header && content) {
+                    header.style.userSelect = 'none'; // Prevent text selection
+                    header.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const isCollapsed = this.classList.contains('collapsed');
+                        console.log('Jiggle drawer clicked, isCollapsed:', isCollapsed); // Debug log
+                        if (isCollapsed) {
+                            this.classList.remove('collapsed');
+                            content.style.display = 'block';
+                        } else {
+                            this.classList.add('collapsed');
+                            content.style.display = 'none';
+                        }
+                    });
+                    console.log('Jiggle drawer handler attached successfully'); // Debug log
+                    return true;
+                } else {
+                    console.warn('Jiggle drawer elements not found:', { header: !!header, content: !!content }); // Debug log
+                }
+                return false;
+            }
+            
+            // Set up the handler
+            if (!setupJiggleDrawerHandler()) {
+                // Fallback: try again after a short delay in case DOM isn't ready
+                setTimeout(() => {
+                    console.log('Retrying jiggle drawer handler setup...'); // Debug log
+                    setupJiggleDrawerHandler();
+                }, 100);
+            }
+            
+            // Initialize checkboxes and add event listeners
+            jiggleParamNames.forEach(param => {
+                const checkbox = document.getElementById(`jiggle-param-${param}`);
+                if (checkbox) {
+                    checkbox.checked = jiggleEnabledParams[param];
+                    checkbox.addEventListener('change', (e) => {
+                        jiggleEnabledParams[param] = e.target.checked;
+                    });
+                }
+            });
+            
+            // Quick action buttons
+            const jiggleAllBtn = document.getElementById('jiggle-all-btn');
+            const jiggleNoneBtn = document.getElementById('jiggle-none-btn');
+            const jiggleShapeBtn = document.getElementById('jiggle-shape-btn');
+            const jiggleAppearanceBtn = document.getElementById('jiggle-appearance-btn');
+            
+            if (jiggleAllBtn) {
+                jiggleAllBtn.addEventListener('click', () => {
+                    jiggleParamNames.forEach(param => {
+                        jiggleEnabledParams[param] = true;
+                        const checkbox = document.getElementById(`jiggle-param-${param}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                });
+            }
+            
+            if (jiggleNoneBtn) {
+                jiggleNoneBtn.addEventListener('click', () => {
+                    jiggleParamNames.forEach(param => {
+                        jiggleEnabledParams[param] = false;
+                        const checkbox = document.getElementById(`jiggle-param-${param}`);
+                        if (checkbox) checkbox.checked = false;
+                    });
+                });
+            }
+            
+            if (jiggleShapeBtn) {
+                jiggleShapeBtn.addEventListener('click', () => {
+                    const shapeParams = ['spikiness', 'spikeFrequency', 'spikeSharpness'];
+                    jiggleParamNames.forEach(param => {
+                        const enabled = shapeParams.includes(param);
+                        jiggleEnabledParams[param] = enabled;
+                        const checkbox = document.getElementById(`jiggle-param-${param}`);
+                        if (checkbox) checkbox.checked = enabled;
+                    });
+                });
+            }
+            
+            if (jiggleAppearanceBtn) {
+                jiggleAppearanceBtn.addEventListener('click', () => {
+                    const appearanceParams = ['hue', 'scale', 'fillSize', 'fillOpacity'];
+                    jiggleParamNames.forEach(param => {
+                        const enabled = appearanceParams.includes(param);
+                        jiggleEnabledParams[param] = enabled;
+                        const checkbox = document.getElementById(`jiggle-param-${param}`);
+                        if (checkbox) checkbox.checked = enabled;
+                    });
+                });
+            }
+            
             // Get emanation rate slider before initializing values
             const emanationRateSlider = document.getElementById('emanation-rate-slider');
             const emanationRateValue = document.getElementById('emanation-rate-value');
@@ -1777,9 +2300,510 @@
                     statusIndicators.style.left = rect.left + 'px';
                 }
             }
+            
+            // Position UX toolbox below status indicators
+            const uxToolbox = document.getElementById('ux-toolbox');
+            function positionUXToolbox() {
+                if (statusIndicators && uxToolbox) {
+                    const rect = statusIndicators.getBoundingClientRect();
+                    uxToolbox.style.top = (rect.bottom + 6) + 'px';
+                    uxToolbox.style.left = rect.left + 'px';
+                }
+            }
+            
             // Position on load and resize
             positionStatusIndicators();
-            window.addEventListener('resize', positionStatusIndicators);
+            positionUXToolbox();
+            window.addEventListener('resize', () => {
+                positionStatusIndicators();
+                positionUXToolbox();
+            });
+            
+            // ============================================
+            // Smooth Interpolation System
+            // ============================================
+            
+            class ParameterInterpolator {
+                constructor() {
+                    this.params = new Map(); // paramName -> {current, target, startTime, duration, startValue, easing}
+                    this.springParams = new Map(); // paramName -> {current, target, velocity, spring, damping}
+                    this.enabled = true;
+                    this.defaultDuration = 0.5; // seconds
+                    this.defaultEasing = 'easeInOut';
+                    this.springConstant = 0.1;
+                    this.springDamping = 0.8;
+                    this.useSpringForRotation = true;
+                }
+                
+                setEnabled(enabled) {
+                    this.enabled = enabled;
+                    if (!enabled) {
+                        // Snap all params to targets
+                        this.params.forEach((state, paramName) => {
+                            state.current = state.target;
+                        });
+                        this.springParams.forEach((state, paramName) => {
+                            state.current = state.target;
+                            state.velocity = 0;
+                        });
+                    }
+                }
+                
+                setTarget(paramName, targetValue, duration = null, easing = null, useSpring = false) {
+                    if (!this.enabled) {
+                        // If disabled, set current directly
+                        if (useSpring || (this.useSpringForRotation && paramName === 'rotation')) {
+                            const state = this.springParams.get(paramName) || { current: targetValue, velocity: 0, spring: this.springConstant, damping: this.springDamping };
+                            state.target = targetValue;
+                            state.spring = this.springConstant;
+                            state.damping = this.springDamping;
+                            this.springParams.set(paramName, state);
+                        } else {
+                            const state = this.params.get(paramName) || { current: targetValue };
+                            state.current = targetValue;
+                            state.target = targetValue;
+                            this.params.set(paramName, state);
+                        }
+                        return;
+                    }
+                    
+                    const currentValue = this.getCurrent(paramName);
+                    const finalDuration = duration ?? this.defaultDuration;
+                    const finalEasing = easing ?? this.defaultEasing;
+                    
+                    if (useSpring || (this.useSpringForRotation && paramName === 'rotation')) {
+                        const state = this.springParams.get(paramName) || { current: currentValue, velocity: 0, spring: this.springConstant, damping: this.springDamping };
+                        state.target = targetValue;
+                        state.spring = this.springConstant;
+                        state.damping = this.springDamping;
+                        this.springParams.set(paramName, state);
+                    } else {
+                        this.params.set(paramName, {
+                            current: currentValue,
+                            target: targetValue,
+                            startValue: currentValue,
+                            startTime: Date.now(),
+                            duration: finalDuration * 1000, // Convert to ms
+                            easing: finalEasing
+                        });
+                    }
+                }
+                
+                update() {
+                    if (!this.enabled) return;
+                    
+                    const now = Date.now();
+                    const deltaTime = 1/60; // Assume 60fps
+                    
+                    // Update standard interpolations
+                    this.params.forEach((state, paramName) => {
+                        const elapsed = now - state.startTime;
+                        const progress = Math.min(elapsed / state.duration, 1);
+                        
+                        if (progress >= 1) {
+                            state.current = state.target;
+                        } else {
+                            const t = this.applyEasing(progress, state.easing);
+                            state.current = this.lerp(state.startValue, state.target, t);
+                        }
+                    });
+                    
+                    // Update spring-based interpolations
+                    this.springParams.forEach((state, paramName) => {
+                        const distance = state.target - state.current;
+                        const force = distance * state.spring;
+                        state.velocity = (state.velocity + force) * state.damping;
+                        state.current += state.velocity * deltaTime;
+                        
+                        // Stop if very close and velocity is small
+                        if (Math.abs(distance) < 0.001 && Math.abs(state.velocity) < 0.001) {
+                            state.current = state.target;
+                            state.velocity = 0;
+                        }
+                    });
+                }
+                
+                getCurrent(paramName) {
+                    if (this.springParams.has(paramName)) {
+                        return this.springParams.get(paramName).current;
+                    }
+                    if (this.params.has(paramName)) {
+                        return this.params.get(paramName).current;
+                    }
+                    // Return target if param doesn't exist yet (for initialization)
+                    return null;
+                }
+                
+                lerp(start, end, t) {
+                    return start + (end - start) * t;
+                }
+                
+                applyEasing(t, easing) {
+                    switch(easing) {
+                        case 'linear':
+                            return t;
+                        case 'easeIn':
+                            return t * t;
+                        case 'easeOut':
+                            return 1 - (1 - t) * (1 - t);
+                        case 'easeInOut':
+                            return t < 0.5 
+                                ? 2 * t * t 
+                                : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                        default:
+                            return t < 0.5 
+                                ? 2 * t * t 
+                                : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                    }
+                }
+                
+                // Handle rotation wrapping (359° -> 1° should go forward, not backward)
+                setTargetRotation(paramName, targetValue) {
+                    const current = this.getCurrent(paramName) ?? targetValue;
+                    
+                    // Normalize angles to 0-360
+                    const currentNorm = ((current % 360) + 360) % 360;
+                    const targetNorm = ((targetValue % 360) + 360) % 360;
+                    
+                    // Find shortest path
+                    let diff = targetNorm - currentNorm;
+                    if (Math.abs(diff) > 180) {
+                        diff = diff > 0 ? diff - 360 : diff + 360;
+                    }
+                    
+                    this.setTarget(paramName, currentNorm + diff, null, null, this.useSpringForRotation);
+                }
+            }
+            
+            // Create global interpolator instance
+            const interpolator = new ParameterInterpolator();
+            
+            // Wire up interpolation settings UI
+            const interpolationEnabled = document.getElementById('interpolation-enabled');
+            const interpolationDurationSlider = document.getElementById('interpolation-duration-slider');
+            const interpolationDurationValue = document.getElementById('interpolation-duration-value');
+            const interpolationEasingSelect = document.getElementById('interpolation-easing-select');
+            const interpolationSpringSlider = document.getElementById('interpolation-spring-slider');
+            const interpolationSpringValue = document.getElementById('interpolation-spring-value');
+            const interpolationDampingSlider = document.getElementById('interpolation-damping-slider');
+            const interpolationDampingValue = document.getElementById('interpolation-damping-value');
+            const interpolationRotationSpring = document.getElementById('interpolation-rotation-spring');
+            const interpolationSettingsHeader = document.getElementById('interpolation-settings-header');
+            const interpolationSettingsContent = document.getElementById('interpolation-settings-content');
+            
+            // Toggle interpolation settings drawer
+            if (interpolationSettingsHeader && interpolationSettingsContent) {
+                interpolationSettingsHeader.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isCollapsed = this.classList.contains('collapsed');
+                    if (isCollapsed) {
+                        this.classList.remove('collapsed');
+                        interpolationSettingsContent.style.display = 'block';
+                    } else {
+                        this.classList.add('collapsed');
+                        interpolationSettingsContent.style.display = 'none';
+                    }
+                });
+            }
+            
+            // Debug values panel
+            const debugValuesHeader = document.getElementById('debug-values-header');
+            const debugValuesContent = document.getElementById('debug-values-content');
+            const debugOutput = document.getElementById('debug-output');
+            
+            if (debugValuesHeader && debugValuesContent) {
+                debugValuesHeader.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isCollapsed = this.classList.contains('collapsed');
+                    if (isCollapsed) {
+                        this.classList.remove('collapsed');
+                        debugValuesContent.style.display = 'block';
+                    } else {
+                        this.classList.add('collapsed');
+                        debugValuesContent.style.display = 'none';
+                    }
+                });
+            }
+            
+            // Function to update debug output
+            function updateDebugOutput() {
+                if (!debugOutput || debugValuesContent.style.display === 'none') return;
+                
+                const getInterpolatedCurrent = (param) => interpolator.getCurrent(param) ?? 'N/A';
+                const getInterpolatedTarget = (param) => {
+                    const state = interpolator.params.get(param);
+                    const springState = interpolator.springParams.get(param);
+                    if (springState) return springState.target.toFixed(4);
+                    if (state) return state.target.toFixed(4);
+                    return 'N/A';
+                };
+                const getInterpolationProgress = (param) => {
+                    const state = interpolator.params.get(param);
+                    if (!state) return 'N/A';
+                    const elapsed = Date.now() - state.startTime;
+                    const progress = Math.min(elapsed / state.duration, 1);
+                    return (progress * 100).toFixed(1) + '%';
+                };
+                const getSpringVelocity = (param) => {
+                    const state = interpolator.springParams.get(param);
+                    if (!state) return 'N/A';
+                    return state.velocity.toFixed(4);
+                };
+                
+                const output = [];
+                output.push('=== INTERPOLATION STATE ===');
+                output.push(`Enabled: ${interpolator.enabled}`);
+                output.push(`Active: ${interpolator.enabled && !jiggleEnabled}`);
+                output.push(`Jiggle Enabled: ${jiggleEnabled}`);
+                output.push(`Jiggle Amount: ${(jiggleAmount * 100).toFixed(1)}%`);
+                output.push('');
+                
+                output.push('=== ROTATION ===');
+                output.push(`Rotation (direct): ${rotation.toFixed(2)}°`);
+                output.push(`Rotation (interp current): ${getInterpolatedCurrent('rotation')}°`);
+                output.push(`Rotation (interp target): ${getInterpolatedTarget('rotation')}°`);
+                output.push(`Rotation (base): ${baseRotation.toFixed(2)}°`);
+                output.push(`Rotation (target base): ${targetBaseRotation.toFixed(2)}°`);
+                const rotSpring = interpolator.springParams.get('rotation');
+                if (rotSpring) {
+                    output.push(`Rotation (spring velocity): ${rotSpring.velocity.toFixed(4)}`);
+                }
+                output.push(`Auto Rotation Speed (direct): ${autoRotationSpeed.toFixed(2)}°/s`);
+                output.push(`Auto Rotation Speed (interp current): ${getInterpolatedCurrent('autoRotationSpeed')}°/s`);
+                output.push(`Auto Rotation Speed (interp target): ${getInterpolatedTarget('autoRotationSpeed')}°/s`);
+                output.push(`Auto Rotation Speed (base): ${baseAutoRotationSpeed.toFixed(2)}°/s`);
+                output.push('');
+                
+                output.push('=== DILATION ===');
+                output.push(`Dilation Speed (direct): ${dilationSpeed.toFixed(4)}`);
+                output.push(`Dilation Speed (interp current): ${getInterpolatedCurrent('dilationSpeed')}`);
+                output.push(`Dilation Speed (interp target): ${getInterpolatedTarget('dilationSpeed')}`);
+                output.push(`Dilation Speed (base): ${baseDilationSpeed.toFixed(4)}`);
+                output.push(`Dilation Speed (target base): ${targetBaseDilationSpeed.toFixed(4)}`);
+                output.push(`Dilation Speed (progress): ${getInterpolationProgress('dilationSpeed')}`);
+                output.push(`Effective (freeze): ${freezeEnabled ? '1.0 (frozen)' : dilationSpeed.toFixed(4)}`);
+                output.push('');
+                
+                output.push('=== SHAPE ===');
+                output.push(`Spikiness: ${spikiness.toFixed(3)} | interp: ${getInterpolatedCurrent('spikiness')} | target: ${getInterpolatedTarget('spikiness')} | base: ${baseSpikiness.toFixed(3)}`);
+                output.push(`Spike Freq: ${spikeFrequency.toFixed(2)} | interp: ${getInterpolatedCurrent('spikeFrequency')} | target: ${getInterpolatedTarget('spikeFrequency')} | base: ${baseSpikeFrequency.toFixed(2)}`);
+                output.push(`Spike Sharp: ${spikeSharpness.toFixed(3)} | interp: ${getInterpolatedCurrent('spikeSharpness')} | target: ${getInterpolatedTarget('spikeSharpness')} | base: ${baseSpikeSharpness.toFixed(3)}`);
+                output.push('');
+                
+                output.push('=== APPEARANCE ===');
+                output.push(`Hue: ${hue.toFixed(1)}° | interp: ${getInterpolatedCurrent('hue')}° | target: ${getInterpolatedTarget('hue')}° | base: ${baseHue.toFixed(1)}°`);
+                output.push(`Scale: ${scale.toFixed(3)} | interp: ${getInterpolatedCurrent('scale')} | target: ${getInterpolatedTarget('scale')} | base: ${baseScale.toFixed(3)}`);
+                output.push(`Fill Size: ${fillSize.toFixed(3)} | interp: ${getInterpolatedCurrent('fillSize')} | target: ${getInterpolatedTarget('fillSize')} | base: ${baseFillSize.toFixed(3)}`);
+                output.push(`Fill Opacity: ${fillOpacity.toFixed(3)} | interp: ${getInterpolatedCurrent('fillOpacity')} | target: ${getInterpolatedTarget('fillOpacity')} | base: ${baseFillOpacity.toFixed(3)}`);
+                output.push('');
+                
+                output.push('=== EMANATION ===');
+                output.push(`Emanation Rate: ${emanationRate.toFixed(2)} | interp: ${getInterpolatedCurrent('emanationRate')} | target: ${getInterpolatedTarget('emanationRate')} | base: ${baseEmanationRate.toFixed(2)}`);
+                output.push(`Fade Amount: ${fadeAmount.toFixed(3)} | interp: ${getInterpolatedCurrent('fadeAmount')} | target: ${getInterpolatedTarget('fadeAmount')} | base: ${baseFadeAmount.toFixed(3)}`);
+                output.push('');
+                
+                output.push('=== FILTERS ===');
+                output.push(`Noise Amount: ${noiseAmount.toFixed(3)} | interp: ${getInterpolatedCurrent('noiseAmount')} | target: ${getInterpolatedTarget('noiseAmount')} | base: ${baseNoiseAmount.toFixed(3)}`);
+                output.push(`Noise Rate: ${noiseRate.toFixed(2)} | interp: ${getInterpolatedCurrent('noiseRate')} | target: ${getInterpolatedTarget('noiseRate')} | base: ${baseNoiseRate.toFixed(2)}`);
+                output.push(`Blur Amount: ${blurAmount.toFixed(3)} | interp: ${getInterpolatedCurrent('blurAmount')} | target: ${getInterpolatedTarget('blurAmount')} | base: ${baseBlurAmount.toFixed(3)}`);
+                output.push(`Blur Rate: ${blurRate.toFixed(2)} | interp: ${getInterpolatedCurrent('blurRate')} | target: ${getInterpolatedTarget('blurRate')} | base: ${baseBlurRate.toFixed(2)}`);
+                output.push('');
+                
+                output.push('=== EFFECTS ===');
+                output.push(`Hue Shift: ${hueShiftAmount.toFixed(4)} | interp: ${getInterpolatedCurrent('hueShiftAmount')} | target: ${getInterpolatedTarget('hueShiftAmount')} | base: ${baseHueShiftAmount.toFixed(4)}`);
+                output.push(`Blend Opacity: ${blendOpacity.toFixed(3)} | interp: ${getInterpolatedCurrent('blendOpacity')} | target: ${getInterpolatedTarget('blendOpacity')} | base: ${baseBlendOpacity.toFixed(3)}`);
+                output.push('');
+                
+                output.push('=== CALCULATED VALUES ===');
+                const currentTime = (Date.now() - startTime) / 1000.0;
+                const interpolatedRot = interpolator.getCurrent('rotation') ?? rotation;
+                const interpolatedAutoRot = interpolator.getCurrent('autoRotationSpeed') ?? autoRotationSpeed;
+                const totalRotation = interpolatedRot + (currentTime * interpolatedAutoRot);
+                output.push(`Total Rotation: ${totalRotation.toFixed(2)}°`);
+                output.push(`Time: ${currentTime.toFixed(2)}s`);
+                
+                debugOutput.textContent = output.join('\n');
+            }
+            
+            // Interpolation enabled toggle
+            if (interpolationEnabled) {
+                interpolationEnabled.addEventListener('change', (e) => {
+                    interpolator.setEnabled(e.target.checked);
+                });
+            }
+            
+            // Duration slider
+            if (interpolationDurationSlider) {
+                interpolationDurationSlider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    interpolator.defaultDuration = value;
+                    interpolationDurationValue.textContent = value.toFixed(2);
+                });
+                handleValueEdit(interpolationDurationValue,
+                    (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                    (val) => val.toFixed(2),
+                    (val) => {
+                        interpolator.defaultDuration = val;
+                        interpolationDurationSlider.value = val;
+                    }
+                );
+            }
+            
+            // Easing select
+            if (interpolationEasingSelect) {
+                interpolationEasingSelect.addEventListener('change', (e) => {
+                    interpolator.defaultEasing = e.target.value;
+                });
+            }
+            
+            // Spring constant slider
+            if (interpolationSpringSlider) {
+                interpolationSpringSlider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    interpolator.springConstant = value;
+                    interpolationSpringValue.textContent = value.toFixed(2);
+                    // Update existing spring params
+                    interpolator.springParams.forEach((state) => {
+                        state.spring = value;
+                    });
+                });
+                handleValueEdit(interpolationSpringValue,
+                    (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                    (val) => val.toFixed(2),
+                    (val) => {
+                        interpolator.springConstant = val;
+                        interpolationSpringSlider.value = val;
+                    }
+                );
+            }
+            
+            // Damping slider
+            if (interpolationDampingSlider) {
+                interpolationDampingSlider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    interpolator.springDamping = value;
+                    interpolationDampingValue.textContent = value.toFixed(2);
+                    // Update existing spring params
+                    interpolator.springParams.forEach((state) => {
+                        state.damping = value;
+                    });
+                });
+                handleValueEdit(interpolationDampingValue,
+                    (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
+                    (val) => val.toFixed(2),
+                    (val) => {
+                        interpolator.springDamping = val;
+                        interpolationDampingSlider.value = val;
+                    }
+                );
+            }
+            
+            // Rotation spring toggle
+            if (interpolationRotationSpring) {
+                interpolationRotationSpring.addEventListener('change', (e) => {
+                    interpolator.useSpringForRotation = e.target.checked;
+                });
+            }
+            
+            // Function to update debug output
+            function updateDebugOutput() {
+                if (!debugOutput || !debugValuesContent || debugValuesContent.style.display === 'none') return;
+                
+                const getInterpolatedCurrent = (param) => {
+                    const val = interpolator.getCurrent(param);
+                    return val !== null && val !== undefined ? val.toFixed(4) : 'N/A';
+                };
+                const getInterpolatedTarget = (param) => {
+                    const state = interpolator.params.get(param);
+                    const springState = interpolator.springParams.get(param);
+                    if (springState) return springState.target.toFixed(4);
+                    if (state) return state.target.toFixed(4);
+                    return 'N/A';
+                };
+                const getInterpolationProgress = (param) => {
+                    const state = interpolator.params.get(param);
+                    if (!state) return 'N/A';
+                    const elapsed = Date.now() - state.startTime;
+                    const progress = Math.min(elapsed / state.duration, 1);
+                    return (progress * 100).toFixed(1) + '%';
+                };
+                
+                const output = [];
+                output.push('=== INTERPOLATION STATE ===');
+                output.push(`Enabled: ${interpolator.enabled}`);
+                output.push(`Active: ${interpolator.enabled && !jiggleEnabled}`);
+                output.push(`Jiggle Enabled: ${jiggleEnabled}`);
+                output.push(`Jiggle Amount: ${(jiggleAmount * 100).toFixed(1)}%`);
+                output.push('');
+                
+                output.push('=== ROTATION ===');
+                output.push(`Rotation (direct): ${rotation.toFixed(2)}°`);
+                output.push(`Rotation (interp current): ${getInterpolatedCurrent('rotation')}°`);
+                output.push(`Rotation (interp target): ${getInterpolatedTarget('rotation')}°`);
+                output.push(`Rotation (base): ${baseRotation.toFixed(2)}°`);
+                output.push(`Rotation (target base): ${targetBaseRotation.toFixed(2)}°`);
+                const rotSpring = interpolator.springParams.get('rotation');
+                if (rotSpring) {
+                    output.push(`Rotation (spring velocity): ${rotSpring.velocity.toFixed(4)}`);
+                }
+                output.push(`Auto Rotation Speed (direct): ${autoRotationSpeed.toFixed(2)}°/s`);
+                output.push(`Auto Rotation Speed (interp current): ${getInterpolatedCurrent('autoRotationSpeed')}°/s`);
+                output.push(`Auto Rotation Speed (interp target): ${getInterpolatedTarget('autoRotationSpeed')}°/s`);
+                output.push(`Auto Rotation Speed (base): ${baseAutoRotationSpeed.toFixed(2)}°/s`);
+                output.push('');
+                
+                output.push('=== DILATION ===');
+                output.push(`Dilation Speed (direct): ${dilationSpeed.toFixed(4)}`);
+                output.push(`Dilation Speed (interp current): ${getInterpolatedCurrent('dilationSpeed')}`);
+                output.push(`Dilation Speed (interp target): ${getInterpolatedTarget('dilationSpeed')}`);
+                output.push(`Dilation Speed (base): ${baseDilationSpeed.toFixed(4)}`);
+                output.push(`Dilation Speed (target base): ${targetBaseDilationSpeed.toFixed(4)}`);
+                output.push(`Dilation Speed (progress): ${getInterpolationProgress('dilationSpeed')}`);
+                output.push(`Effective (freeze): ${freezeEnabled ? '1.0 (frozen)' : dilationSpeed.toFixed(4)}`);
+                output.push('');
+                
+                output.push('=== SHAPE ===');
+                output.push(`Spikiness: ${spikiness.toFixed(3)} | interp: ${getInterpolatedCurrent('spikiness')} | target: ${getInterpolatedTarget('spikiness')} | base: ${baseSpikiness.toFixed(3)}`);
+                output.push(`Spike Freq: ${spikeFrequency.toFixed(2)} | interp: ${getInterpolatedCurrent('spikeFrequency')} | target: ${getInterpolatedTarget('spikeFrequency')} | base: ${baseSpikeFrequency.toFixed(2)}`);
+                output.push(`Spike Sharp: ${spikeSharpness.toFixed(3)} | interp: ${getInterpolatedCurrent('spikeSharpness')} | target: ${getInterpolatedTarget('spikeSharpness')} | base: ${baseSpikeSharpness.toFixed(3)}`);
+                output.push('');
+                
+                output.push('=== APPEARANCE ===');
+                output.push(`Hue: ${hue.toFixed(1)}° | interp: ${getInterpolatedCurrent('hue')}° | target: ${getInterpolatedTarget('hue')}° | base: ${baseHue.toFixed(1)}°`);
+                output.push(`Scale: ${scale.toFixed(3)} | interp: ${getInterpolatedCurrent('scale')} | target: ${getInterpolatedTarget('scale')} | base: ${baseScale.toFixed(3)}`);
+                output.push(`Fill Size: ${fillSize.toFixed(3)} | interp: ${getInterpolatedCurrent('fillSize')} | target: ${getInterpolatedTarget('fillSize')} | base: ${baseFillSize.toFixed(3)}`);
+                output.push(`Fill Opacity: ${fillOpacity.toFixed(3)} | interp: ${getInterpolatedCurrent('fillOpacity')} | target: ${getInterpolatedTarget('fillOpacity')} | base: ${baseFillOpacity.toFixed(3)}`);
+                output.push('');
+                
+                output.push('=== EMANATION ===');
+                output.push(`Emanation Rate: ${emanationRate.toFixed(2)} | interp: ${getInterpolatedCurrent('emanationRate')} | target: ${getInterpolatedTarget('emanationRate')} | base: ${baseEmanationRate.toFixed(2)}`);
+                output.push(`Fade Amount: ${fadeAmount.toFixed(3)} | interp: ${getInterpolatedCurrent('fadeAmount')} | target: ${getInterpolatedTarget('fadeAmount')} | base: ${baseFadeAmount.toFixed(3)}`);
+                output.push('');
+                
+                output.push('=== FILTERS ===');
+                output.push(`Noise Amount: ${noiseAmount.toFixed(3)} | interp: ${getInterpolatedCurrent('noiseAmount')} | target: ${getInterpolatedTarget('noiseAmount')} | base: ${baseNoiseAmount.toFixed(3)}`);
+                output.push(`Noise Rate: ${noiseRate.toFixed(2)} | interp: ${getInterpolatedCurrent('noiseRate')} | target: ${getInterpolatedTarget('noiseRate')} | base: ${baseNoiseRate.toFixed(2)}`);
+                output.push(`Blur Amount: ${blurAmount.toFixed(3)} | interp: ${getInterpolatedCurrent('blurAmount')} | target: ${getInterpolatedTarget('blurAmount')} | base: ${baseBlurAmount.toFixed(3)}`);
+                output.push(`Blur Rate: ${blurRate.toFixed(2)} | interp: ${getInterpolatedCurrent('blurRate')} | target: ${getInterpolatedTarget('blurRate')} | base: ${baseBlurRate.toFixed(2)}`);
+                output.push('');
+                
+                output.push('=== EFFECTS ===');
+                output.push(`Hue Shift: ${hueShiftAmount.toFixed(4)} | interp: ${getInterpolatedCurrent('hueShiftAmount')} | target: ${getInterpolatedTarget('hueShiftAmount')} | base: ${baseHueShiftAmount.toFixed(4)}`);
+                output.push(`Blend Opacity: ${blendOpacity.toFixed(3)} | interp: ${getInterpolatedCurrent('blendOpacity')} | target: ${getInterpolatedTarget('blendOpacity')} | base: ${baseBlendOpacity.toFixed(3)}`);
+                output.push('');
+                
+                output.push('=== CALCULATED VALUES ===');
+                const currentTime = (Date.now() - startTime) / 1000.0;
+                const interpolatedRot = interpolator.getCurrent('rotation') ?? rotation;
+                const interpolatedAutoRot = interpolator.getCurrent('autoRotationSpeed') ?? autoRotationSpeed;
+                const totalRotation = interpolatedRot + (currentTime * interpolatedAutoRot);
+                output.push(`Total Rotation: ${totalRotation.toFixed(2)}°`);
+                output.push(`Time: ${currentTime.toFixed(2)}s`);
+                
+                debugOutput.textContent = output.join('\n');
+            }
             
             // Track last loaded preset for unsaved changes detection
             let lastLoadedPresetName = null;
@@ -1822,6 +2846,10 @@
             // Collapsible dev-tool sections
             const sectionHeaders = Array.from(document.querySelectorAll('#dev-toolbox .section-header'));
             sectionHeaders.forEach((header) => {
+                // Skip jiggle-settings-header as it has its own custom handler
+                if (header.id === 'jiggle-settings-header') {
+                    return;
+                }
                 header.addEventListener('click', () => {
                     const collapsed = header.classList.toggle('collapsed');
                     let el = header.nextElementSibling;
@@ -1861,34 +2889,65 @@
                 
                 const preset = presets[name];
                 
-                // Set all values
+                // Set all values using interpolation for smooth transitions
                 // Handle migration from old "spikes" parameter to new shape parameters
                 if (preset.spikes !== undefined) {
                     // Old preset format: convert discrete spikes to continuous parameters
                     const oldSpikes = preset.spikes;
-                    spikiness = 0.8; // Default spikiness for old presets
-                    spikeFrequency = Math.max(2.0, Math.min(20.0, oldSpikes)); // Use old spike count as frequency
-                    spikeSharpness = 0.0; // Default sharpness
+                    interpolator.setTarget('spikiness', 0.8); // Default spikiness for old presets
+                    interpolator.setTarget('spikeFrequency', Math.max(2.0, Math.min(20.0, oldSpikes))); // Use old spike count as frequency
+                    interpolator.setTarget('spikeSharpness', 0.0); // Default sharpness
                 } else {
                     // New preset format
-                    spikiness = preset.spikiness !== undefined ? preset.spikiness : 0.5;
-                    spikeFrequency = preset.spikeFrequency !== undefined ? preset.spikeFrequency : 5.0;
-                    spikeSharpness = preset.spikeSharpness !== undefined ? preset.spikeSharpness : 0.0;
+                    interpolator.setTarget('spikiness', preset.spikiness !== undefined ? preset.spikiness : 0.5);
+                    interpolator.setTarget('spikeFrequency', preset.spikeFrequency !== undefined ? preset.spikeFrequency : 5.0);
+                    interpolator.setTarget('spikeSharpness', preset.spikeSharpness !== undefined ? preset.spikeSharpness : 0.0);
                 }
-                hue = preset.hue;
-                scale = preset.scale;
-                hueShiftAmount = preset.hueShiftAmount;
-                rotation = preset.rotation;
-                blendMode = preset.blendMode;
-                blendOpacity = preset.blendOpacity;
-                fillSize = preset.fillSize !== undefined ? preset.fillSize : 0.0;
-                fillOpacity = preset.fillOpacity !== undefined ? preset.fillOpacity : 0.6;
-                emanationRate = preset.emanationRate !== undefined ? preset.emanationRate : 2.0;
-                noiseAmount = preset.noiseAmount !== undefined ? preset.noiseAmount : 0.0;
-                noiseRate = preset.noiseRate !== undefined ? preset.noiseRate : 0.0;
-                blurAmount = preset.blurAmount !== undefined ? preset.blurAmount : 0.0;
-                blurRate = preset.blurRate !== undefined ? preset.blurRate : 0.0;
-                autoRotationSpeed = preset.autoRotationSpeed;
+                interpolator.setTarget('hue', preset.hue);
+                interpolator.setTarget('scale', preset.scale);
+                interpolator.setTarget('hueShiftAmount', preset.hueShiftAmount);
+                interpolator.setTargetRotation('rotation', preset.rotation); // Use rotation-specific setter for wrapping
+                blendMode = preset.blendMode; // Blend mode doesn't need interpolation
+                interpolator.setTarget('blendOpacity', preset.blendOpacity);
+                interpolator.setTarget('fillSize', preset.fillSize !== undefined ? preset.fillSize : 0.0);
+                interpolator.setTarget('fillOpacity', preset.fillOpacity !== undefined ? preset.fillOpacity : 0.6);
+                interpolator.setTarget('emanationRate', preset.emanationRate !== undefined ? preset.emanationRate : 2.0);
+                interpolator.setTarget('noiseAmount', preset.noiseAmount !== undefined ? preset.noiseAmount : 0.0);
+                interpolator.setTarget('noiseRate', preset.noiseRate !== undefined ? preset.noiseRate : 0.0);
+                interpolator.setTarget('blurAmount', preset.blurAmount !== undefined ? preset.blurAmount : 0.0);
+                interpolator.setTarget('blurRate', preset.blurRate !== undefined ? preset.blurRate : 0.0);
+                interpolator.setTarget('autoRotationSpeed', preset.autoRotationSpeed);
+                
+                // Also set direct values for slider updates (they'll sync via interpolator)
+                spikiness = interpolator.getCurrent('spikiness') ?? (preset.spikiness !== undefined ? preset.spikiness : 0.5);
+                spikeFrequency = interpolator.getCurrent('spikeFrequency') ?? (preset.spikeFrequency !== undefined ? preset.spikeFrequency : 5.0);
+                spikeSharpness = interpolator.getCurrent('spikeSharpness') ?? (preset.spikeSharpness !== undefined ? preset.spikeSharpness : 0.0);
+                hue = interpolator.getCurrent('hue') ?? preset.hue;
+                scale = interpolator.getCurrent('scale') ?? preset.scale;
+                hueShiftAmount = interpolator.getCurrent('hueShiftAmount') ?? preset.hueShiftAmount;
+                rotation = interpolator.getCurrent('rotation') ?? preset.rotation;
+                blendOpacity = interpolator.getCurrent('blendOpacity') ?? preset.blendOpacity;
+                fillSize = interpolator.getCurrent('fillSize') ?? (preset.fillSize !== undefined ? preset.fillSize : 0.0);
+                fillOpacity = interpolator.getCurrent('fillOpacity') ?? (preset.fillOpacity !== undefined ? preset.fillOpacity : 0.6);
+                emanationRate = interpolator.getCurrent('emanationRate') ?? (preset.emanationRate !== undefined ? preset.emanationRate : 2.0);
+                noiseAmount = interpolator.getCurrent('noiseAmount') ?? (preset.noiseAmount !== undefined ? preset.noiseAmount : 0.0);
+                noiseRate = interpolator.getCurrent('noiseRate') ?? (preset.noiseRate !== undefined ? preset.noiseRate : 0.0);
+                blurAmount = interpolator.getCurrent('blurAmount') ?? (preset.blurAmount !== undefined ? preset.blurAmount : 0.0);
+                blurRate = interpolator.getCurrent('blurRate') ?? (preset.blurRate !== undefined ? preset.blurRate : 0.0);
+                autoRotationSpeed = interpolator.getCurrent('autoRotationSpeed') ?? preset.autoRotationSpeed;
+                
+                // Handle dilation speed separately (needs slider conversion)
+                dilationSpeed = preset.dilationSlider ? (() => {
+                    const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
+                    const range = (1.22 - 0.88) / (1.0 - midPower);
+                    const min = 1.0 - midPower * range;
+                    return min + Math.pow(parseFloat(preset.dilationSlider) / 200.0, 1.0 / 8.0) * range;
+                })() : (interpolator.getCurrent('dilationSpeed') ?? 1.01);
+                interpolator.setTarget('dilationSpeed', dilationSpeed);
+                
+                // Handle fade amount separately (needs slider conversion)
+                fadeAmount = preset.fadeSlider ? Math.pow(parseFloat(preset.fadeSlider) / 100.0, 1.0 / 3.0) * 5.0 : (interpolator.getCurrent('fadeAmount') ?? 0.3);
+                interpolator.setTarget('fadeAmount', fadeAmount);
                 
                 // Update sliders
                 spikinessSlider.value = Math.round(spikiness * 100);
@@ -1941,6 +3000,27 @@
                     autoRotationSlider.value = sliderValue;
                 }
                 autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                
+                // Restore jiggle settings if present
+                if (preset.jiggleAmount !== undefined) {
+                    jiggleAmount = preset.jiggleAmount;
+                    jiggleAmountSlider.value = Math.round(jiggleAmount * 100);
+                    jiggleAmountValue.textContent = Math.round(jiggleAmount * 100) + '%';
+                }
+                
+                if (preset.jiggleEnabledParams) {
+                    // Restore enabled params from preset
+                    jiggleParamNames.forEach(param => {
+                        if (preset.jiggleEnabledParams[param] !== undefined) {
+                            jiggleEnabledParams[param] = preset.jiggleEnabledParams[param];
+                            const checkbox = document.getElementById(`jiggle-param-${param}`);
+                            if (checkbox) checkbox.checked = jiggleEnabledParams[param];
+                        }
+                    });
+                }
+                
+                // Update base values to match loaded preset
+                updateBaseValues();
                 
                 // Update dropdown to show the loaded preset
                 presetSelect.value = name;
@@ -2068,6 +3148,46 @@
             let baseFillOpacity = fillOpacity;
             let baseRotation = rotation;
             let baseHueShiftAmount = hueShiftAmount;
+            let baseDilationSpeed = dilationSpeed;
+            let baseFadeAmount = fadeAmount;
+            let baseEmanationRate = emanationRate;
+            let baseNoiseAmount = noiseAmount;
+            let baseNoiseRate = noiseRate;
+            let baseBlurAmount = blurAmount;
+            let baseBlurRate = blurRate;
+            let baseBlendOpacity = blendOpacity;
+            
+            // Initialize auto rotation speed
+            const initialAutoRotationSlider = parseFloat(autoRotationSlider.value);
+            let autoRotationSpeed = mapParamValue('autoRotationSpeed', initialAutoRotationSlider, 200);
+            if (autoRotationSpeed === null) {
+                // Fallback to original exponential mapping
+                autoRotationSpeed = -1.0 + Math.pow(initialAutoRotationSlider / 200.0, 0.5) * 361.0;
+            }
+            
+            // Now initialize baseAutoRotationSpeed after autoRotationSpeed is declared
+            let baseAutoRotationSpeed = autoRotationSpeed;
+            
+            // Initialize all parameters in the interpolator with their initial values
+            // This ensures interpolation works from the start
+            interpolator.setTarget('spikiness', spikiness, 0); // Instant for initial values
+            interpolator.setTarget('spikeFrequency', spikeFrequency, 0);
+            interpolator.setTarget('spikeSharpness', spikeSharpness, 0);
+            interpolator.setTarget('hue', hue, 0);
+            interpolator.setTarget('scale', scale, 0);
+            interpolator.setTarget('fillSize', fillSize, 0);
+            interpolator.setTarget('fillOpacity', fillOpacity, 0);
+            interpolator.setTargetRotation('rotation', rotation, 0); // Use rotation-specific setter
+            interpolator.setTarget('hueShiftAmount', hueShiftAmount, 0);
+            interpolator.setTarget('dilationSpeed', dilationSpeed, 0);
+            interpolator.setTarget('fadeAmount', fadeAmount, 0);
+            interpolator.setTarget('emanationRate', emanationRate, 0);
+            interpolator.setTarget('autoRotationSpeed', autoRotationSpeed, 0);
+            interpolator.setTarget('noiseAmount', noiseAmount, 0);
+            interpolator.setTarget('noiseRate', noiseRate, 0);
+            interpolator.setTarget('blurAmount', blurAmount, 0);
+            interpolator.setTarget('blurRate', blurRate, 0);
+            interpolator.setTarget('blendOpacity', blendOpacity, 0);
             
             // Target origins for jiggle when user edits params during jiggle
             // Jiggle will smoothly ease its orbit center toward these targets
@@ -2080,13 +3200,15 @@
             let targetBaseFillOpacity = baseFillOpacity;
             let targetBaseRotation = baseRotation;
             let targetBaseHueShiftAmount = baseHueShiftAmount;
-            // Initialize auto rotation speed
-            const initialAutoRotationSlider = parseFloat(autoRotationSlider.value);
-            let autoRotationSpeed = mapParamValue('autoRotationSpeed', initialAutoRotationSlider, 200);
-            if (autoRotationSpeed === null) {
-                // Fallback to original exponential mapping
-                autoRotationSpeed = -1.0 + Math.pow(initialAutoRotationSlider / 200.0, 0.5) * 361.0;
-            }
+            let targetBaseDilationSpeed = baseDilationSpeed;
+            let targetBaseFadeAmount = baseFadeAmount;
+            let targetBaseEmanationRate = baseEmanationRate;
+            let targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+            let targetBaseNoiseAmount = baseNoiseAmount;
+            let targetBaseNoiseRate = baseNoiseRate;
+            let targetBaseBlurAmount = baseBlurAmount;
+            let targetBaseBlurRate = baseBlurRate;
+            let targetBaseBlendOpacity = baseBlendOpacity;
             
             // Now load the preset if one was found (this will override the default values)
             if (presetLoaded) {
@@ -2129,8 +3251,10 @@
             // Update sliders
             spikinessSlider.addEventListener('input', (e) => {
                 const sliderValue = parseFloat(e.target.value);
-                spikiness = mapParamValue('spikiness', sliderValue) ?? (sliderValue / 100.0);
-                spikinessValue.textContent = spikiness.toFixed(2);
+                const targetValue = mapParamValue('spikiness', sliderValue) ?? (sliderValue / 100.0);
+                interpolator.setTarget('spikiness', targetValue);
+                spikiness = targetValue; // Update direct value for display
+                spikinessValue.textContent = targetValue.toFixed(2);
                 updateBaseValues();
             });
             
@@ -2138,6 +3262,7 @@
                 (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
                 (val) => val.toFixed(2),
                 (val) => {
+                    interpolator.setTarget('spikiness', val);
                     spikiness = val;
                     const settings = window.CurveEditor?.getCurveSettings('spikiness');
                     if (settings) {
@@ -2153,8 +3278,10 @@
             
             spikeFrequencySlider.addEventListener('input', (e) => {
                 const sliderValue = parseFloat(e.target.value);
-                spikeFrequency = mapParamValue('spikeFrequency', sliderValue, 20) ?? sliderValue;
-                spikeFrequencyValue.textContent = spikeFrequency.toFixed(1);
+                const targetValue = mapParamValue('spikeFrequency', sliderValue, 20) ?? sliderValue;
+                interpolator.setTarget('spikeFrequency', targetValue);
+                spikeFrequency = targetValue;
+                spikeFrequencyValue.textContent = targetValue.toFixed(1);
                 updateBaseValues();
             });
             
@@ -2162,6 +3289,7 @@
                 (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
                 (val) => val.toFixed(1),
                 (val) => {
+                    interpolator.setTarget('spikeFrequency', val);
                     spikeFrequency = val;
                     const settings = window.CurveEditor?.getCurveSettings('spikeFrequency');
                     if (settings) {
@@ -2177,8 +3305,10 @@
             
             spikeSharpnessSlider.addEventListener('input', (e) => {
                 const sliderValue = parseFloat(e.target.value);
-                spikeSharpness = mapParamValue('spikeSharpness', sliderValue) ?? (sliderValue / 100.0);
-                spikeSharpnessValue.textContent = spikeSharpness.toFixed(2);
+                const targetValue = mapParamValue('spikeSharpness', sliderValue) ?? (sliderValue / 100.0);
+                interpolator.setTarget('spikeSharpness', targetValue);
+                spikeSharpness = targetValue;
+                spikeSharpnessValue.textContent = targetValue.toFixed(2);
                 updateBaseValues();
             });
             
@@ -2186,6 +3316,7 @@
                 (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
                 (val) => val.toFixed(2),
                 (val) => {
+                    interpolator.setTarget('spikeSharpness', val);
                     spikeSharpness = val;
                     const settings = window.CurveEditor?.getCurveSettings('spikeSharpness');
                     if (settings) {
@@ -2201,8 +3332,10 @@
             
             hueSlider.addEventListener('input', (e) => {
                 const sliderValue = parseFloat(e.target.value);
-                hue = mapParamValue('hue', sliderValue, 360) ?? sliderValue;
-                hueValue.textContent = Math.round(hue) + '°';
+                const targetValue = mapParamValue('hue', sliderValue, 360) ?? sliderValue;
+                interpolator.setTarget('hue', targetValue);
+                hue = targetValue;
+                hueValue.textContent = Math.round(targetValue) + '°';
                 updateBaseValues();
             });
             
@@ -2210,6 +3343,7 @@
                 (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
                 (val) => Math.round(val) + '°',
                 (val) => {
+                    interpolator.setTarget('hue', val);
                     hue = val;
                     const settings = window.CurveEditor?.getCurveSettings('hue');
                     if (settings) {
@@ -2225,8 +3359,10 @@
             
             scaleSlider.addEventListener('input', (e) => {
                 const sliderValue = parseFloat(e.target.value);
-                scale = mapParamValue('scale', sliderValue, 1.0) ?? sliderValue;
-                scaleValue.textContent = scale.toFixed(2);
+                const targetValue = mapParamValue('scale', sliderValue, 1.0) ?? sliderValue;
+                interpolator.setTarget('scale', targetValue);
+                scale = targetValue;
+                scaleValue.textContent = targetValue.toFixed(2);
                 updateBaseValues();
             });
             
@@ -2234,6 +3370,7 @@
                 (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
                 (val) => val.toFixed(2),
                 (val) => {
+                    interpolator.setTarget('scale', val);
                     scale = val;
                     const settings = window.CurveEditor?.getCurveSettings('scale');
                     if (settings) {
@@ -2337,8 +3474,10 @@
             
             rotationSlider.addEventListener('input', (e) => {
                 const sliderValue = parseFloat(e.target.value);
-                rotation = mapParamValue('rotation', sliderValue, 360) ?? sliderValue;
-                rotationValue.textContent = Math.round(rotation) + '°';
+                const targetRotation = mapParamValue('rotation', sliderValue, 360) ?? sliderValue;
+                interpolator.setTargetRotation('rotation', targetRotation);
+                rotation = targetRotation; // Update direct value for display
+                rotationValue.textContent = Math.round(targetRotation) + '°';
                 updateBaseValues();
             });
             
@@ -2346,6 +3485,7 @@
                 (text) => parseFloat(text.replace(/[^0-9.]/g, '')),
                 (val) => Math.round(val) + '°',
                 (val) => {
+                    interpolator.setTargetRotation('rotation', val);
                     rotation = val;
                     const settings = window.CurveEditor?.getCurveSettings('rotation');
                     if (settings) {
@@ -2588,12 +3728,14 @@
             
             autoRotationSlider.addEventListener('input', (e) => {
                 const sliderValue = parseFloat(e.target.value);
-                autoRotationSpeed = mapParamValue('autoRotationSpeed', sliderValue, 200);
-                if (autoRotationSpeed === null) {
+                let targetSpeed = mapParamValue('autoRotationSpeed', sliderValue, 200);
+                if (targetSpeed === null) {
                     // Fallback to original exponential mapping
-                    autoRotationSpeed = -1.0 + Math.pow(sliderValue / 200.0, 0.5) * 361.0;
+                    targetSpeed = -1.0 + Math.pow(sliderValue / 200.0, 0.5) * 361.0;
                 }
-                autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                interpolator.setTarget('autoRotationSpeed', targetSpeed);
+                autoRotationSpeed = targetSpeed; // Update direct value for display
+                autoRotationValue.textContent = targetSpeed.toFixed(1) + '°';
                 updateStatusIndicators();
             });
             
@@ -2647,13 +3789,16 @@
                     blurAmount: blurAmount,
                     blurRate: blurRate,
                     autoRotationSpeed: autoRotationSpeed, // Store actual value (will reverse map to slider on load)
-                    autoRotationSlider: parseFloat(autoRotationSlider.value) // Also store slider for easier restoration
+                    autoRotationSlider: parseFloat(autoRotationSlider.value), // Also store slider for easier restoration
+                    jiggleAmount: jiggleAmount, // Store jiggle amount
+                    jiggleEnabledParams: { ...jiggleEnabledParams } // Store jiggle enabled params (copy object)
                 };
                 
                 const presets = loadPresets();
                 presets[name] = preset;
                 localStorage.setItem('sandboxPresets', JSON.stringify(presets));
                 loadPresets();
+                updatePresetNames(); // Update preset names list for cycling
                 presetNameInput.value = '';
                 alert(`Preset "${name}" saved!`);
             }
@@ -2681,6 +3826,7 @@
                 if (e.target.value) {
                     loadPreset(e.target.value);
                     localStorage.setItem('sandboxLastActivePreset', e.target.value);
+                    updatePresetNames(); // Update preset names list for cycling
                 }
             });
             
@@ -2878,7 +4024,80 @@
                 baseFillOpacity = fillOpacity;
                 baseRotation = rotation;
                 baseHueShiftAmount = hueShiftAmount;
+                baseDilationSpeed = dilationSpeed;
+                baseFadeAmount = fadeAmount;
+                baseEmanationRate = emanationRate;
+                baseAutoRotationSpeed = autoRotationSpeed;
+                baseNoiseAmount = noiseAmount;
+                baseNoiseRate = noiseRate;
+                baseBlurAmount = blurAmount;
+                baseBlurRate = blurRate;
+                baseBlendOpacity = blendOpacity;
+                
+                // Update target bases to match
+                targetBaseSpikiness = baseSpikiness;
+                targetBaseSpikeFrequency = baseSpikeFrequency;
+                targetBaseSpikeSharpness = baseSpikeSharpness;
+                targetBaseHue = baseHue;
+                targetBaseScale = baseScale;
+                targetBaseFillSize = baseFillSize;
+                targetBaseFillOpacity = baseFillOpacity;
+                targetBaseRotation = baseRotation;
+                targetBaseHueShiftAmount = baseHueShiftAmount;
+                targetBaseDilationSpeed = baseDilationSpeed;
+                targetBaseFadeAmount = baseFadeAmount;
+                targetBaseEmanationRate = baseEmanationRate;
+                targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+                targetBaseNoiseAmount = baseNoiseAmount;
+                targetBaseNoiseRate = baseNoiseRate;
+                targetBaseBlurAmount = baseBlurAmount;
+                targetBaseBlurRate = baseBlurRate;
+                targetBaseBlendOpacity = baseBlendOpacity;
             }
+            
+            // Resolution controls
+            function updateResolution(resolutionKey) {
+                currentResolution = resolutionKey;
+                const res = RESOLUTIONS[resolutionKey];
+                
+                // Update URL without page reload
+                const url = new URL(window.location);
+                if (resolutionKey === 'window') {
+                    url.searchParams.delete('resolution');
+                } else {
+                    url.searchParams.set('resolution', resolutionKey);
+                }
+                window.history.replaceState({}, '', url);
+                
+                // Update UI
+                document.querySelectorAll('.resolution-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-resolution="${resolutionKey}"]`).classList.add('active');
+                
+                // Update display
+                const display = document.getElementById('current-resolution-display');
+                if (res.width && res.height) {
+                    display.textContent = `Current: ${res.name} (${res.width}×${res.height})`;
+                } else {
+                    display.textContent = `Current: ${res.name}`;
+                }
+                
+                // Resize canvas
+                renderer.resize();
+            }
+            
+            // Set initial active button
+            document.querySelector(`[data-resolution="${currentResolution}"]`).classList.add('active');
+            updateResolution(currentResolution); // Update display
+            
+            // Resolution button event listeners
+            document.querySelectorAll('.resolution-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const resolution = e.target.dataset.resolution;
+                    updateResolution(resolution);
+                });
+            });
             
             randomizeBtn.addEventListener('click', randomizeAll);
             
@@ -2917,6 +4136,15 @@
                     baseFillOpacity = fillOpacity;
                     baseRotation = rotation;
                     baseHueShiftAmount = hueShiftAmount;
+                    baseDilationSpeed = dilationSpeed;
+                    baseFadeAmount = fadeAmount;
+                    baseEmanationRate = emanationRate;
+                    baseAutoRotationSpeed = autoRotationSpeed;
+                    baseNoiseAmount = noiseAmount;
+                    baseNoiseRate = noiseRate;
+                    baseBlurAmount = blurAmount;
+                    baseBlurRate = blurRate;
+                    baseBlendOpacity = blendOpacity;
                     // Targets match new bases
                     targetBaseSpikiness = baseSpikiness;
                     targetBaseSpikeFrequency = baseSpikeFrequency;
@@ -2927,6 +4155,35 @@
                     targetBaseFillOpacity = baseFillOpacity;
                     targetBaseRotation = baseRotation;
                     targetBaseHueShiftAmount = baseHueShiftAmount;
+                    targetBaseDilationSpeed = baseDilationSpeed;
+                    targetBaseFadeAmount = baseFadeAmount;
+                    targetBaseEmanationRate = baseEmanationRate;
+                    targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+                    targetBaseNoiseAmount = baseNoiseAmount;
+                    targetBaseNoiseRate = baseNoiseRate;
+                    targetBaseBlurAmount = baseBlurAmount;
+                    targetBaseBlurRate = baseBlurRate;
+                    targetBaseBlendOpacity = baseBlendOpacity;
+                    
+                    // Sync interpolator targets to current values so interpolation continues smoothly
+                    interpolator.setTarget('spikiness', spikiness, 0); // Instant sync
+                    interpolator.setTarget('spikeFrequency', spikeFrequency, 0);
+                    interpolator.setTarget('spikeSharpness', spikeSharpness, 0);
+                    interpolator.setTarget('hue', hue, 0);
+                    interpolator.setTarget('scale', scale, 0);
+                    interpolator.setTarget('fillSize', fillSize, 0);
+                    interpolator.setTarget('fillOpacity', fillOpacity, 0);
+                    interpolator.setTargetRotation('rotation', rotation, 0);
+                    interpolator.setTarget('hueShiftAmount', hueShiftAmount, 0);
+                    interpolator.setTarget('dilationSpeed', dilationSpeed, 0);
+                    interpolator.setTarget('fadeAmount', fadeAmount, 0);
+                    interpolator.setTarget('emanationRate', emanationRate, 0);
+                    interpolator.setTarget('autoRotationSpeed', autoRotationSpeed, 0);
+                    interpolator.setTarget('noiseAmount', noiseAmount, 0);
+                    interpolator.setTarget('noiseRate', noiseRate, 0);
+                    interpolator.setTarget('blurAmount', blurAmount, 0);
+                    interpolator.setTarget('blurRate', blurRate, 0);
+                    interpolator.setTarget('blendOpacity', blendOpacity, 0);
                     
                     // Update sliders to reflect current values (they should already match, but ensure sync)
                     spikinessSlider.value = Math.round(spikiness * 100);
@@ -2938,6 +4195,15 @@
                     fillOpacitySlider.value = Math.round(fillOpacity * 100);
                     rotationSlider.value = Math.round(rotation);
                     hueShiftSlider.value = hueShiftAmount.toFixed(3);
+                    dilationSlider.value = dilationSpeedToSlider(dilationSpeed);
+                    fadeSlider.value = fadeAmountToSlider(fadeAmount);
+                    emanationRateSlider.value = emanationRate.toFixed(1);
+                    autoRotationSlider.value = autoRotationSpeedToSlider(autoRotationSpeed);
+                    noiseAmountSlider.value = noiseAmountToSlider(noiseAmount);
+                    noiseRateSlider.value = noiseRateToSlider(noiseRate);
+                    blurAmountSlider.value = blurAmountToSlider(blurAmount);
+                    blurRateSlider.value = blurRateToSlider(blurRate);
+                    blendOpacitySlider.value = blendOpacity.toFixed(2);
                     
                     // Update status indicators (unsaved state may have changed)
                     updateStatusIndicators();
@@ -2952,6 +4218,15 @@
                     baseFillOpacity = fillOpacity;
                     baseRotation = rotation;
                     baseHueShiftAmount = hueShiftAmount;
+                    baseDilationSpeed = dilationSpeed;
+                    baseFadeAmount = fadeAmount;
+                    baseEmanationRate = emanationRate;
+                    baseAutoRotationSpeed = autoRotationSpeed;
+                    baseNoiseAmount = noiseAmount;
+                    baseNoiseRate = noiseRate;
+                    baseBlurAmount = blurAmount;
+                    baseBlurRate = blurRate;
+                    baseBlendOpacity = blendOpacity;
                     // Targets start at current bases
                     targetBaseSpikiness = baseSpikiness;
                     targetBaseSpikeFrequency = baseSpikeFrequency;
@@ -2962,6 +4237,15 @@
                     targetBaseFillOpacity = baseFillOpacity;
                     targetBaseRotation = baseRotation;
                     targetBaseHueShiftAmount = baseHueShiftAmount;
+                    targetBaseDilationSpeed = baseDilationSpeed;
+                    targetBaseFadeAmount = baseFadeAmount;
+                    targetBaseEmanationRate = baseEmanationRate;
+                    targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+                    targetBaseNoiseAmount = baseNoiseAmount;
+                    targetBaseNoiseRate = baseNoiseRate;
+                    targetBaseBlurAmount = baseBlurAmount;
+                    targetBaseBlurRate = baseBlurRate;
+                    targetBaseBlendOpacity = baseBlendOpacity;
                 }
                 
                 // Update jiggle indicator
@@ -2981,6 +4265,15 @@
                     baseFillOpacity = fillOpacity;
                     baseRotation = rotation;
                     baseHueShiftAmount = hueShiftAmount;
+                    baseDilationSpeed = dilationSpeed;
+                    baseFadeAmount = fadeAmount;
+                    baseEmanationRate = emanationRate;
+                    baseAutoRotationSpeed = autoRotationSpeed;
+                    baseNoiseAmount = noiseAmount;
+                    baseNoiseRate = noiseRate;
+                    baseBlurAmount = blurAmount;
+                    baseBlurRate = blurRate;
+                    baseBlendOpacity = blendOpacity;
                     
                     targetBaseSpikiness = baseSpikiness;
                     targetBaseSpikeFrequency = baseSpikeFrequency;
@@ -2991,6 +4284,15 @@
                     targetBaseFillOpacity = baseFillOpacity;
                     targetBaseRotation = baseRotation;
                     targetBaseHueShiftAmount = baseHueShiftAmount;
+                    targetBaseDilationSpeed = baseDilationSpeed;
+                    targetBaseFadeAmount = baseFadeAmount;
+                    targetBaseEmanationRate = baseEmanationRate;
+                    targetBaseAutoRotationSpeed = baseAutoRotationSpeed;
+                    targetBaseNoiseAmount = baseNoiseAmount;
+                    targetBaseNoiseRate = baseNoiseRate;
+                    targetBaseBlurAmount = baseBlurAmount;
+                    targetBaseBlurRate = baseBlurRate;
+                    targetBaseBlendOpacity = baseBlendOpacity;
                 } else {
                     // When jiggle is on, treat current values as new desired origins
                     // Jiggle will smoothly ease its orbit center toward these targets
@@ -3003,6 +4305,15 @@
                     targetBaseFillOpacity = fillOpacity;
                     targetBaseRotation = rotation;
                     targetBaseHueShiftAmount = hueShiftAmount;
+                    targetBaseDilationSpeed = dilationSpeed;
+                    targetBaseFadeAmount = fadeAmount;
+                    targetBaseEmanationRate = emanationRate;
+                    targetBaseAutoRotationSpeed = autoRotationSpeed;
+                    targetBaseNoiseAmount = noiseAmount;
+                    targetBaseNoiseRate = noiseRate;
+                    targetBaseBlurAmount = blurAmount;
+                    targetBaseBlurRate = blurRate;
+                    targetBaseBlendOpacity = blendOpacity;
                 }
                 // Update status indicators to check for unsaved changes
                 if (typeof updateStatusIndicators === 'function') {
@@ -3018,6 +4329,65 @@
             function render() {
                 const currentTime = (Date.now() - startTime) / 1000.0;
                 
+                // Update interpolation system (only if enabled and jiggle is off)
+                // When jiggle is enabled, it bypasses interpolation and sets values directly
+                const interpolationActive = interpolator.enabled && !jiggleEnabled;
+                if (interpolationActive) {
+                    interpolator.update();
+                }
+                
+                // Get values for rendering
+                // When jiggle is enabled OR interpolation is disabled, use direct values
+                // When jiggle is off AND interpolation is enabled, use interpolated values
+                let interpolatedRotation, interpolatedAutoRotationSpeed, interpolatedHueShiftAmount;
+                let interpolatedDilationSpeed, interpolatedEmanationRate, interpolatedNoiseAmount;
+                let interpolatedNoiseRate, interpolatedBlurAmount, interpolatedBlurRate;
+                let interpolatedSpikiness, interpolatedSpikeFrequency, interpolatedSpikeSharpness;
+                let interpolatedHue, interpolatedScale, interpolatedFillSize;
+                let interpolatedFillOpacity, interpolatedFadeAmount, interpolatedBlendOpacity;
+                
+                if (interpolationActive) {
+                    // Use interpolated values when interpolation is enabled and jiggle is off
+                    interpolatedRotation = interpolator.getCurrent('rotation') ?? rotation;
+                    interpolatedAutoRotationSpeed = interpolator.getCurrent('autoRotationSpeed') ?? autoRotationSpeed;
+                    interpolatedHueShiftAmount = interpolator.getCurrent('hueShiftAmount') ?? hueShiftAmount;
+                    interpolatedDilationSpeed = interpolator.getCurrent('dilationSpeed') ?? dilationSpeed;
+                    interpolatedEmanationRate = interpolator.getCurrent('emanationRate') ?? emanationRate;
+                    interpolatedNoiseAmount = interpolator.getCurrent('noiseAmount') ?? noiseAmount;
+                    interpolatedNoiseRate = interpolator.getCurrent('noiseRate') ?? noiseRate;
+                    interpolatedBlurAmount = interpolator.getCurrent('blurAmount') ?? blurAmount;
+                    interpolatedBlurRate = interpolator.getCurrent('blurRate') ?? blurRate;
+                    interpolatedSpikiness = interpolator.getCurrent('spikiness') ?? spikiness;
+                    interpolatedSpikeFrequency = interpolator.getCurrent('spikeFrequency') ?? spikeFrequency;
+                    interpolatedSpikeSharpness = interpolator.getCurrent('spikeSharpness') ?? spikeSharpness;
+                    interpolatedHue = interpolator.getCurrent('hue') ?? hue;
+                    interpolatedScale = interpolator.getCurrent('scale') ?? scale;
+                    interpolatedFillSize = interpolator.getCurrent('fillSize') ?? fillSize;
+                    interpolatedFillOpacity = interpolator.getCurrent('fillOpacity') ?? fillOpacity;
+                    interpolatedFadeAmount = interpolator.getCurrent('fadeAmount') ?? fadeAmount;
+                    interpolatedBlendOpacity = interpolator.getCurrent('blendOpacity') ?? blendOpacity;
+                } else {
+                    // Use direct values when jiggle is active OR interpolation is disabled
+                    interpolatedRotation = rotation;
+                    interpolatedAutoRotationSpeed = autoRotationSpeed;
+                    interpolatedHueShiftAmount = hueShiftAmount;
+                    interpolatedDilationSpeed = dilationSpeed;
+                    interpolatedEmanationRate = emanationRate;
+                    interpolatedNoiseAmount = noiseAmount;
+                    interpolatedNoiseRate = noiseRate;
+                    interpolatedBlurAmount = blurAmount;
+                    interpolatedBlurRate = blurRate;
+                    interpolatedSpikiness = spikiness;
+                    interpolatedSpikeFrequency = spikeFrequency;
+                    interpolatedSpikeSharpness = spikeSharpness;
+                    interpolatedHue = hue;
+                    interpolatedScale = scale;
+                    interpolatedFillSize = fillSize;
+                    interpolatedFillOpacity = fillOpacity;
+                    interpolatedFadeAmount = fadeAmount;
+                    interpolatedBlendOpacity = blendOpacity;
+                }
+                
                 // Apply jiggle if enabled
                 if (jiggleEnabled && jiggleAmount > 0) {
                     // Ease bases toward targets so jiggle orbits move smoothly when user edits params
@@ -3031,41 +4401,206 @@
                     baseFillOpacity += (targetBaseFillOpacity - baseFillOpacity) * originLerp;
                     baseRotation += (targetBaseRotation - baseRotation) * originLerp;
                     baseHueShiftAmount += (targetBaseHueShiftAmount - baseHueShiftAmount) * originLerp;
+                    baseDilationSpeed += (targetBaseDilationSpeed - baseDilationSpeed) * originLerp;
+                    baseFadeAmount += (targetBaseFadeAmount - baseFadeAmount) * originLerp;
+                    baseEmanationRate += (targetBaseEmanationRate - baseEmanationRate) * originLerp;
+                    baseAutoRotationSpeed += (targetBaseAutoRotationSpeed - baseAutoRotationSpeed) * originLerp;
+                    baseNoiseAmount += (targetBaseNoiseAmount - baseNoiseAmount) * originLerp;
+                    baseNoiseRate += (targetBaseNoiseRate - baseNoiseRate) * originLerp;
+                    baseBlurAmount += (targetBaseBlurAmount - baseBlurAmount) * originLerp;
+                    baseBlurRate += (targetBaseBlurRate - baseBlurRate) * originLerp;
+                    baseBlendOpacity += (targetBaseBlendOpacity - baseBlendOpacity) * originLerp;
                     
                     // Use time-based seed for smooth jiggle
                     const seed = currentTime * 2.0; // Speed of jiggle
                     
                     // Apply random offsets to each parameter based on jiggle amount
                     // Using sin/cos with different frequencies for each parameter for smooth variation
-                    spikiness = baseSpikiness + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount;
-                    spikiness = Math.max(0, Math.min(1, spikiness));
+                    // Only apply jiggle if the parameter is enabled in jiggleEnabledParams
                     
-                    spikeFrequency = baseSpikeFrequency + (Math.sin(seed * 1.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 9.0; // ±9 range
-                    spikeFrequency = Math.max(2, Math.min(20, spikeFrequency));
+                    if (jiggleEnabledParams.spikiness) {
+                        spikiness = baseSpikiness + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                        spikiness = Math.max(0, Math.min(1, spikiness));
+                    }
                     
-                    spikeSharpness = baseSpikeSharpness + (Math.sin(seed * 1.1) * 0.5 + 0.5 - 0.5) * jiggleAmount;
-                    spikeSharpness = Math.max(0, Math.min(1, spikeSharpness));
+                    if (jiggleEnabledParams.spikeFrequency) {
+                        spikeFrequency = baseSpikeFrequency + (Math.sin(seed * 1.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 9.0; // ±9 range
+                        spikeFrequency = Math.max(2, Math.min(20, spikeFrequency));
+                    }
                     
-                    hue = baseHue + (Math.sin(seed * 0.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 180.0; // ±180 range
-                    hue = ((hue % 360) + 360) % 360; // Wrap around
+                    if (jiggleEnabledParams.spikeSharpness) {
+                        spikeSharpness = baseSpikeSharpness + (Math.sin(seed * 1.1) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                        spikeSharpness = Math.max(0, Math.min(1, spikeSharpness));
+                    }
                     
-                    scale = baseScale + (Math.sin(seed * 1.5) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.3; // ±0.3 range
-                    scale = Math.max(0.05, Math.min(1.0, scale));
+                    if (jiggleEnabledParams.hue) {
+                        hue = baseHue + (Math.sin(seed * 0.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 180.0; // ±180 range
+                        hue = ((hue % 360) + 360) % 360; // Wrap around
+                    }
                     
-                    fillSize = baseFillSize + (Math.sin(seed * 1.2) * 0.5 + 0.5 - 0.5) * jiggleAmount;
-                    fillSize = Math.max(0, Math.min(1, fillSize));
+                    if (jiggleEnabledParams.scale) {
+                        scale = baseScale + (Math.sin(seed * 1.5) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.3; // ±0.3 range
+                        scale = Math.max(0.05, Math.min(1.0, scale));
+                    }
                     
-                    fillOpacity = baseFillOpacity + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount;
-                    fillOpacity = Math.max(0, Math.min(1, fillOpacity));
+                    if (jiggleEnabledParams.fillSize) {
+                        fillSize = baseFillSize + (Math.sin(seed * 1.2) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                        fillSize = Math.max(0, Math.min(1, fillSize));
+                    }
+                    
+                    if (jiggleEnabledParams.fillOpacity) {
+                        fillOpacity = baseFillOpacity + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount;
+                        fillOpacity = Math.max(0, Math.min(1, fillOpacity));
+                    }
                     
                     // Manual rotation does not jiggle; keep rotation from user / auto-rotation
                     
-                    hueShiftAmount = baseHueShiftAmount + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1; // ±0.1 range
-                    hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
+                    if (jiggleEnabledParams.hueShiftAmount) {
+                        hueShiftAmount = baseHueShiftAmount + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1; // ±0.1 range
+                        hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
+                    }
+                    
+                    if (jiggleEnabledParams.dilationSpeed) {
+                        // Dilation speed: jiggle around base, range ~0.88-1.22, so use ±0.1 range
+                        dilationSpeed = baseDilationSpeed + (Math.sin(seed * 0.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1;
+                        dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed));
+                    }
+                    
+                    if (jiggleEnabledParams.fadeAmount) {
+                        // Fade amount: jiggle around base, range 0-5, so use ±1.0 range
+                        fadeAmount = baseFadeAmount + (Math.sin(seed * 1.8) * 0.5 + 0.5 - 0.5) * jiggleAmount * 1.0;
+                        fadeAmount = Math.max(0, Math.min(5.0, fadeAmount));
+                    }
+                    
+                    if (jiggleEnabledParams.emanationRate) {
+                        // Emanation rate: jiggle around base, range 2-200, so use ±20 range
+                        emanationRate = baseEmanationRate + (Math.sin(seed * 1.0) * 0.5 + 0.5 - 0.5) * jiggleAmount * 20.0;
+                        emanationRate = Math.max(2, Math.min(200, emanationRate));
+                    }
+                    
+                    if (jiggleEnabledParams.autoRotationSpeed) {
+                        // Auto rotation speed: jiggle around base, range -1 to 360, so use ±30 range
+                        autoRotationSpeed = baseAutoRotationSpeed + (Math.sin(seed * 0.7) * 0.5 + 0.5 - 0.5) * jiggleAmount * 30.0;
+                        autoRotationSpeed = Math.max(-1, Math.min(360, autoRotationSpeed));
+                    }
+                    
+                    if (jiggleEnabledParams.noiseAmount) {
+                        // Noise amount: jiggle around base, range 0-1, so use ±0.2 range
+                        noiseAmount = baseNoiseAmount + (Math.sin(seed * 1.9) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.2;
+                        noiseAmount = Math.max(0, Math.min(1, noiseAmount));
+                    }
+                    
+                    if (jiggleEnabledParams.noiseRate) {
+                        // Noise rate: jiggle around base, range 0-10, so use ±2.0 range
+                        noiseRate = baseNoiseRate + (Math.sin(seed * 1.3) * 0.5 + 0.5 - 0.5) * jiggleAmount * 2.0;
+                        noiseRate = Math.max(0, Math.min(10, noiseRate));
+                    }
+                    
+                    if (jiggleEnabledParams.blurAmount) {
+                        // Blur amount: jiggle around base, range 0-1, so use ±0.2 range
+                        blurAmount = baseBlurAmount + (Math.sin(seed * 2.0) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.2;
+                        blurAmount = Math.max(0, Math.min(1, blurAmount));
+                    }
+                    
+                    if (jiggleEnabledParams.blurRate) {
+                        // Blur rate: jiggle around base, range 0-10, so use ±2.0 range
+                        blurRate = baseBlurRate + (Math.sin(seed * 1.4) * 0.5 + 0.5 - 0.5) * jiggleAmount * 2.0;
+                        blurRate = Math.max(0, Math.min(10, blurRate));
+                    }
+                    
+                    if (jiggleEnabledParams.blendOpacity) {
+                        // Blend opacity: jiggle around base, range 0-1, so use ±0.1 range
+                        blendOpacity = baseBlendOpacity + (Math.sin(seed * 1.6) * 0.5 + 0.5 - 0.5) * jiggleAmount * 0.1;
+                        blendOpacity = Math.max(0, Math.min(1, blendOpacity));
+                    }
                 }
                 
-                // Calculate capture interval from emanation rate (emanations per second)
-                const captureInterval = 1.0 / emanationRate;
+                // Apply audio-driven offsets if enabled (after jiggle so audio modulates jiggle values)
+                if (window.getAudioOffset && window.audioReactiveEnabled) {
+                    const audioOffsetSpikiness = window.getAudioOffset('spikiness') || 0;
+                    const audioOffsetSpikeFrequency = window.getAudioOffset('spikeFrequency') || 0;
+                    const audioOffsetSpikeSharpness = window.getAudioOffset('spikeSharpness') || 0;
+                    const audioOffsetHue = window.getAudioOffset('hue') || 0;
+                    const audioOffsetScale = window.getAudioOffset('scale') || 0;
+                    const audioOffsetDilationSpeed = window.getAudioOffset('dilationSpeed') || 0;
+                    const audioOffsetFadeAmount = window.getAudioOffset('fadeAmount') || 0;
+                    const audioOffsetHueShiftAmount = window.getAudioOffset('hueShiftAmount') || 0;
+                    const audioOffsetRotation = window.getAudioOffset('rotation') || 0;
+                    const audioOffsetFillSize = window.getAudioOffset('fillSize') || 0;
+                    const audioOffsetFillOpacity = window.getAudioOffset('fillOpacity') || 0;
+                    const audioOffsetBlendOpacity = window.getAudioOffset('blendOpacity') || 0;
+                    
+                    // Get jiggle ranges for each parameter (used to scale audio offsets)
+                    const jiggleRanges = {
+                        spikiness: jiggleAmount || 0.1,
+                        spikeFrequency: (jiggleAmount || 0.1) * 9.0,
+                        spikeSharpness: jiggleAmount || 0.1,
+                        hue: (jiggleAmount || 0.1) * 180.0,
+                        scale: (jiggleAmount || 0.1) * 0.3,
+                        dilationSpeed: (jiggleAmount || 0.1) * 0.1,
+                        fadeAmount: (jiggleAmount || 0.1) * 5.0,
+                        hueShiftAmount: (jiggleAmount || 0.1) * 0.1,
+                        rotation: (jiggleAmount || 0.1) * 180.0,
+                        fillSize: jiggleAmount || 0.1,
+                        fillOpacity: jiggleAmount || 0.1,
+                        blendOpacity: (jiggleAmount || 0.1) * 0.1
+                    };
+                    
+                    // Apply audio offsets scaled to jiggle range (modulates current values)
+                    const config = window.getAudioMappingConfig ? window.getAudioMappingConfig() : {};
+                    
+                    if (config.spikiness?.enabled) {
+                        spikiness += audioOffsetSpikiness * jiggleRanges.spikiness;
+                        spikiness = Math.max(0, Math.min(1, spikiness));
+                    }
+                    if (config.spikeFrequency?.enabled) {
+                        spikeFrequency += audioOffsetSpikeFrequency * jiggleRanges.spikeFrequency;
+                        spikeFrequency = Math.max(2, Math.min(20, spikeFrequency));
+                    }
+                    if (config.spikeSharpness?.enabled) {
+                        spikeSharpness += audioOffsetSpikeSharpness * jiggleRanges.spikeSharpness;
+                        spikeSharpness = Math.max(0, Math.min(1, spikeSharpness));
+                    }
+                    if (config.hue?.enabled) {
+                        hue += audioOffsetHue * jiggleRanges.hue;
+                        hue = ((hue % 360) + 360) % 360;
+                    }
+                    if (config.scale?.enabled) {
+                        scale += audioOffsetScale * jiggleRanges.scale;
+                        scale = Math.max(0.05, Math.min(1.0, scale));
+                    }
+                    if (config.dilationSpeed?.enabled) {
+                        dilationSpeed += audioOffsetDilationSpeed * jiggleRanges.dilationSpeed;
+                        dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed));
+                    }
+                    if (config.fadeAmount?.enabled) {
+                        fadeAmount += audioOffsetFadeAmount * jiggleRanges.fadeAmount;
+                        fadeAmount = Math.max(0, Math.min(5, fadeAmount));
+                    }
+                    if (config.hueShiftAmount?.enabled) {
+                        hueShiftAmount += audioOffsetHueShiftAmount * jiggleRanges.hueShiftAmount;
+                        hueShiftAmount = Math.max(0, Math.min(0.2, hueShiftAmount));
+                    }
+                    if (config.rotation?.enabled) {
+                        rotation += audioOffsetRotation * jiggleRanges.rotation;
+                        rotation = ((rotation % 360) + 360) % 360;
+                    }
+                    if (config.fillSize?.enabled) {
+                        fillSize += audioOffsetFillSize * jiggleRanges.fillSize;
+                        fillSize = Math.max(0, Math.min(1, fillSize));
+                    }
+                    if (config.fillOpacity?.enabled) {
+                        fillOpacity += audioOffsetFillOpacity * jiggleRanges.fillOpacity;
+                        fillOpacity = Math.max(0, Math.min(1, fillOpacity));
+                    }
+                    if (config.blendOpacity?.enabled) {
+                        blendOpacity += audioOffsetBlendOpacity * jiggleRanges.blendOpacity;
+                        blendOpacity = Math.max(0, Math.min(1, blendOpacity));
+                    }
+                }
+                
+                // Calculate capture interval from interpolated emanation rate (emanations per second)
+                const captureInterval = 1.0 / interpolatedEmanationRate;
                 
                 // Check if it's time to capture a new shape
                 const shouldCaptureShape = (currentTime - lastCaptureTime) >= captureInterval;
@@ -3073,23 +4608,27 @@
                     lastCaptureTime = currentTime;
                 }
                 
-                // Calculate total rotation (manual + auto) for capturing
+                // Calculate total rotation (interpolated manual + auto) for capturing
                 // This ensures captured shapes preserve their rotation at capture time
-                const totalRotation = rotation + (currentTime * autoRotationSpeed);
+                const totalRotation = interpolatedRotation + (currentTime * interpolatedAutoRotationSpeed);
                 
                 // Apply freeze: if frozen, set dilation to 1.0 (no expansion)
-                const effectiveDilationSpeed = freezeEnabled ? 1.0 : dilationSpeed;
+                const effectiveDilationSpeed = freezeEnabled ? 1.0 : interpolatedDilationSpeed;
                 
+                // Use interpolated values for rendering
                 renderer.render({
                     u_time: currentTime,
-                    u_spikiness: spikiness,
-                    u_spikeFrequency: spikeFrequency,
-                    u_spikeSharpness: spikeSharpness,
-                    u_hue: hue,
-                    u_scale: scale,
-                    u_fillSize: fillSize,
-                    u_fillOpacity: fillOpacity
-                }, effectiveDilationSpeed, shouldCaptureShape, fadeAmount, hueShiftAmount, emanationRate, noiseAmount, noiseRate, blurAmount, blurRate, rotation, blendMode, blendOpacity, autoRotationSpeed, totalRotation);
+                    u_spikiness: interpolatedSpikiness,
+                    u_spikeFrequency: interpolatedSpikeFrequency,
+                    u_spikeSharpness: interpolatedSpikeSharpness,
+                    u_hue: interpolatedHue,
+                    u_scale: interpolatedScale,
+                    u_fillSize: interpolatedFillSize,
+                    u_fillOpacity: interpolatedFillOpacity
+                }, effectiveDilationSpeed, shouldCaptureShape, interpolatedFadeAmount, interpolatedHueShiftAmount, interpolatedEmanationRate, interpolatedNoiseAmount, interpolatedNoiseRate, interpolatedBlurAmount, interpolatedBlurRate, interpolatedRotation, blendMode, interpolatedBlendOpacity, interpolatedAutoRotationSpeed, totalRotation);
+                
+                // Update debug output
+                updateDebugOutput();
             }
             
             // Use setInterval for fixed 60fps instead of requestAnimationFrame
@@ -3138,6 +4677,16 @@
                     console.error('Snapshot failed', err);
                 }
             }
+
+	    function toggleFullScreen() {
+		let devtool = document.querySelector('#dev-toolbox');
+		let hotleg = document.querySelector('#hotkey-legend');
+		let uxToolbox = document.querySelector('#ux-toolbox');
+
+		devtool.hidden = !devtool.hidden;
+		hotleg.hidden = !hotleg.hidden;
+		if (uxToolbox) uxToolbox.hidden = !uxToolbox.hidden;
+	    }
             
             // GIF capture helpers
             function startGifCapture() {
@@ -3299,6 +4848,10 @@
                 if (e.key === 's' || e.key === 'S') {
                     downloadSnapshot();
                 }
+
+                if (e.key === 'h' || e.key === 'H') {
+		    toggleFullScreen();
+                }
                 
                 // G: Toggle GIF recording (max 10s, forward + reverse loop)
                 if (e.key === 'g' || e.key === 'G') {
@@ -3309,34 +4862,75 @@
                     }
                 }
                 
-                // Left/Right arrows: Cycle presets (stub)
+                // 1: Toggle interpolation
+                if (e.key === '1') {
+                    if (interpolationEnabled) {
+                        interpolationEnabled.checked = !interpolationEnabled.checked;
+                        interpolator.setEnabled(interpolationEnabled.checked);
+                    }
+                }
+
+                
+                // Left/Right arrows: Cycle presets
                 if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                    console.log('Preset cycling via arrow keys: TODO refine behavior');
+                    if (presetNames.length === 0) {
+                        updatePresetNames();
+                    }
+                    if (presetNames.length === 0) return;
+                    
+                    // Find current preset index
+                    const currentPreset = presetSelect.value;
+                    let currentIndex = presetNames.indexOf(currentPreset);
+                    if (currentIndex === -1) currentIndex = 0;
+                    
+                    // Cycle
+                    if (e.key === 'ArrowLeft') {
+                        currentIndex = (currentIndex - 1 + presetNames.length) % presetNames.length;
+                    } else {
+                        currentIndex = (currentIndex + 1) % presetNames.length;
+                    }
+                    
+                    // Load the preset
+                    const presetName = presetNames[currentIndex];
+                    presetSelect.value = presetName;
+                    loadPreset(presetName);
+                    localStorage.setItem('sandboxLastActivePreset', presetName);
                 }
                 
                 // Up arrow: accelerate auto params (rotation, hue shift, dilation)
                 if (e.key === 'ArrowUp') {
+                    // Get current values from interpolator
+                    const currentAutoRotation = interpolator.getCurrent('autoRotationSpeed') ?? autoRotationSpeed;
+                    const currentHueShift = interpolator.getCurrent('hueShiftAmount') ?? hueShiftAmount;
+                    const currentDilation = interpolator.getCurrent('dilationSpeed') ?? dilationSpeed;
+                    
                     // Increase auto rotation speed (up to a max) - slower step
-                    autoRotationSpeed = Math.min(360.0, autoRotationSpeed + 0.5);
-                    autoRotationSlider.value = Math.round(200 * Math.pow(Math.max(0, Math.min(1, (autoRotationSpeed + 1) / 361.0)), 2));
-                    autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                    const newAutoRotation = Math.min(360.0, currentAutoRotation + 0.5);
+                    interpolator.setTarget('autoRotationSpeed', newAutoRotation);
+                    autoRotationSpeed = newAutoRotation; // Update direct value for slider sync
+                    autoRotationSlider.value = Math.round(200 * Math.pow(Math.max(0, Math.min(1, (newAutoRotation + 1) / 361.0)), 2));
+                    autoRotationValue.textContent = newAutoRotation.toFixed(1) + '°';
                     
                     // Increase hue shift amount (up to max 0.2) - slower step
-                    hueShiftAmount = Math.min(0.2, hueShiftAmount + 0.0002);
-                    hueShiftSlider.value = hueShiftAmount.toFixed(3);
-                    hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+                    const newHueShift = Math.min(0.2, currentHueShift + 0.0002);
+                    interpolator.setTarget('hueShiftAmount', newHueShift);
+                    hueShiftAmount = newHueShift;
+                    hueShiftSlider.value = newHueShift.toFixed(3);
+                    hueShiftValue.textContent = newHueShift.toFixed(3);
                     
                     // Push dilation further away from 1.0 - slower step
-                    const delta = dilationSpeed >= 1.0 ? 0.001 : -0.001;
-                    dilationSpeed = Math.max(0.88, Math.min(1.22, dilationSpeed + delta));
+                    const delta = currentDilation >= 1.0 ? 0.001 : -0.001;
+                    const newDilation = Math.max(0.88, Math.min(1.22, currentDilation + delta));
+                    interpolator.setTarget('dilationSpeed', newDilation);
+                    dilationSpeed = newDilation;
                     dilationSlider.value = (function dilationSpeedToSlider(speed) {
                         const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
                         const range = (1.22 - 0.88) / (1.0 - midPower);
                         const min = 1.0 - midPower * range;
                         const normalized = (speed - min) / range;
                         return Math.round(200 * Math.pow(Math.max(0, Math.min(1, normalized)), 8));
-                    })(dilationSpeed);
-                    dilationValue.textContent = dilationSpeed.toFixed(4);
+                    })(newDilation);
+                    dilationValue.textContent = newDilation.toFixed(4);
                     
                     updateBaseValues();
                     updateStatusIndicators();
@@ -3344,26 +4938,37 @@
                 
                 // Down arrow: decelerate auto params towards neutral
                 if (e.key === 'ArrowDown') {
+                    // Get current values from interpolator
+                    const currentAutoRotation = interpolator.getCurrent('autoRotationSpeed') ?? autoRotationSpeed;
+                    const currentHueShift = interpolator.getCurrent('hueShiftAmount') ?? hueShiftAmount;
+                    const currentDilation = interpolator.getCurrent('dilationSpeed') ?? dilationSpeed;
+                    
                     // Gently damp auto rotation towards 0 - slower step
-                    autoRotationSpeed *= 0.98;
-                    autoRotationSlider.value = Math.round(200 * Math.pow(Math.max(0, Math.min(1, (autoRotationSpeed + 1) / 361.0)), 2));
-                    autoRotationValue.textContent = autoRotationSpeed.toFixed(1) + '°';
+                    const newAutoRotation = currentAutoRotation * 0.98;
+                    interpolator.setTarget('autoRotationSpeed', newAutoRotation);
+                    autoRotationSpeed = newAutoRotation;
+                    autoRotationSlider.value = Math.round(200 * Math.pow(Math.max(0, Math.min(1, (newAutoRotation + 1) / 361.0)), 2));
+                    autoRotationValue.textContent = newAutoRotation.toFixed(1) + '°';
                     
                     // Gently damp hue shift towards 0 - slower step
-                    hueShiftAmount *= 0.98;
-                    hueShiftSlider.value = hueShiftAmount.toFixed(3);
-                    hueShiftValue.textContent = hueShiftAmount.toFixed(3);
+                    const newHueShift = currentHueShift * 0.98;
+                    interpolator.setTarget('hueShiftAmount', newHueShift);
+                    hueShiftAmount = newHueShift;
+                    hueShiftSlider.value = newHueShift.toFixed(3);
+                    hueShiftValue.textContent = newHueShift.toFixed(3);
                     
                     // Bring dilation towards 1.0 (never snapping) - slower easing
-                    dilationSpeed = dilationSpeed + (1.0 - dilationSpeed) * 0.02;
+                    const newDilation = currentDilation + (1.0 - currentDilation) * 0.02;
+                    interpolator.setTarget('dilationSpeed', newDilation);
+                    dilationSpeed = newDilation;
                     dilationSlider.value = (function dilationSpeedToSlider(speed) {
                         const midPower = Math.pow(100.0 / 200.0, 1.0 / 8.0);
                         const range = (1.22 - 0.88) / (1.0 - midPower);
                         const min = 1.0 - midPower * range;
                         const normalized = (speed - min) / range;
                         return Math.round(200 * Math.pow(Math.max(0, Math.min(1, normalized)), 8));
-                    })(dilationSpeed);
-                    dilationValue.textContent = dilationSpeed.toFixed(4);
+                    })(newDilation);
+                    dilationValue.textContent = newDilation.toFixed(4);
                     
                     updateBaseValues();
                     updateStatusIndicators();
@@ -3398,6 +5003,356 @@
             // Note: We don't wrap loadPresets here because updatePresetNames
             // already calls the original function directly to avoid circular references.
             // If you need to update preset names after loading, call updatePresetNames() explicitly.
+        })();
+        
+        // Audio Mapping System
+        (() => {
+            let audioAnalyzer = null;
+            let audioMappingConfig = {};
+            let audioReactiveEnabled = false;
+            let lastSelectedMenu = null;
+            
+            // Audio parameter mappings: visualParam -> audioMetric
+            const audioMappings = {
+                spikiness: 'collision',
+                spikeFrequency: 'audioAmp',
+                spikeSharpness: 'harshness',
+                hue: 'bandEnergy',
+                scale: 'audioAmp',
+                dilationSpeed: 'compression',
+                fadeAmount: 'emptiness',
+                hueShiftAmount: 'bandEnergy',
+                rotation: 'phaseRisk',
+                fillSize: 'audioAmp',
+                fillOpacity: 'coherence',
+                blendOpacity: 'coherence'
+            };
+            
+            // Initialize audio analyzer
+            async function initAudioAnalyzer() {
+                if (typeof AudioAnalyzer === 'undefined') {
+                    console.warn('AudioAnalyzer not loaded');
+                    return;
+                }
+                audioAnalyzer = new AudioAnalyzer();
+            }
+            
+            // Initialize audio mapping UI
+            function initAudioMappingUI() {
+                const panel = document.getElementById('audio-mapping-panel');
+                const content = document.getElementById('audio-mapping-content');
+                if (!panel || !content) return;
+                
+                // Create mapping controls for each parameter
+                Object.keys(audioMappings).forEach(paramName => {
+                    const audioMetric = audioMappings[paramName];
+                    const mappingId = `mapping-${paramName}`;
+                    
+                    // Initialize config with defaults
+                    if (!audioMappingConfig[paramName]) {
+                        audioMappingConfig[paramName] = {
+                            enabled: false,
+                            sensitivity: 1.0,
+                            smoothing: 0.8,
+                            multiplier: 1.0,
+                            offset: 0.0
+                        };
+                    }
+                    
+                    const config = audioMappingConfig[paramName];
+                    
+                    // Create parameter group
+                    const group = document.createElement('div');
+                    group.className = 'mapping-param-group';
+                    group.id = `mapping-group-${paramName}`;
+                    
+                    group.innerHTML = `
+                        <div class="mapping-param-header">
+                            <input type="checkbox" id="${mappingId}-enabled" ${config.enabled ? 'checked' : ''}>
+                            <span class="mapping-param-name">${paramName}</span>
+                            <span class="mapping-source">from ${audioMetric}</span>
+                        </div>
+                        <div class="mapping-diagnostic">
+                            <canvas class="mapping-range-display" id="${mappingId}-range" width="200" height="60"></canvas>
+                            <div class="mapping-minmax-display">
+                                <span id="${mappingId}-minmax">Min: 0.000 | Max: 1.000</span>
+                                <span id="${mappingId}-current" class="mapping-current-value">Current: 0.000</span>
+                            </div>
+                        </div>
+                        <div class="mapping-control">
+                            <label>Sensitivity</label>
+                            <div class="mapping-control-row">
+                                <input type="range" id="${mappingId}-sensitivity" min="0" max="3" value="${config.sensitivity}" step="0.1">
+                                <input type="number" id="${mappingId}-sensitivity-num" value="${config.sensitivity}" step="0.1" min="0" max="10">
+                            </div>
+                        </div>
+                        <div class="mapping-control">
+                            <label>Smoothing</label>
+                            <div class="mapping-control-row">
+                                <input type="range" id="${mappingId}-smoothing" min="0.5" max="0.99" value="${config.smoothing}" step="0.01">
+                                <input type="number" id="${mappingId}-smoothing-num" value="${config.smoothing}" step="0.01" min="0.5" max="0.99">
+                            </div>
+                        </div>
+                        <div class="mapping-control">
+                            <label>Multiplier</label>
+                            <div class="mapping-control-row">
+                                <input type="range" id="${mappingId}-multiplier" min="-5" max="5" value="${config.multiplier}" step="0.1">
+                                <input type="number" id="${mappingId}-multiplier-num" value="${config.multiplier}" step="0.1">
+                            </div>
+                        </div>
+                        <div class="mapping-control">
+                            <label>Offset</label>
+                            <div class="mapping-control-row">
+                                <input type="range" id="${mappingId}-offset" min="-1" max="1" value="${config.offset}" step="0.01">
+                                <input type="number" id="${mappingId}-offset-num" value="${config.offset}" step="0.01">
+                            </div>
+                        </div>
+                    `;
+                    
+                    content.appendChild(group);
+                    
+                    // Wire up controls
+                    const enabledCheckbox = document.getElementById(`${mappingId}-enabled`);
+                    const sensitivitySlider = document.getElementById(`${mappingId}-sensitivity`);
+                    const sensitivityNum = document.getElementById(`${mappingId}-sensitivity-num`);
+                    const smoothingSlider = document.getElementById(`${mappingId}-smoothing`);
+                    const smoothingNum = document.getElementById(`${mappingId}-smoothing-num`);
+                    const multiplierSlider = document.getElementById(`${mappingId}-multiplier`);
+                    const multiplierNum = document.getElementById(`${mappingId}-multiplier-num`);
+                    const offsetSlider = document.getElementById(`${mappingId}-offset`);
+                    const offsetNum = document.getElementById(`${mappingId}-offset-num`);
+                    
+                    enabledCheckbox.addEventListener('change', (e) => {
+                        config.enabled = e.target.checked;
+                    });
+                    
+                    const syncSliderNum = (slider, num, prop) => {
+                        slider.addEventListener('input', (e) => {
+                            const val = parseFloat(e.target.value);
+                            config[prop] = val;
+                            num.value = val;
+                        });
+                        num.addEventListener('input', (e) => {
+                            const val = parseFloat(e.target.value);
+                            config[prop] = val;
+                            slider.value = val;
+                        });
+                    };
+                    
+                    syncSliderNum(sensitivitySlider, sensitivityNum, 'sensitivity');
+                    syncSliderNum(smoothingSlider, smoothingNum, 'smoothing');
+                    syncSliderNum(multiplierSlider, multiplierNum, 'multiplier');
+                    syncSliderNum(offsetSlider, offsetNum, 'offset');
+                });
+            }
+            
+            // Smooth audio-driven offsets
+            const audioOffsets = {};
+            Object.keys(audioMappings).forEach(param => {
+                audioOffsets[param] = 0.0;
+            });
+            
+            // Update audio-driven parameter offsets
+            function updateAudioOffsets() {
+                if (!audioAnalyzer || !audioReactiveEnabled) return;
+                
+                const metrics = audioAnalyzer.getMetrics();
+                const normalizedMetrics = audioAnalyzer.normalizedMetrics || {};
+                
+                Object.keys(audioMappings).forEach(paramName => {
+                    const config = audioMappingConfig[paramName];
+                    if (!config || !config.enabled) {
+                        audioOffsets[paramName] = 0.0;
+                        return;
+                    }
+                    
+                    const audioMetric = audioMappings[paramName];
+                    let rawValue = 0.5;
+                    
+                    // Get normalized metric value
+                    if (audioMetric === 'bandEnergy') {
+                        // Use mid band for bandEnergy mappings
+                        rawValue = normalizedMetrics.bandEnergy ? normalizedMetrics.bandEnergy[1] : 0.5;
+                    } else if (normalizedMetrics[audioMetric] !== undefined) {
+                        rawValue = normalizedMetrics[audioMetric];
+                    } else if (metrics[`u_${audioMetric}`] !== undefined) {
+                        // Fallback to raw metric
+                        rawValue = Array.isArray(metrics[`u_${audioMetric}`]) 
+                            ? metrics[`u_${audioMetric}`][1] || 0.5
+                            : metrics[`u_${audioMetric}`];
+                    }
+                    
+                    // Apply multiplier and offset
+                    let mappedValue = (rawValue - 0.5) * config.sensitivity * config.multiplier + config.offset;
+                    
+                    // Smooth the offset
+                    audioOffsets[paramName] = audioOffsets[paramName] * config.smoothing + mappedValue * (1 - config.smoothing);
+                });
+            }
+            
+            // Update diagnostic displays
+            function updateDiagnostics() {
+                if (!audioAnalyzer) return;
+                
+                Object.keys(audioMappings).forEach(paramName => {
+                    const audioMetric = audioMappings[paramName];
+                    const mappingId = `mapping-${paramName}`;
+                    
+                    const rangeDisplay = document.getElementById(`${mappingId}-range`);
+                    const minmaxDisplay = document.getElementById(`${mappingId}-minmax`);
+                    const currentDisplay = document.getElementById(`${mappingId}-current`);
+                    
+                    if (!rangeDisplay || !minmaxDisplay || !currentDisplay) return;
+                    
+                    // Get min/max for this metric
+                    let minMax = { min: 0, max: 1 };
+                    if (audioMetric === 'bandEnergy') {
+                        minMax = audioAnalyzer.getMinMax('bandEnergy', 1);
+                    } else {
+                        minMax = audioAnalyzer.getMinMax(audioMetric);
+                    }
+                    
+                    // Get current normalized value
+                    let currentNorm = 0.5;
+                    if (audioMetric === 'bandEnergy') {
+                        currentNorm = audioAnalyzer.getNormalizedMetric('bandEnergy', 1);
+                    } else {
+                        currentNorm = audioAnalyzer.getNormalizedMetric(audioMetric);
+                    }
+                    
+                    // Get current raw value
+                    const metrics = audioAnalyzer.getMetrics();
+                    let currentRaw = 0.5;
+                    if (audioMetric === 'bandEnergy') {
+                        currentRaw = metrics.u_bandEnergy ? metrics.u_bandEnergy[1] : 0.5;
+                    } else {
+                        currentRaw = metrics[`u_${audioMetric}`] || 0.5;
+                    }
+                    
+                    // Update displays
+                    minmaxDisplay.textContent = `Min: ${minMax.min.toFixed(3)} | Max: ${minMax.max.toFixed(3)}`;
+                    currentDisplay.textContent = `Current: ${currentNorm.toFixed(3)}`;
+                    
+                    // Draw range visualization
+                    if (!(rangeDisplay instanceof HTMLCanvasElement)) {
+                        // Convert to canvas if not already
+                        const canvas = document.createElement('canvas');
+                        canvas.className = rangeDisplay.className;
+                        canvas.style.cssText = rangeDisplay.style.cssText;
+                        canvas.id = rangeDisplay.id;
+                        rangeDisplay.parentNode.replaceChild(canvas, rangeDisplay);
+                        return;
+                    }
+                    const ctx = rangeDisplay.getContext('2d');
+                    const width = rangeDisplay.width = rangeDisplay.offsetWidth || 200;
+                    const height = rangeDisplay.height = rangeDisplay.offsetHeight || 60;
+                    
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    // Draw min/max range
+                    const rangeStart = (minMax.min / 1.0) * width;
+                    const rangeEnd = (minMax.max / 1.0) * width;
+                    ctx.fillStyle = 'rgba(0, 170, 255, 0.2)';
+                    ctx.fillRect(rangeStart, 0, rangeEnd - rangeStart, height);
+                    
+                    // Draw current normalized position
+                    const currentX = currentNorm * width;
+                    ctx.strokeStyle = '#0af';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(currentX, 0);
+                    ctx.lineTo(currentX, height);
+                    ctx.stroke();
+                    
+                    // Draw current raw position
+                    const rawX = currentRaw * width;
+                    ctx.strokeStyle = '#fa0';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(rawX, 0);
+                    ctx.lineTo(rawX, height);
+                    ctx.stroke();
+                    
+                    // Draw offset indicator
+                    const config = audioMappingConfig[paramName];
+                    if (config && config.enabled) {
+                        const offset = audioOffsets[paramName] || 0;
+                        const offsetX = (0.5 + offset) * width;
+                        ctx.fillStyle = '#0f0';
+                        ctx.fillRect(offsetX - 1, height - 8, 2, 8);
+                    }
+                });
+            }
+            
+            // Toggle audio mapping panel
+            function toggleAudioMappingPanel() {
+                const panel = document.getElementById('audio-mapping-panel');
+                if (!panel) return;
+                panel.classList.toggle('visible');
+                lastSelectedMenu = 'audio-mapping';
+            }
+            
+            // Hotkey handler
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'm' || e.key === 'M') {
+                    if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+                        toggleAudioMappingPanel();
+                    }
+                }
+            });
+            
+            // Initialize on load
+            initAudioAnalyzer();
+            initAudioMappingUI();
+            
+            // Update loop
+            function audioMappingUpdate() {
+                updateAudioOffsets();
+                updateDiagnostics();
+                requestAnimationFrame(audioMappingUpdate);
+            }
+            audioMappingUpdate();
+            
+            // Export for use in render loop
+            window.getAudioOffset = (paramName) => {
+                return audioOffsets[paramName] || 0.0;
+            };
+            
+            // Make audioReactiveEnabled accessible globally
+            window.audioReactiveEnabled = false;
+            window.setAudioReactiveEnabled = (enabled) => {
+                window.audioReactiveEnabled = enabled;
+                audioReactiveEnabled = enabled;
+            };
+            
+            window.getAudioMappingConfig = () => audioMappingConfig;
+            window.setAudioMappingConfig = (config) => {
+                audioMappingConfig = config;
+                // Update UI
+                Object.keys(audioMappingConfig).forEach(paramName => {
+                    const mappingId = `mapping-${paramName}`;
+                    const config = audioMappingConfig[paramName];
+                    const enabledCheckbox = document.getElementById(`${mappingId}-enabled`);
+                    const sensitivitySlider = document.getElementById(`${mappingId}-sensitivity`);
+                    const sensitivityNum = document.getElementById(`${mappingId}-sensitivity-num`);
+                    const smoothingSlider = document.getElementById(`${mappingId}-smoothing`);
+                    const smoothingNum = document.getElementById(`${mappingId}-smoothing-num`);
+                    const multiplierSlider = document.getElementById(`${mappingId}-multiplier`);
+                    const multiplierNum = document.getElementById(`${mappingId}-multiplier-num`);
+                    const offsetSlider = document.getElementById(`${mappingId}-offset`);
+                    const offsetNum = document.getElementById(`${mappingId}-offset-num`);
+                    
+                    if (enabledCheckbox) enabledCheckbox.checked = config.enabled;
+                    if (sensitivitySlider) sensitivitySlider.value = config.sensitivity;
+                    if (sensitivityNum) sensitivityNum.value = config.sensitivity;
+                    if (smoothingSlider) smoothingSlider.value = config.smoothing;
+                    if (smoothingNum) smoothingNum.value = config.smoothing;
+                    if (multiplierSlider) multiplierSlider.value = config.multiplier;
+                    if (multiplierNum) multiplierNum.value = config.multiplier;
+                    if (offsetSlider) offsetSlider.value = config.offset;
+                    if (offsetNum) offsetNum.value = config.offset;
+                });
+            };
         })();
     </script>
 </body>
