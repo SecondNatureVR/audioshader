@@ -3,6 +3,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   root: '.',
+  base: '/audioshader/', // Required for GitHub Pages (project site)
   publicDir: 'public',
   build: {
     outDir: 'dist',
