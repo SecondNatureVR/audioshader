@@ -17,7 +17,7 @@ import type { AudioAnalyzer } from '../audio/AudioAnalyzer';
 import { AudioMapper, ALL_MAPPABLE_PARAMS, createDefaultSlot, DEFAULT_AUDIO_SOURCES } from '../audio/AudioMapper';
 import { PARAM_RANGES } from '../render/Parameters';
 import { AudioRadarChart } from './AudioRadarChart';
-import { takeSnapshot, GifRecorder } from '../capture/Capture';
+import { takeSnapshot, GifRecorder, ReelsVideoRecorder } from '../capture/Capture';
 import { type ResolutionKey, getResolutionDisplayString } from '../config/Resolution';
 import { parseNumericValue, calculateAdjustedRange } from './valueUtils';
 import { getParamLabel } from '../config/paramLabels';
@@ -95,6 +95,7 @@ export class UIController {
 
   // Recording state
   private gifRecorder: GifRecorder | null = null;
+  private reelsVideoRecorder: ReelsVideoRecorder | null = null;
 
   // Jiggle settings
   private jiggleSettings: JiggleSettings = {
@@ -785,11 +786,25 @@ export class UIController {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result;
-      if (typeof result === 'string') {
-        const count = this.app.getPresetManager().importPresets(result);
-        this.refreshPresetList();
-        alert(`Imported ${count} preset(s)`);
+      if (typeof result !== 'string') {
+        alert('Failed to read file.');
+        return;
       }
+      try {
+        const count = this.app.getPresetManager().importPresets(result, true);
+        this.refreshPresetList();
+        if (count > 0) {
+          alert(`Imported ${count} preset(s)`);
+        } else {
+          alert('No valid presets found in file. Check that the JSON has the expected format (name, params with spikiness, spikeFrequency, scale, hue).');
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        alert(`Error importing presets: ${msg}`);
+      }
+    };
+    reader.onerror = () => {
+      alert('Failed to read file.');
     };
     reader.readAsText(file);
   }
@@ -3288,6 +3303,41 @@ export class UIController {
         indicator.style.display = 'none';
       }
     });
+
+    if (ReelsVideoRecorder.isSupported()) {
+      this.reelsVideoRecorder = new ReelsVideoRecorder(canvas);
+      this.reelsVideoRecorder.onProgress((remaining) => {
+        const indicator = document.getElementById('record-video-indicator');
+        if (indicator !== null) {
+          const sec = Math.ceil(remaining / 1000);
+          indicator.textContent = `VIDEO ${sec}s`;
+        }
+      });
+      this.reelsVideoRecorder.onComplete(() => {
+        const indicator = document.getElementById('record-video-indicator');
+        if (indicator !== null) {
+          indicator.style.display = 'none';
+        }
+      });
+      const recordVideoBtn = document.getElementById('record-video-btn');
+      if (recordVideoBtn !== null) {
+        recordVideoBtn.addEventListener('click', () => this.toggleReelsVideoRecording());
+      }
+    } else {
+      const recordVideoBtn = document.getElementById('record-video-btn') as HTMLButtonElement | null;
+      const videoCaptureContent = document.getElementById('video-capture-content');
+      if (recordVideoBtn !== null) recordVideoBtn.disabled = true;
+      if (videoCaptureContent !== null) {
+        const hint = videoCaptureContent.querySelector('.video-unsupported-hint');
+        if (hint === null) {
+          const div = document.createElement('div');
+          div.className = 'video-unsupported-hint';
+          div.style.cssText = 'font-size: 8px; color: #a00; margin-top: 4px;';
+          div.textContent = 'Video recording not supported in this browser.';
+          videoCaptureContent.appendChild(div);
+        }
+      }
+    }
   }
 
   /**
@@ -3361,6 +3411,13 @@ export class UIController {
       case 'KeyG':
         e.preventDefault();
         this.toggleGifRecording();
+        break;
+
+      case 'KeyV':
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          this.toggleReelsVideoRecording();
+        }
         break;
 
       case 'Digit1': {
@@ -3470,6 +3527,33 @@ export class UIController {
       if (indicator !== null) {
         indicator.style.display = 'inline-block';
         indicator.textContent = 'RECORD 10.0s';
+      }
+    }
+  }
+
+  /**
+   * Toggle Reels video recording (90s max, optional audio)
+   */
+  private toggleReelsVideoRecording(): void {
+    if (this.reelsVideoRecorder === null) return;
+
+    const indicator = document.getElementById('record-video-indicator');
+    const withAudioCheck = document.getElementById('record-video-with-audio') as HTMLInputElement | null;
+    const withAudio = withAudioCheck?.checked ?? false;
+
+    if (this.reelsVideoRecorder.isRecording) {
+      this.reelsVideoRecorder.stop();
+      if (indicator !== null) indicator.style.display = 'none';
+    } else {
+      const audioStream = withAudio && this.audioAnalyzer != null ? this.audioAnalyzer.getAudioStream() : null;
+      if (withAudio && (audioStream == null || audioStream.getAudioTracks().length === 0)) {
+        alert('Enable mic/device or Capture Tab Audio first to record with audio.');
+      }
+      if (this.reelsVideoRecorder.start(audioStream ?? undefined)) {
+        if (indicator !== null) {
+          indicator.style.display = 'inline-block';
+          indicator.textContent = 'VIDEO 90s';
+        }
       }
     }
   }

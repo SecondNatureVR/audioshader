@@ -304,39 +304,47 @@ export class PresetManager {
    * Import presets from JSON string
    */
   importPresets(json: string, overwrite: boolean = false): number {
+    let data: Record<string, Preset> | Preset;
     try {
-      const data = JSON.parse(json) as Record<string, Preset> | Preset;
-
-      // Handle single preset or multiple presets
-      const presets: Record<string, Preset> =
-        'name' in data && typeof data.name === 'string'
-          ? { [data.name]: data as Preset }
-          : (data as Record<string, Preset>);
-
-      let imported = 0;
-
-      for (const [name, preset] of Object.entries(presets)) {
-        if (!overwrite && this.presets.has(name)) {
-          continue;
-        }
-
-        // Validate preset structure
-        if (this.isValidPreset(preset)) {
-          this.presets.set(name, preset);
-          imported++;
-        }
-      }
-
-      if (imported > 0) {
-        this.saveToStorage();
-        this.notifyChange();
-      }
-
-      return imported;
+      data = JSON.parse(json) as Record<string, Preset> | Preset;
     } catch (error) {
-      console.error('Failed to import presets:', error);
-      return 0;
+      console.error('Failed to parse preset JSON:', error);
+      throw error;
     }
+
+    // Handle single preset or multiple presets
+    const presets: Record<string, Preset> =
+      typeof data === 'object' &&
+      data !== null &&
+      'name' in data &&
+      typeof (data as Preset).name === 'string'
+        ? { [(data as Preset).name]: data as Preset }
+        : (data as Record<string, Preset>);
+
+    if (typeof presets !== 'object' || presets === null || Array.isArray(presets)) {
+      throw new Error('Invalid format: expected an object with preset names as keys');
+    }
+
+    let imported = 0;
+
+    for (const [name, preset] of Object.entries(presets)) {
+      if (!overwrite && this.presets.has(name)) {
+        continue;
+      }
+
+      // Validate preset structure
+      if (this.isValidPreset(preset)) {
+        this.presets.set(name, preset);
+        imported++;
+      }
+    }
+
+    if (imported > 0) {
+      this.saveToStorage();
+      this.notifyChange();
+    }
+
+    return imported;
   }
 
   /**
