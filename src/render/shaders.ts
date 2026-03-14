@@ -25,19 +25,27 @@ export async function loadShader(path: string): Promise<string> {
 }
 
 /**
+ * Resolve shader path with base URL (required for correct resolution when served from subpath e.g. GitHub Pages)
+ */
+function shaderPath(path: string): string {
+  const base = import.meta.env.BASE_URL;
+  return `${base}${path}`;
+}
+
+/**
  * Load all required shaders
  */
 export async function loadAllShaders(): Promise<ShaderSources> {
   const [starVertex, starFragment, dilationVertex, dilationFragment, copyFragment, centerBlendFragment, postprocessVertex, postprocessFragment] =
     await Promise.all([
-      loadShader('shaders/star.vert'),
-      loadShader('shaders/star.frag'),
-      loadShader('shaders/dilation.vert'),
-      loadShader('shaders/dilation.frag'),
-      loadShader('shaders/copy.frag'),
-      loadShader('shaders/centerBlend.frag'),
-      loadShader('shaders/postprocess.vert'),
-      loadShader('shaders/postprocess.frag'),
+      loadShader(shaderPath('shaders/star.vert')),
+      loadShader(shaderPath('shaders/star.frag')),
+      loadShader(shaderPath('shaders/dilation.vert')),
+      loadShader(shaderPath('shaders/dilation.frag')),
+      loadShader(shaderPath('shaders/copy.frag')),
+      loadShader(shaderPath('shaders/centerBlend.frag')),
+      loadShader(shaderPath('shaders/postprocess.vert')),
+      loadShader(shaderPath('shaders/postprocess.frag')),
     ]);
 
   return {
